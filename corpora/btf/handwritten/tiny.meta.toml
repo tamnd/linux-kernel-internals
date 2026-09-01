@@ -1,0 +1,17 @@
+source = "handwritten"
+evidence = false
+reason = "Written by make.py from the documented format so the reader had something to test against before a kernel exists. Not a dump from a kernel. No lesson may cite it."
+
+format = "BTF"
+version = 1
+endianness = "little"
+pointer_size = 8
+describes = "made up demo_ types, one of every kind in the format, with three holes in them on purpose"
+built_by = "corpora/btf/handwritten/make.py"
+
+# What the reader has to get right, and what CI compares against.
+types = 32
+struct_count = 4
+demo_task_size = 64
+demo_task_padding = 6
+demo_arg_padding = 4

@@ -58,6 +58,10 @@ kconfig-required:
 kernel profile="A-full":
     ./kxbox/kernel/build.sh {{profile}}
 
+# Rebuild the small handwritten BTF blob the reader is tested against.
+btf-fixture:
+    python3 corpora/btf/handwritten/make.py
+
 # Rebuild every lesson notebook and its markdown from the build.py beside it.
 build-lessons:
     python3 -m tools.nbbuild
