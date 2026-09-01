@@ -39,6 +39,7 @@ from pathlib import Path
 SCHEMA = 1
 
 LESSONS = Path("lessons")
+BLUEPRINTS = Path("blueprints")
 PLANNED = Path("refcheck.toml")
 PIN = Path("kxbox/kernel/pin.toml")
 
@@ -81,6 +82,9 @@ FENCE = re.compile(r"^\s*```")
 # An anchor has to be long enough to be worth searching for. One word matches everywhere and
 # tells you nothing when it moves.
 MIN_ANCHOR = 12
+
+# How a blueprint points at its evidence in the middle of a sentence: `[page-fault-R07]`.
+CITATION = re.compile(r"\[([a-z0-9][a-z0-9-]*-R\d+)\]")
 
 
 @dataclass(frozen=True)
@@ -355,6 +359,34 @@ def check_lesson_claims(directory: Path, references: list[Reference]) -> list[Fi
     return findings
 
 
+def check_blueprint_citations(document: Path, references: list[Reference]) -> list[Finding]:
+    """Every citation marker in the prose exists, and every citation in the file is used.
+
+    A blueprint is a normative document, so a sentence in one is a claim about the kernel and a
+    claim about the kernel needs somewhere a reader can go and check it. The marker in the prose
+    is `[page-fault-R07]`, and it resolves here rather than in the reader's head.
+
+    The unused half matters as much as the missing half. A citation nothing points at is usually a
+    sentence that got rewritten and lost its evidence on the way, and the file still looks
+    thoroughly cited afterwards.
+    """
+    findings: list[Finding] = []
+    text = document.read_text(encoding="utf-8")
+    used = {found.group(1) for found in CITATION.finditer(text)}
+    known = {r.identifier for r in references}
+
+    for identifier in sorted(used - known):
+        findings.append(Finding(str(document), f"cites {identifier}, which is not in refs.toml"))
+    for identifier in sorted(known - used):
+        findings.append(
+            Finding(
+                f"{document.stem}.refs.toml#{identifier}",
+                "is not cited anywhere in the blueprint, so nothing rests on it",
+            )
+        )
+    return findings
+
+
 def resolve(reference: Reference, tree: Path) -> tuple[int | None, str]:
     """Find the anchor in a real kernel tree. Returns the line, and what went wrong if it did not.
 
@@ -398,6 +430,25 @@ def find_lessons(root: Path) -> list[Path]:
     return sorted(p for p in lessons.iterdir() if (p / "meta.toml").exists())
 
 
+def find_blueprints(root: Path) -> list[tuple[Path, Path]]:
+    """Every blueprint that has citations, as the document and its `refs.toml` beside it.
+
+    A blueprint keeps its references in `<name>.refs.toml` rather than in a directory of its own,
+    because a blueprint is one file and giving each one a directory to hold a single sidecar buys
+    nothing. A blueprint with no citations does not appear here at all, which is allowed while one
+    is a stub and is what the status field is for.
+    """
+    directory = root / BLUEPRINTS
+    if not directory.is_dir():
+        return []
+    found = []
+    for refs in sorted(directory.rglob("*.refs.toml")):
+        document = refs.with_name(refs.name[: -len(".refs.toml")] + ".md")
+        if document.exists():
+            found.append((document, refs))
+    return found
+
+
 def check(root: Path) -> tuple[list[Finding], list[Reference]]:
     tops = repository_tops(root)
     planned_file = _load(root / PLANNED) if (root / PLANNED).exists() else {}
@@ -424,6 +475,14 @@ def check(root: Path) -> tuple[list[Finding], list[Reference]]:
         # pile from every lesson before it.
         findings.extend(check_lesson_claims(lesson, mine))
 
+    for document, refs_file in find_blueprints(root):
+        mine, problems = read_references(refs_file)
+        findings.extend(problems)
+        for reference in mine:
+            findings.extend(check_reference(reference, document.stem, versions))
+        findings.extend(check_blueprint_citations(document, mine))
+        references.extend(mine)
+
     return findings, references
 
 
@@ -431,8 +490,10 @@ def confirm(root: Path, tree: Path, *, write: bool) -> tuple[list[Finding], int]
     """Resolve every citation against a real tree, and optionally write the line numbers back."""
     findings: list[Finding] = []
     resolved = 0
-    for lesson in find_lessons(root):
-        refs_file = lesson / "refs.toml"
+    files = [lesson / "refs.toml" for lesson in find_lessons(root)]
+    files += [refs for _, refs in find_blueprints(root)]
+
+    for refs_file in files:
         if not refs_file.exists():
             continue
         references, problems = read_references(refs_file)
