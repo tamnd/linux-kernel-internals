@@ -36,6 +36,8 @@ A live session says what Tier 0 is: uniprocessor, 32 bit x86, emulated timing, a
 
 `session.py` is the session and the banner. `corpus.py` replays a recording. `bridge.py` is the Python half of the conversation with the emulator, and `PROTOCOL.md` is the contract, which is four calls wide and says why the calls are synchronous and what that costs in hosting.
 
+`web/` is the other half: the shared buffer the answer comes back through, the shell protocol every call turns into, the page that boots the emulator, and a server that sets the two headers a blocking worker needs.
+
 `kernel/` is the pin, the config fragments and the build script. `pin.toml` says which kernel, from where, with which checksum.
 
-Not here: the JavaScript half, the v86 vendoring, the rootfs, and a built kernel. Nobody has booted anything for this project. The protocol, the Python half and the fallback are written and tested, and the tests drive the live backend through a stand in that implements the four calls, so the part that is unproven is the emulator rather than the code around it.
+Not here: the v86 vendoring, the rootfs, and a built kernel. Nobody has booted anything for this project. Both halves of the protocol are written and both are tested without an emulator, the Python one through a stand in that implements the four calls and the JavaScript one through a guest that answers like a shell, so the part that is unproven is the emulator rather than the code around it.

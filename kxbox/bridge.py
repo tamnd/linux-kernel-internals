@@ -2,7 +2,7 @@
 
 v86 is an x86 emulator compiled to WebAssembly, so the kernel is running in the page and the only
 way into it is through JavaScript. This module is the Python half of that conversation. The
-JavaScript half is `kxbox/bridge/`, and it is not written yet.
+JavaScript half is `kxbox/web/`.
 
 `PROTOCOL.md` beside this file is the whole contract, and it is deliberately four calls wide.
 Everything a lesson does is a shell line, a file read, a file write or a module load, because
@@ -10,14 +10,15 @@ those four are what the kernel already exposes to a shell and because a protocol
 your head is a protocol somebody can reimplement.
 
 The calls are synchronous, which they have to be, because a lesson cell that says `await` in front
-of every line is a lesson about promises. On the page that works by running v86 in a worker and
-having the Python side block on `Atomics.wait`, which needs the two cross origin isolation headers
-listed in `PROTOCOL.md`. That is a real constraint on where the book can be hosted and it is
-written down rather than discovered later.
+of every line is a lesson about promises. Blocking is the only way to get that and only a worker
+may block, so Python is the worker and v86 is on the page, and the answer comes back through a
+`SharedArrayBuffer`, which needs the two cross origin isolation headers listed in `PROTOCOL.md`.
+That is a real constraint on where the book can be hosted and it is written down rather than
+discovered later.
 
-Nobody has run any of this against v86. The kernel is not built and the JavaScript is not written.
-What is here is the protocol, the Python side of it, and a stand in that the tests drive it with,
-so that when the emulator arrives the argument is about the emulator rather than about this.
+Nobody has run any of this against v86, because the kernel is not built and the emulator is not
+vendored. What is here is the protocol, the Python side of it, and a stand in that the tests drive
+it with, so that when the emulator arrives the argument is about the emulator rather than this.
 """
 
 from __future__ import annotations

@@ -20,10 +20,10 @@ linux-kernel-internals/
 │   ├── session.py           #   boot(), the Box, and the banner every lesson prints first
 │   ├── corpus.py            #   the recorded backend, which is what CI and most readers get
 │   ├── bridge.py            #   the Python half of the conversation with v86
+│   ├── web/                 #   the browser half: the channel, the shell protocol, the page
 │   ├── vendor/v86/          #   pinned upstream, BSD-2-Clause
 │   ├── kernel/              #   pin.toml, config fragments, build.sh, results
-│   ├── rootfs/              #   busybox, strace, our tools
-│   └── bridge/              #   the JavaScript half, four calls, see PROTOCOL.md
+│   └── rootfs/              #   busybox, strace, our tools
 ├── kxwidgets/               # SyscallTape, StructMap, OpsExplorer, PredictionGate
 ├── kxmanim/                 # the nine primitives, storyboards, the manim adapter
 │   └── storyboards/         #   one toml per animation, checked in CI
@@ -64,6 +64,10 @@ That is also why the analysis toolkit is pure Python with no C extensions. It co
 The lessons and the blueprints are copied into `site/docs/` at build time and those copies are ignored by git. MkDocs can only see what is under its docs directory, and a file that exists twice in a repository is a file that will disagree with itself.
 
 `kxbox/` has two backends behind one interface and they hand back the same objects. That is not tidiness. A fallback written as a branch gives you one path that runs constantly and one that runs for a reader on a Tuesday, and the second one is the one that will be broken. `box.trace(...)` returns a `kxray.models.Tape` whether it came off a kernel or out of `corpora/tier0/`, so the widget and the blueprint downstream cannot tell which they got. `KXBOX_DISABLE=1` forces the recording and CI runs everything that way.
+
+`kxbox/web/` is split four ways for one reason, which is that only one of the four needs an emulator. `channel.js` is the blocking call and knows there are two threads. `guest.js` builds a line of shell and reads the answer back out of a serial stream, with no state and no emulator in it. `host.js` queues commands onto the one shell the guest has and gives each of them a deadline, and it reaches the emulator through an object with `send` and `listen`, so a test can hand it something else. `page.js` is the wiring, and it is the only part that cannot be tested until there is a kernel to boot.
+
+`kxbox/web/serve.py` is there because a blocking worker needs a `SharedArrayBuffer`, a useful `SharedArrayBuffer` needs the page to be cross origin isolated, and that needs two response headers `python3 -m http.server` does not send. Getting it wrong does not look like a header problem, it looks like the emulator hanging, so the headers have a test.
 
 `corpora/` is committed on purpose. A trace that a lesson depends on is an input to the build, not a scratch file, and a lesson whose evidence is not in the repository is a lesson nobody can check.
 

@@ -1,0 +1,9 @@
+{
+  "name": "linux-kernel-internals-web",
+  "private": true,
+  "type": "module",
+  "description": "The browser half of Tier 0. Node is only here to run the tests.",
+  "scripts": {
+    "test": "node --test tests/web/*.test.js"
+  }
+}
