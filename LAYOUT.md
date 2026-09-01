@@ -23,6 +23,7 @@ linux-kernel-internals/
 │   └── bridge/              #   run a command, read a file, collect a trace
 ├── kxwidgets/               # anywidget: SyscallTape, StructMap, LockTimeline
 ├── kxmanim/                 # manim scenes and reusable objects
+├── kxdraw/                  # diagrams as code, out to svg and excalidraw
 ├── lessons/                 # 103 lessons: prose, notebook, assets, grader
 ├── blueprints/              # the normative specifications, and bpc, their generator
 ├── corpora/                 # pinned traces, BTF dumps, /proc snapshots, oopses
@@ -47,6 +48,8 @@ That is also why the analysis toolkit is pure Python with no C extensions. It co
 A new parser goes in `kxray/`, with its fixture in `corpora/` and its test in `tests/`.
 
 A new lesson goes in `lessons/<ID>/`, where the identifier comes from the curriculum and never changes.
+
+A new diagram goes in that lesson's `assets/` as a file named `*.diagram.py`. The `.svg` and `.excalidraw` beside it are output, written by `just diagrams` and checked in CI, so editing them by hand gets reverted by the next build. Every diagram source has to define an `ALT` string, and the build fails without one.
 
 A new checker goes in `tools/`, with tests, and gets wired into `justfile` and CI in the same pull request. A checker that is not in CI is a suggestion.
 

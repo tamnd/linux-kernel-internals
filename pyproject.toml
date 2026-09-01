@@ -24,7 +24,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 # kxwidgets, kxbox and kxmanim get added here as each one lands.
-packages = ["kxray", "tools"]
+packages = ["kxdraw", "kxray", "tools"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

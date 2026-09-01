@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 660" width="980" height="660" role="img" aria-label="How one line of trace output gets made">
+  <title>How one line of trace output gets made</title>
+  <desc>A flow diagram running down the page. On the left, a box holding three file names: current_tracer, set_graph_function and tracing_on, described as three files written with echo, with an arrow into the middle of the flow labelled you set these first. Down the middle, five stages joined by arrows: your program calls write, the kernel runs ksys_write and vfs_write, ftrace records every call and every return, a dashed group holding one ring buffer for CPU 0 and one for CPU 1, and finally the file at slash sys slash kernel slash tracing slash trace, reached by an arrow labelled cat.</desc>
+  <defs>
+    <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#495057"/>
+    </marker>
+  </defs>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="40.0" y="46.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="20.0" fill="#1e1e1e" text-anchor="start" dominant-baseline="middle">How one line of trace output gets made</text>
+  <rect x="40.0" y="180.0" width="250.0" height="120.0" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+  <text x="165.0" y="221.2" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="15.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">current_tracer</text>
+  <text x="165.0" y="240.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="15.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">set_graph_function</text>
+  <text x="165.0" y="258.8" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="15.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">tracing_on</text>
+  <text x="40.0" y="326.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">three files, written with echo</text>
+  <rect x="360.0" y="90.0" width="280.0" height="64.0" rx="8" fill="#d0ebff" stroke="#1971c2" stroke-width="2"/>
+  <text x="500.0" y="122.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="16.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle">your program calls write()</text>
+  <rect x="360.0" y="190.0" width="280.0" height="64.0" rx="8" fill="none" stroke="#1e1e1e" stroke-width="2"/>
+  <text x="500.0" y="212.6" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="15.0" fill="#1e1e1e" text-anchor="middle" dominant-baseline="middle">the kernel runs</text>
+  <text x="500.0" y="231.4" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="15.0" fill="#1e1e1e" text-anchor="middle" dominant-baseline="middle">ksys_write, vfs_write, ...</text>
+  <rect x="360.0" y="290.0" width="280.0" height="66.0" rx="8" fill="none" stroke="#1e1e1e" stroke-width="2"/>
+  <text x="500.0" y="313.6" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="15.0" fill="#1e1e1e" text-anchor="middle" dominant-baseline="middle">ftrace records</text>
+  <text x="500.0" y="332.4" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="15.0" fill="#1e1e1e" text-anchor="middle" dominant-baseline="middle">every call and every return</text>
+  <rect x="330.0" y="396.0" width="340.0" height="90.0" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2" stroke-dasharray="8 6"/>
+  <rect x="346.0" y="412.0" width="150.0" height="58.0" rx="8" fill="none" stroke="#1e1e1e" stroke-width="2"/>
+  <text x="421.0" y="432.9" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#1e1e1e" text-anchor="middle" dominant-baseline="middle">CPU 0</text>
+  <text x="421.0" y="449.1" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#1e1e1e" text-anchor="middle" dominant-baseline="middle">ring buffer</text>
+  <rect x="504.0" y="412.0" width="150.0" height="58.0" rx="8" fill="none" stroke="#1e1e1e" stroke-width="2"/>
+  <text x="579.0" y="432.9" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#1e1e1e" text-anchor="middle" dominant-baseline="middle">CPU 1</text>
+  <text x="579.0" y="449.1" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#1e1e1e" text-anchor="middle" dominant-baseline="middle">ring buffer</text>
+  <rect x="360.0" y="530.0" width="280.0" height="64.0" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+  <text x="500.0" y="562.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="14.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">/sys/kernel/tracing/trace</text>
+  <line x1="500.0" y1="154.0" x2="500.0" y2="190.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <line x1="500.0" y1="254.0" x2="500.0" y2="290.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <text x="510.0" y="272.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">patched call sites</text>
+  <line x1="290.0" y1="240.0" x2="360.0" y2="323.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <text x="335.0" y="281.5" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">you set these first</text>
+  <line x1="500.0" y1="356.0" x2="500.0" y2="396.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <line x1="500.0" y1="486.0" x2="500.0" y2="530.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <text x="510.0" y="508.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">cat</text>
+  <text x="700.0" y="424.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">one buffer per CPU,</text>
+  <text x="700.0" y="444.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">so the trace interleaves</text>
+  <text x="40.0" y="624.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">The buffer is a ring. Fill it and the oldest lines go, without a word to anybody.</text>
+</svg>
