@@ -1,0 +1,29 @@
+# tracer: function_graph
+#
+# CPU  TASK/PID         DURATION                  FUNCTION CALLS
+# |    |    |             |   |                     |   |   |   |
+ 1)  stress-ng-2411  |             |  exc_page_fault() {
+ 1)  stress-ng-2411  |             |    handle_mm_fault() {
+ 1)  stress-ng-2411  |             |      __handle_mm_fault() {
+ 1)  stress-ng-2411  |             |        /* kxprobe: anon fault at 0x7f2c9a3b1000 */
+ 1)  stress-ng-2411  |             |        do_anonymous_page() {
+ 1)  stress-ng-2411  |  8.221 us   |          vma_alloc_folio();
+ 1)  stress-ng-2411  |  0.204 us   |          folio_add_new_anon_rmap();
+ 1)  stress-ng-2411  |  0.512 us   |          folio_add_lru();
+ 1)  stress-ng-2411  |  9.663 us   |        }
+ 1)  stress-ng-2411  |  9.947 us   |      }
+ 1)  stress-ng-2411  |+ 10.346 us  |    }
+ 1)  stress-ng-2411  |+ 10.858 us  |  }
+ 1)  stress-ng-2411  | ==========> |
+ 1)  stress-ng-2411  |             |  sysvec_apic_timer_interrupt() {
+ 1)  stress-ng-2411  |  0.121 us   |    irq_enter_rcu();
+ 1)  stress-ng-2411  |             |    hrtimer_interrupt() {
+ 1)  stress-ng-2411  |  3.044 us   |      __hrtimer_run_queues();
+ 1)  stress-ng-2411  |  3.577 us   |    }
+ 1)  stress-ng-2411  |  0.688 us   |    irq_exit_rcu();
+ 1)  stress-ng-2411  |  4.812 us   |  }
+ 1)  stress-ng-2411  | <========== |
+ ------------------------------------------
+ 1)    stress-ng-2411  =>  swapper/1-0
+ ------------------------------------------
+ 1)  swapper/1-0     |             |  schedule_idle() {

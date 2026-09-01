@@ -1,0 +1,14 @@
+source = "handwritten"
+evidence = false
+reason = "Written from the documented format so the parser had something to test against before kxbox exists. Not a capture. No lesson may cite it."
+
+tracer = "function_graph"
+options = []
+describes = "one byte write to a file on tmpfs"
+
+# What the parser has to get right, and what CI compares against.
+unparsed_lines = 0
+frames = 17
+roots = 1
+max_depth = 7
+cpus = [0]

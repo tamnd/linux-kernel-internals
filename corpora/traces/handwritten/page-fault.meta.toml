@@ -1,0 +1,14 @@
+source = "handwritten"
+evidence = false
+reason = "Written from the documented format so the parser had something to test against before kxbox exists. Not a capture. No lesson may cite it."
+
+tracer = "function_graph"
+options = ["funcgraph-proc", "funcgraph-irq"]
+describes = "an anonymous page fault, a timer interrupt, and a switch to the idle task"
+
+# What the parser has to get right, and what CI compares against.
+unparsed_lines = 0
+frames = 13
+roots = 3
+max_depth = 4
+cpus = [1]
