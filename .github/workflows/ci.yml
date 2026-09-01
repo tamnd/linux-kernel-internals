@@ -23,6 +23,12 @@ jobs:
         with:
           enable-cache: true
 
+      # Named rather than taken from whatever the runner image happens to ship, because the test
+      # runner's handling of its arguments has changed between versions.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: Set up Python
         run: uv python install 3.12
 
@@ -51,7 +57,7 @@ jobs:
       # no dependencies to install, so this costs a few seconds. What it is worth is the blocking
       # call across two real threads, which is the part of the design that is either true or not.
       - name: Browser half
-        run: node --test tests/web/
+        run: node --test tests/web/*.test.js
 
   prose:
     name: prose

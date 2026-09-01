@@ -81,7 +81,7 @@ tier0:
 
 # The browser half of Tier 0: the channel, the shell protocol and the blocking call.
 web:
-    node --test tests/web/
+    node --test tests/web/*.test.js
 
 # Serve kxbox/web with the two headers a blocking worker needs. There is nothing to boot yet.
 web-serve:
