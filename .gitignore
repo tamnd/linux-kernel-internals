@@ -12,8 +12,11 @@ build/
 node_modules/
 *.tsbuildinfo
 
-# Site output
+# Site output, and the lessons and blueprints staged into it. MkDocs can only see what is under
+# its docs directory, so `just site` copies them in. The originals are the committed ones.
 site/_build/
+site/docs/lessons/
+site/docs/blueprints/
 .cache/
 
 # Kernel build artefacts. The recipe is in the repo, the output is not.

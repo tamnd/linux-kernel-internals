@@ -1,0 +1,60 @@
+name: pages
+
+# Publishing is a decision somebody makes, so this runs when a person asks for it and not on
+# every push. Turning on Pages in the repository settings, with the source set to GitHub Actions,
+# is a one time step that has to happen before the first run. Once that is done, adding
+#
+#   push:
+#     branches: [main]
+#
+# next to `workflow_dispatch` below makes every merge publish.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time, and let a running one finish rather than cancelling it half way through
+# replacing the live site.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install
+        run: uv sync --extra site
+
+      - name: Stage
+        run: uv run python -m tools.sitebuild
+
+      # Same strict build the site job runs on every pull request, so nothing is published that
+      # would not have passed review.
+      - name: Build
+        run: cd site && uv run mkdocs build --strict
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/_build
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

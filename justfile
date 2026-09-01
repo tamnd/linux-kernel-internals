@@ -5,7 +5,7 @@ default:
     @just --list
 
 # Everything CI runs, in the same order. Run this before you open a pull request.
-check: lint prose diagrams-check claims refs blueprints kconfig storyboards notebooks test
+check: lint prose diagrams-check claims refs blueprints kconfig storyboards notebooks site-check test
 
 # Install the development dependencies into a local virtual environment.
 setup:
@@ -24,7 +24,7 @@ fmt:
 
 # House style for prose. The rules are in tools/lintprose/rules.py.
 prose:
-    python3 -m tools.lintprose README.md CONTRIBUTING.md LAYOUT.md lessons blueprints corpora kxbox
+    python3 -m tools.lintprose README.md CONTRIBUTING.md LAYOUT.md lessons blueprints corpora kxbox site
 
 # Print the prose rules and what each one is for.
 prose-rules:
@@ -110,6 +110,26 @@ diagrams:
 # Fail if a committed diagram is out of date with its source.
 diagrams-check:
     python3 -m tools.diagrams --check
+
+# Stage the lessons and the blueprints into the site, and write mkdocs.yml and the stylesheet.
+site:
+    python3 -m tools.sitebuild
+
+# Fail if mkdocs.yml or the generated stylesheet is out of date with what is on disk.
+site-check:
+    python3 -m tools.sitebuild --check
+
+# Build the book. Strict, so a link that points at nothing stops the build.
+site-build: site
+    cd site && mkdocs build --strict
+
+# Preview it on localhost:8000 while you edit.
+site-serve: site
+    cd site && mkdocs serve
+
+# Install mkdocs, the theme and the notebook renderer. Nothing else needs them.
+setup-site:
+    uv pip install -e ".[site]"
 
 test:
     python3 -m pytest

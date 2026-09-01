@@ -1,0 +1,252 @@
+"""Tests for the site build.
+
+The thing worth checking is not that MkDocs works. It is that the navigation is worked out from
+what is on disk, so a lesson cannot be added and left invisible, and a lesson cannot be removed
+and leave a dead entry behind. Both of those are silent failures on every documentation site that
+keeps its navigation in a hand edited list.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from tools import sitebuild
+
+ROOT = Path(__file__).resolve().parents[1]
+
+HEAD = """site_name: Test book
+docs_dir: docs
+site_dir: _build
+"""
+
+LESSON_META = """
+id = "{identifier}"
+title = "{title}"
+part = "Z"
+status = "{status}"
+"""
+
+BLUEPRINT = """---
+blueprint: {name}
+title: {title}
+status: {status}
+pin: v7.2.2
+arch: x86_64
+---
+
+# {title}
+
+Something specified.
+"""
+
+
+def notebook() -> str:
+    return json.dumps(
+        {
+            "cells": [{"cell_type": "markdown", "metadata": {}, "source": ["# A lesson\n"]}],
+            "metadata": {},
+            "nbformat": 4,
+            "nbformat_minor": 5,
+        }
+    )
+
+
+def repo(tmp_path: Path, *, lessons=(), blueprints=()) -> Path:
+    """A small repository with a site directory, some lessons and some blueprints."""
+    (tmp_path / "site" / "docs" / "stylesheets").mkdir(parents=True)
+    (tmp_path / "site" / "head.yml").write_text(HEAD)
+    (tmp_path / "site" / "docs" / "index.md").write_text("# Home\n")
+
+    for identifier, title, status in lessons:
+        directory = tmp_path / "lessons" / identifier
+        (directory / "assets").mkdir(parents=True)
+        (directory / "meta.toml").write_text(
+            LESSON_META.format(identifier=identifier, title=title, status=status)
+        )
+        (directory / f"{identifier}.ipynb").write_text(notebook())
+        (directory / "assets" / "picture.svg").write_text("<svg></svg>")
+        (directory / "assets" / "picture.diagram.py").write_text("# not a picture\n")
+
+    if blueprints:
+        (tmp_path / "blueprints").mkdir(parents=True, exist_ok=True)
+    for name, title, status in blueprints:
+        (tmp_path / "blueprints" / f"{name}.md").write_text(
+            BLUEPRINT.format(name=name, title=title, status=status)
+        )
+    return tmp_path
+
+
+# -- finding what is on disk ----------------------------------------------------------------------
+
+
+def test_a_lesson_is_found_by_its_metadata(tmp_path):
+    root = repo(tmp_path, lessons=[("Z02", "Your first trace", "draft")])
+    found = sitebuild.find_lessons(root)
+    assert [one.identifier for one in found] == ["Z02"]
+    assert found[0].title == "Your first trace"
+    assert found[0].status == "draft"
+
+
+def test_a_blueprint_is_found_by_its_front_matter(tmp_path):
+    root = repo(tmp_path, blueprints=[("page-fault", "The page fault path", "partial")])
+    found = sitebuild.find_blueprints(root)
+    assert [one.name for one in found] == ["page-fault"]
+    assert found[0].status == "partial"
+    assert found[0].arch == "x86_64"
+
+
+def test_the_template_and_the_readme_are_not_blueprints(tmp_path):
+    root = repo(tmp_path, blueprints=[("page-fault", "The page fault path", "partial")])
+    for name in ("README.md", "TEMPLATE.md", "NOTATION.md"):
+        (root / "blueprints" / name).write_text("# Not a blueprint\n")
+    assert [one.name for one in sitebuild.find_blueprints(root)] == ["page-fault"]
+
+
+# -- the navigation -------------------------------------------------------------------------------
+
+
+def test_every_lesson_on_disk_reaches_the_navigation(tmp_path):
+    root = repo(
+        tmp_path,
+        lessons=[("Z02", "Your first trace", "draft"), ("S05", "The first ops plug", "draft")],
+    )
+    nav = sitebuild.navigation(sitebuild.find_lessons(root), [])
+    assert "lessons/Z02/index.ipynb" in nav
+    assert "lessons/S05/index.ipynb" in nav
+
+
+def test_a_lesson_that_is_removed_leaves_no_entry_behind(tmp_path):
+    """The half people forget.
+
+    A dead navigation entry is not a broken page, it is a page that never gets built, and under
+    `--strict` MkDocs stops on it. Working that out from a strict build failure is worse than
+    never being able to write it down in the first place.
+    """
+    root = repo(tmp_path, lessons=[("Z02", "Your first trace", "draft")])
+    text = sitebuild.config(root, sitebuild.find_lessons(root), [])
+    assert "Z02" in text
+
+    for one in (root / "lessons" / "Z02").rglob("*"):
+        if one.is_file():
+            one.unlink()
+    assert "Z02" not in sitebuild.config(root, sitebuild.find_lessons(root), [])
+
+
+def test_the_navigation_carries_the_lesson_title_not_just_the_identifier(tmp_path):
+    root = repo(tmp_path, lessons=[("Z02", "Your first trace", "draft")])
+    nav = sitebuild.navigation(sitebuild.find_lessons(root), [])
+    assert '"Z02: Your first trace"' in nav
+
+
+def test_the_generated_config_says_it_is_generated(tmp_path):
+    root = repo(tmp_path)
+    text = sitebuild.config(root, [], [])
+    assert text.startswith("# Generated by tools/sitebuild.py")
+    assert "site_name: Test book" in text
+
+
+# -- the index pages ------------------------------------------------------------------------------
+
+
+def test_the_lesson_index_says_the_status_and_links_to_colab(tmp_path):
+    root = repo(tmp_path, lessons=[("Z02", "Your first trace", "draft")])
+    page = sitebuild.lesson_index(sitebuild.find_lessons(root))
+    assert "kx-status-draft" in page
+    assert "colab.research.google.com/github/tamnd/linux-kernel-internals" in page
+    assert "of 103 planned" in page
+
+
+def test_the_blueprint_index_says_which_kernel_and_which_architecture(tmp_path):
+    root = repo(tmp_path, blueprints=[("page-fault", "The page fault path", "partial")])
+    page = sitebuild.blueprint_index(sitebuild.find_blueprints(root))
+    assert "v7.2.2" in page
+    assert "x86_64" in page
+    assert "kx-status-partial" in page
+
+
+# -- the stylesheet -------------------------------------------------------------------------------
+
+
+def test_the_stylesheet_comes_from_the_one_list_of_colours():
+    from kxray import vocabulary
+
+    css = sitebuild.stylesheet()
+    for one in vocabulary.SUBSYSTEMS:
+        assert f"--kx-{one.key}-stroke: {one.stroke};" in css
+
+
+def test_the_stylesheet_has_a_class_for_every_status():
+    css = sitebuild.stylesheet()
+    for status in sitebuild.STATUSES:
+        assert f".kx-status-{status} {{" in css
+
+
+# -- staging --------------------------------------------------------------------------------------
+
+
+def test_staging_puts_the_notebook_where_the_url_is_the_lesson(tmp_path):
+    root = repo(tmp_path, lessons=[("Z02", "Your first trace", "draft")])
+    sitebuild.stage(root, sitebuild.find_lessons(root), [])
+    assert (root / "site" / "docs" / "lessons" / "Z02" / "index.ipynb").exists()
+
+
+def test_staging_brings_the_pictures_and_leaves_their_sources_behind(tmp_path):
+    """A diagram source is Python, and a Python file in the docs tree is a page nobody asked for."""
+    root = repo(tmp_path, lessons=[("Z02", "Your first trace", "draft")])
+    sitebuild.stage(root, sitebuild.find_lessons(root), [])
+    assets = root / "site" / "docs" / "lessons" / "Z02" / "assets"
+    assert (assets / "picture.svg").exists()
+    assert not (assets / "picture.diagram.py").exists()
+
+
+def test_staging_again_removes_what_is_no_longer_there(tmp_path):
+    root = repo(tmp_path, lessons=[("Z02", "Your first trace", "draft")])
+    sitebuild.stage(root, sitebuild.find_lessons(root), [])
+
+    stale = root / "site" / "docs" / "lessons" / "Z99"
+    stale.mkdir()
+    (stale / "index.ipynb").write_text(notebook())
+
+    sitebuild.stage(root, sitebuild.find_lessons(root), [])
+    assert not stale.exists()
+
+
+# -- the check ------------------------------------------------------------------------------------
+
+
+def test_check_fails_when_the_config_is_out_of_date(tmp_path):
+    root = repo(tmp_path, lessons=[("Z02", "Your first trace", "draft")])
+    sitebuild.build(root)
+
+    (root / "site" / "mkdocs.yml").write_text("site_name: edited by hand\n")
+    stale, lines = sitebuild.build(root, check=True)
+    assert stale == 1
+    assert any("mkdocs.yml is out of date" in line for line in lines)
+
+
+def test_check_writes_nothing(tmp_path):
+    root = repo(tmp_path, lessons=[("Z02", "Your first trace", "draft")])
+    sitebuild.build(root, check=True)
+    assert not (root / "site" / "mkdocs.yml").exists()
+    assert not (root / "site" / "docs" / "lessons").exists()
+
+
+def test_building_twice_changes_nothing_the_second_time(tmp_path):
+    root = repo(tmp_path, lessons=[("Z02", "Your first trace", "draft")])
+    sitebuild.build(root)
+    stale, _ = sitebuild.build(root, check=True)
+    assert stale == 0
+
+
+# -- what is actually in the repository -------------------------------------------------------------
+
+
+def test_this_repository_is_up_to_date():
+    stale, lines = sitebuild.build(ROOT, check=True)
+    assert stale == 0, lines
+
+
+def test_the_handwritten_pages_the_navigation_promises_are_on_disk():
+    for _, page in sitebuild.FRONT:
+        assert (ROOT / "site" / "docs" / page).exists(), page

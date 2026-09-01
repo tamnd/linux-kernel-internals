@@ -23,6 +23,18 @@ animation = [
   "manim>=0.18",
 ]
 
+# The published book. Not in `dev` and not in the fast CI job, for the same reason as animation:
+# the theme and the notebook renderer are a slow install to check something most pushes do not
+# touch. Everything except the render, including the navigation and the staging, works without it.
+# Held below MkDocs 2.0 deliberately. 2.0 removes the plugin system, and the notebook renderer
+# that turns a lesson into a page is a plugin. Moving up is a decision with work attached, not
+# something that should happen on its own in a CI run one morning.
+site = [
+  "mkdocs>=1.6,<2",
+  "mkdocs-material>=9.5,<10",
+  "mkdocs-jupyter>=0.25",
+]
+
 [project.scripts]
 lintprose = "tools.lintprose.__main__:main"
 kxmanim = "kxmanim.__main__:main"
@@ -55,3 +67,5 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 # A lesson builder holds the lesson prose, and the house rule is that a paragraph is one line, so
 # every paragraph in it is over the limit by design.
 "lessons/*/build.py" = ["E501"]
+# Same reason: the site builder holds the prose of the two index pages, one paragraph per line.
+"tools/sitebuild.py" = ["E501"]
