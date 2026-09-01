@@ -42,7 +42,18 @@ from kxray.btf.format import (
     BtfError,
     Header,
 )
-from kxray.models import EnumValue, Field, Hole, Layout, Member, Param, SecInfo, Type
+from kxray.models import (
+    EnumValue,
+    Field,
+    Hole,
+    Layout,
+    Member,
+    OpsTable,
+    Param,
+    SecInfo,
+    Slot,
+    Type,
+)
 
 VOID = Type(id=0, kind="void", name="void", size=0)
 
@@ -301,6 +312,58 @@ class Btf:
         if size is not None and size > cursor:
             holes.append(Hole(previous, cursor, size - cursor))
         return holes
+
+    def ops(self, name: str, *, instance: str | None = None) -> OpsTable:
+        """The function pointer slots in a struct, which is the kernel's version of an interface.
+
+        A member counts as a slot when it is a pointer to a function. Everything else in the
+        struct is data and comes back separately, because an ops table usually has an owner field
+        or a flags word in the middle of it and a reader looking for the operations does not want
+        those in the list.
+
+        Nothing here says what is in the slots. That is a fact about a running kernel, so it
+        arrives later through `with_implementations` and every slot reads as empty until it does.
+        """
+        one = self.struct(name)
+        slots: list[Slot] = []
+        data: list[Field] = []
+        for member in one.members:
+            pointer = self.resolve(member.type_id)
+            target = self.resolve(pointer.type_id) if pointer.kind == "ptr" else None
+            if target is not None and target.kind == "func_proto":
+                signature = self._slot_signature(member.name, target)
+                slots.append(Slot(member.name, signature, member.byte_offset))
+            else:
+                data.append(
+                    Field(
+                        path=member.name or "<anonymous>",
+                        type_name=self.type_name(member.type_id),
+                        byte_offset=member.byte_offset,
+                        bit_offset=member.bit_offset,
+                        size=self.size_of(member.type_id),
+                        bitfield_size=self._bitfield_size(member, self.resolve(member.type_id)),
+                    )
+                )
+        return OpsTable(
+            name=f"{one.kind} {name}",
+            slots=slots,
+            data_fields=data,
+            size=one.size,
+            instance=instance,
+        )
+
+    def _slot_signature(self, name: str, proto: Type) -> str:
+        """A slot written the way the struct declares it, pointer star and all."""
+        args = []
+        for param in proto.params:
+            rendered = self.type_name(param.type_id)
+            if param.name:
+                joiner = "" if rendered.endswith("*") else " "
+                rendered = f"{rendered}{joiner}{param.name}"
+            args.append(rendered)
+        returns = self.type_name(proto.type_id)
+        joiner = "" if returns.endswith("*") else " "
+        return f"{returns}{joiner}(*{name})({', '.join(args) or 'void'})"
 
     def offset_of(self, path: str) -> int:
         """The byte offset of a field, written as `task_struct.mm` or `task_struct.se.on_rq`."""

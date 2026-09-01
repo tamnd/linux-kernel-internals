@@ -352,3 +352,82 @@ class Layout:
         for hole in self.holes:
             out.append(f"{hole.size} byte hole at offset {hole.byte_offset}, after {hole.after}")
         return "\n".join(out)
+
+
+@dataclass(frozen=True)
+class Slot:
+    """One function pointer in an ops table.
+
+    `filled_by` is the name of the function that is actually in the slot. It stays None until
+    somebody reads a real instance out of a real kernel, because what a function pointer holds is
+    a fact about a running machine and not about a type. The type only says what shape it has to
+    be.
+    """
+
+    name: str
+    signature: str
+    byte_offset: int
+    filled_by: str | None = None
+
+    @property
+    def filled(self) -> bool:
+        return self.filled_by is not None
+
+
+@dataclass
+class OpsTable:
+    """A struct of function pointers, which is how the kernel does polymorphism.
+
+    There is no `class` in C and no vtable the compiler makes for you, so the kernel writes one by
+    hand: a struct full of function pointers, one instance per implementation, and a pointer to
+    the instance hanging off the object. `file_operations`, `inode_operations` and `net_device_ops`
+    are all this. Learn to read one and a large part of the kernel stops being a mystery.
+
+    `instance` is the name of the particular one being looked at, such as `ext4_file_operations`.
+    It is None when what is being looked at is the interface rather than an implementation of it.
+    """
+
+    name: str
+    slots: list[Slot] = field(default_factory=list)
+    data_fields: list[Field] = field(default_factory=list)
+    size: int | None = None
+    instance: str | None = None
+
+    @property
+    def filled(self) -> list[Slot]:
+        return [one for one in self.slots if one.filled]
+
+    def slot(self, name: str) -> Slot:
+        for one in self.slots:
+            if one.name == name:
+                return one
+        raise KeyError(f"{self.name} has no slot called {name!r}")
+
+    def with_implementations(self, filled: dict[str, str]) -> OpsTable:
+        """The same table with the slots filled in, for when you know what is in the instance.
+
+        Returns a new table rather than changing this one, so the interface and an implementation
+        of it can sit side by side without one quietly overwriting the other.
+        """
+        unknown = sorted(set(filled) - {one.name for one in self.slots})
+        if unknown:
+            raise KeyError(f"{self.name} has no slot called {unknown[0]!r}")
+        slots = [
+            Slot(one.name, one.signature, one.byte_offset, filled.get(one.name, one.filled_by))
+            for one in self.slots
+        ]
+        return OpsTable(self.name, slots, self.data_fields, self.size, self.instance)
+
+    def table(self) -> str:
+        rows = [("offset", "slot", "filled by")]
+        for one in self.slots:
+            rows.append((str(one.byte_offset), one.name, one.filled_by or "nothing yet"))
+        widths = [max(len(row[i]) for row in rows) for i in range(3)]
+        out = []
+        for index, row in enumerate(rows):
+            out.append("  ".join(cell.ljust(widths[i]) for i, cell in enumerate(row)).rstrip())
+            if index == 0:
+                out.append("  ".join("-" * width for width in widths))
+        out.append("")
+        out.extend(one.signature for one in self.slots)
+        return "\n".join(out)

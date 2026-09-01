@@ -21,7 +21,7 @@ linux-kernel-internals/
 │   ├── kernel/              #   pin.toml, config fragments, build.sh, results
 │   ├── rootfs/              #   busybox, strace, our tools
 │   └── bridge/              #   run a command, read a file, collect a trace
-├── kxwidgets/               # anywidget: SyscallTape, StructMap, LockTimeline
+├── kxwidgets/               # SyscallTape, StructMap, OpsExplorer, PredictionGate
 ├── kxmanim/                 # manim scenes and reusable objects
 ├── kxdraw/                  # diagrams as code, out to svg and excalidraw
 ├── lessons/                 # 103 lessons: build.py, its notebook, assets, grader
@@ -43,6 +43,8 @@ The line that matters is the tier boundary. `kxray`, `kxwidgets` and the JavaScr
 
 That is also why the analysis toolkit is pure Python with no C extensions. It costs some speed and it rules out drgn, which is the tool you would reach for first on a real machine. The trade is worth it, because a reader with no local toolchain can still do the work.
 
+`kxwidgets/` renders the models and never parses anything. It draws plain HTML with the styling written inline, and it ships no JavaScript at all. That is a decision rather than a shortcut. A lesson exists in four places at once: a notebook on somebody's laptop, the same notebook in Colab, the committed output on GitHub, and a page on the published site. A live widget works in the first two and is a blank space in the other two, and most readers read rather than run. The cost is that nothing responds to a click except a fold, so anything interactive is a Python call in the next cell instead.
+
 `kxbox/kernel/` is the version and the config, and nothing else. `pin.toml` says which kernel, from which URL, with which checksum, and lists the profiles we build. The `config/` fragments say what each profile turns on. `build.sh` downloads, verifies and builds one profile in a container, and `tools/kconfig` checks the whole lot without a toolchain, so a wrong pin fails CI in seconds instead of an hour into a build.
 
 `corpora/` is committed on purpose. A trace that a lesson depends on is an input to the build, not a scratch file, and a lesson whose evidence is not in the repository is a lesson nobody can check.
@@ -56,6 +58,8 @@ A new parser goes in `kxray/`, with its fixture in `corpora/` and its test in `t
 A new lesson goes in `lessons/<ID>/`, where the identifier comes from the curriculum and never changes. The lesson itself is `build.py`, and the `.ipynb` and `lesson.md` beside it are output, written by `just build-lessons` and checked in CI.
 
 A new diagram goes in that lesson's `assets/` as a file named `*.diagram.py`. The `.svg` and `.excalidraw` beside it are output, written by `just diagrams` and checked in CI, so editing them by hand gets reverted by the next build. Every diagram source has to define an `ALT` string, and the build fails without one.
+
+A new widget goes in `kxwidgets/`, takes a model out of `kxray.models` and nothing else, and has to draw itself as text as well as as HTML. The text version is what a screen reader gets and what a test asserts on, so a widget without one is not finished. Add it to the preview page in `kxwidgets/__main__.py` in the same pull request, because a visual thing nobody looks at goes wrong quietly.
 
 A new checker goes in `tools/`, with tests, and gets wired into `justfile` and CI in the same pull request. A checker that is not in CI is a suggestion.
 
