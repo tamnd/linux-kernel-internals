@@ -1,0 +1,52 @@
+schema = 1
+lesson = "Z02"
+
+# Nothing here is verified yet, and that is the honest state of this lesson rather than an
+# oversight. The trace claims need a real capture and there is no way to make one until kxbox
+# boots. The source claims need the pinned tree checked in and refcheck working, so that the
+# citation is a line the build can find again rather than a line number I typed once.
+#
+# `pending` says what will settle each claim. It is a note to the next person, not a field the
+# ledger reads.
+
+[[claims]]
+id = "Z02-01"
+text = "With the function_graph tracer on, the kernel writes a line when a function is entered and a line when it returns, and a function that calls nothing gets a single line with its duration."
+evidence_kind = "source"
+pending = "citation into Documentation/trace/ftrace.rst on the pinned tree, checked by refcheck"
+verified = false
+
+[[claims]]
+id = "Z02-02"
+text = "The character before the duration is a slowness marker, and the kernel prints the marker instead of the threshold: + is over 10 us, ! is over 100 us, # is over 1000 us, * is over 10 ms, @ is over 100 ms, and $ is over 1 s."
+evidence_kind = "source"
+pending = "citation into Documentation/trace/ftrace.rst on the pinned tree, checked by refcheck"
+verified = false
+
+[[claims]]
+id = "Z02-03"
+text = "The trace file holds the output of every CPU in one stream, so indentation belongs to a CPU and not to the file, and two lines next to each other can come from two different call stacks."
+evidence_kind = "trace"
+pending = "a capture on a machine with more than one CPU, which Tier 0 cannot produce because v86 is uniprocessor"
+verified = false
+
+[[claims]]
+id = "Z02-04"
+text = "The buffer behind the trace file is a ring, so a trace that runs for long enough loses its oldest lines, and the count of what was lost is in the per CPU stats file rather than in the trace."
+evidence_kind = "proc"
+pending = "a snapshot of per_cpu/cpu0/stats with a non zero overrun, taken by filling the buffer on purpose"
+verified = false
+
+[[claims]]
+id = "Z02-05"
+text = "Writing one byte to a file enters the kernel at the write system call and reaches the filesystem through vfs_write, and the work underneath that is where the time goes."
+evidence_kind = "trace"
+pending = "a function_graph capture of a one byte write, taken from the browser once kxbox boots"
+verified = false
+
+[[claims]]
+id = "Z02-06"
+text = "Tracing every function costs the traced work real time, so the same write measured with the tracer on takes longer than with it off."
+evidence_kind = "experiment"
+pending = "the reader runs it both ways and compares, so this is verified once the notebook runs against a live kernel"
+verified = false

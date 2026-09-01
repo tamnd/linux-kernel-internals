@@ -34,10 +34,10 @@ A lesson is written in blocks, marked with an HTML comment so the length caps fo
 
 The whole file is capped at 2500 words. A lesson that will not fit is two lessons.
 
-## Nothing here is empty yet
+## The pilot
 
 The first three lessons are the M0 pilot, and they exist to find out whether the format works before 100 more get written in it.
 
-- `Z02`, your first trace
-- `S05`, the first ops plug
-- `C09`, lockdep
+- `Z02`, your first trace. Written, and a draft until there is a real capture behind it.
+- `S05`, the first ops plug. Not started.
+- `C09`, lockdep. Not started.
