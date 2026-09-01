@@ -5,7 +5,7 @@ default:
     @just --list
 
 # Everything CI runs, in the same order. Run this before you open a pull request.
-check: lint prose diagrams-check claims blueprints kconfig notebooks test
+check: lint prose diagrams-check claims refs blueprints kconfig notebooks test
 
 # Install the development dependencies into a local virtual environment.
 setup:
@@ -37,6 +37,18 @@ claims:
 # Print the kinds of evidence a claim is allowed to rest on.
 claim-kinds:
     python3 -m tools.claimledger --list-kinds
+
+# Check every reference: paths we write about, and citations into the kernel.
+refs:
+    python3 -m tools.refcheck
+
+# Resolve every kernel citation against a real tree, and write the line numbers back.
+refs-confirm tree:
+    python3 -m tools.refcheck --tree {{tree}} --confirm
+
+# Print the paths this repository writes about that do not exist yet.
+refs-planned:
+    python3 -m tools.refcheck --list-planned
 
 # Check the shape of every blueprint, and the seals on its generated sections.
 blueprints:

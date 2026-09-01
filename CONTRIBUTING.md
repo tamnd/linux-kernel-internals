@@ -46,7 +46,7 @@ Nothing goes in a lesson that the reader cannot watch happen. That is the whole 
 Every lesson has a `claims.toml` listing what it tells the reader is true and what backs each one. `just claims` checks it, and so does CI. Run `just claim-kinds` to see the kinds of evidence a claim is allowed to rest on:
 
 - a trace, a `/proc` snapshot or a BTF dump committed under `corpora/`
-- a citation into the pinned kernel tree, by file and line, with a context hash so `refcheck` notices when the line moves
+- a citation into the pinned kernel tree, by file and by a piece of text to find in it, never by a line number, so `refcheck` can find it again after it moves
 - a litmus test under `tools/memory-model/` with its `herd7` output
 - something the reader runs and sees for themselves
 - an explicit mark saying no one can observe this, of which a lesson gets at most two

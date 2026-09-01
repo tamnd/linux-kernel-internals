@@ -74,6 +74,8 @@ Every diagram carries alt text, and the build fails without it.
 
 ## References
 
-A blueprint cites the kernel by path and line: `mm/memory.c:5310`. Once `refcheck` is running, each citation also carries a hash of the lines around it, so the build notices when the line moves rather than silently pointing at whatever is there now.
+A blueprint cites the kernel by path and by a piece of text to find in that path. Never by a line number. `mm/memory.c:5310` is correct on the day it is typed and wrong after the next patch, and the wrongness is silent, because a stale line number still points at a line.
+
+The citation itself lives in `refs.toml` beside the lesson or the blueprint, and the prose refers to it by its identifier. `refcheck` resolves the anchor against a real kernel tree, writes down the line it was on, and fails loudly when the anchor is gone rather than pointing confidently at something else.
 
 A blueprint never references a lesson. Not "as we saw", not "recall that", not "see the chapter". If an implementer needs it, it goes in the blueprint even if the lesson already said it, and `bpc` fails the build on the phrases.

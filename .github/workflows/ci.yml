@@ -67,6 +67,11 @@ jobs:
       - name: Claim ledger
         run: python3 -m tools.claimledger
 
+      # Every path this repository writes about, and every citation into the kernel. Catches a
+      # file that moved and left the documents pointing at where it used to be.
+      - name: References
+        run: python3 -m tools.refcheck
+
       # The blueprint shape, and the seal on every generated section.
       - name: Blueprints
         run: python3 -m tools.bpc

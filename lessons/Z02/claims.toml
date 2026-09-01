@@ -3,8 +3,9 @@ lesson = "Z02"
 
 # Nothing here is verified yet, and that is the honest state of this lesson rather than an
 # oversight. The trace claims need a real capture and there is no way to make one until kxbox
-# boots. The source claims need the pinned tree checked in and refcheck working, so that the
-# citation is a line the build can find again rather than a line number I typed once.
+# boots. The source claims name a citation in refs.toml beside this file, and neither citation is
+# confirmed, because confirming one means resolving its anchor against a real 7.2.2 tree and there
+# is not one here yet.
 #
 # `pending` says what will settle each claim. It is a note to the next person, not a field the
 # ledger reads.
@@ -13,14 +14,16 @@ lesson = "Z02"
 id = "Z02-01"
 text = "With the function_graph tracer on, the kernel writes a line when a function is entered and a line when it returns, and a function that calls nothing gets a single line with its duration."
 evidence_kind = "source"
-pending = "citation into Documentation/trace/ftrace.rst on the pinned tree, checked by refcheck"
+evidence = "Z02-R1"
+pending = "somebody with a 7.2.2 tree runs refcheck --tree --confirm, which resolves the anchor"
 verified = false
 
 [[claims]]
 id = "Z02-02"
 text = "The character before the duration is a slowness marker, and the kernel prints the marker instead of the threshold: + is over 10 us, ! is over 100 us, # is over 1000 us, * is over 10 ms, @ is over 100 ms, and $ is over 1 s."
 evidence_kind = "source"
-pending = "citation into Documentation/trace/ftrace.rst on the pinned tree, checked by refcheck"
+evidence = "Z02-R2"
+pending = "somebody with a 7.2.2 tree runs refcheck --tree --confirm, which resolves the anchor"
 verified = false
 
 [[claims]]

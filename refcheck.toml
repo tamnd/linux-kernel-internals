@@ -1,0 +1,15 @@
+schema = 1
+
+# Paths this repository writes about that do not exist yet.
+#
+# Writing about a directory before it exists is fine, and this project does it on purpose, because
+# the plan is public and it is easier to argue with a plan you can see. Doing it silently is not
+# fine, because then nobody can tell a plan from a broken link. So a path that is not there yet is
+# declared here with a reason, the same way a config profile declares a symbol it drops.
+#
+# When the path turns up, the checker fails until the entry is deleted, so this list cannot rot in
+# the other direction either.
+
+[[planned]]
+path = "tools/memory-model/"
+reason = "The litmus tests and their herd7 output, which arrive with the concurrency part in M4. CONTRIBUTING names it now because litmus is already one of the kinds of evidence a claim may rest on."

@@ -31,7 +31,7 @@ linux-kernel-internals/
 ├── conformance/             # kxdiff, graders, KUnit and kselftest drivers
 ├── site/                    # the published book
 ├── containers/              # the Tier 1 image, devcontainer, CI image
-├── tools/                   # lintprose, claimledger, bpc, kconfig, nbbuild, diagrams
+├── tools/                   # lintprose, claimledger, refcheck, bpc, kconfig, nbbuild
 └── justfile
 ```
 
@@ -58,5 +58,7 @@ A new lesson goes in `lessons/<ID>/`, where the identifier comes from the curric
 A new diagram goes in that lesson's `assets/` as a file named `*.diagram.py`. The `.svg` and `.excalidraw` beside it are output, written by `just diagrams` and checked in CI, so editing them by hand gets reverted by the next build. Every diagram source has to define an `ALT` string, and the build fails without one.
 
 A new checker goes in `tools/`, with tests, and gets wired into `justfile` and CI in the same pull request. A checker that is not in CI is a suggestion.
+
+A citation into the kernel goes in `refs.toml` beside the lesson, anchored on a piece of text rather than on a line number, and the prose refers to it by identifier. A path into this repository that does not exist yet goes in `refcheck.toml` with a reason.
 
 Anything that has to run inside the kernel goes in `kxprobe/`, and it is GPL-2.0-only with `MODULE_LICENSE("GPL")` at the top. There is no choice about this and no exceptions.
