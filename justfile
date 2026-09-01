@@ -5,7 +5,7 @@ default:
     @just --list
 
 # Everything CI runs, in the same order. Run this before you open a pull request.
-check: lint prose diagrams-check claims refs blueprints kconfig notebooks test
+check: lint prose diagrams-check claims refs blueprints kconfig storyboards notebooks test
 
 # Install the development dependencies into a local virtual environment.
 setup:
@@ -69,6 +69,18 @@ kconfig-required:
 # Build one profile of the pinned kernel in a container. Takes a while the first time.
 kernel profile="A-full":
     ./kxbox/kernel/build.sh {{profile}}
+
+# Check every storyboard against the rules: the budget, the captions, the alt text, the still.
+storyboards:
+    python3 -m kxmanim
+
+# Write the caption track and the transcript for every storyboard.
+captions out="/tmp/kxmanim":
+    python3 -m kxmanim --captions {{out}}
+
+# Install manim, which nothing except rendering an animation needs.
+setup-animation:
+    uv pip install -e ".[animation]"
 
 # Draw all four widgets into one page, from the handwritten fixtures, so you can look at them.
 widgets out="/tmp/kxwidgets.html":

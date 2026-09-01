@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 560" width="1000" height="560" role="img" aria-label="One file, two call stacks">
+  <title>One file, two call stacks</title>
+  <desc>On the left, one file called slash sys slash kernel slash tracing slash trace, holding six lines in the order they appear. The lines alternate between two CPUs: CPU 0 enters vfs_write, CPU 1 enters handle_mm_fault, CPU 0 enters generic_perform_write, CPU 1 returns, CPU 0 returns, CPU 0 returns. An arrow labelled split by the CPU column leads right to two stacked boxes. The top box is CPU 0 and holds a call stack three deep: vfs_write, then generic_perform_write, then copy_page_from_iter_atomic. The bottom box is CPU 1 and holds a call stack one deep: handle_mm_fault. A note underneath says the indentation belongs to a CPU and not to the file.</desc>
+  <defs>
+    <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#495057"/>
+    </marker>
+  </defs>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="40.0" y="44.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="20.0" fill="#1e1e1e" text-anchor="start" dominant-baseline="middle">One file, two call stacks</text>
+  <text x="40.0" y="70.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">The first column is the CPU. It is the only thing holding this apart.</text>
+  <rect x="40.0" y="110.0" width="380.0" height="210.0" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+  <text x="230.0" y="174.4" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">0)               |  vfs_write() {</text>
+  <text x="230.0" y="190.6" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">1)               |    handle_mm_fault() {</text>
+  <text x="230.0" y="206.9" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">0)               |    generic_perform_write() {</text>
+  <text x="230.0" y="223.1" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">1)   2.104 us    |    }</text>
+  <text x="230.0" y="239.4" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">0)   0.318 us    |    }</text>
+  <text x="230.0" y="255.6" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">0) + 12.771 us   |  }</text>
+  <text x="40.0" y="336.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">/sys/kernel/tracing/trace</text>
+  <rect x="560.0" y="110.0" width="400.0" height="94.0" rx="8" fill="#d0ebff" stroke="#1971c2" stroke-width="2"/>
+  <text x="760.0" y="140.8" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle">vfs_write</text>
+  <text x="760.0" y="157.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle">  generic_perform_write</text>
+  <text x="760.0" y="173.2" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle">    copy_page_from_iter_atomic</text>
+  <text x="560.0" y="96.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">CPU 0</text>
+  <rect x="560.0" y="246.0" width="400.0" height="60.0" rx="8" fill="#d0ebff" stroke="#1971c2" stroke-width="2"/>
+  <text x="760.0" y="276.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle">handle_mm_fault</text>
+  <text x="560.0" y="232.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">CPU 1</text>
+  <line x1="420.0" y1="215.0" x2="560.0" y2="157.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <text x="490.0" y="174.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="middle" dominant-baseline="middle">split by the CPU column</text>
+  <line x1="420.0" y1="215.0" x2="560.0" y2="276.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <text x="40.0" y="400.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="14.0" fill="#1e1e1e" text-anchor="start" dominant-baseline="middle">Read the file top to bottom and vfs_write looks like it called handle_mm_fault.</text>
+  <text x="40.0" y="424.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="14.0" fill="#1e1e1e" text-anchor="start" dominant-baseline="middle">It did not. They ran at the same time on two CPUs, and the file interleaved them.</text>
+  <text x="40.0" y="470.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">The indentation belongs to a CPU, not to the file. One stack per CPU, always.</text>
+  <text x="40.0" y="494.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">Tier 0 cannot show you this. v86 is uniprocessor, so every line in it says 0.</text>
+</svg>

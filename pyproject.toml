@@ -15,16 +15,25 @@ dev = [
   "ruff>=0.6",
 ]
 
+# Rendering animations, and nothing else. This is not in `dev` and it is not in CI on purpose.
+# manim pulls in cairo, pango and a video encoder, which is several minutes of install on every
+# push to check something no push changes. Everything except the render itself, including the
+# storyboard rules and all nine primitives, works without any of it.
+animation = [
+  "manim>=0.18",
+]
+
 [project.scripts]
 lintprose = "tools.lintprose.__main__:main"
+kxmanim = "kxmanim.__main__:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-# kxbox and kxmanim get added here as each one lands.
-packages = ["kxdraw", "kxray", "kxwidgets", "tools"]
+# kxbox gets added here when it lands.
+packages = ["kxdraw", "kxmanim", "kxray", "kxwidgets", "tools"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

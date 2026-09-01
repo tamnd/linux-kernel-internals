@@ -17,12 +17,12 @@ from pathlib import Path
 import pytest
 
 from kxray import btf
+from kxray.layout import place
 from kxray.models import Field, Frame, Layout, OpsTable, Slot, Tape, UnparsedLine
 from kxray.trace import function_graph
 from kxwidgets import OpsExplorer, PredictionGate, StructMap, SyscallTape, Widget
 from kxwidgets.html import attribute, card, details, page, style, tag, text
 from kxwidgets.structmap import CACHE_LINE
-from kxwidgets.tape import place
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "corpora" / "btf" / "handwritten" / "tiny.btf"
