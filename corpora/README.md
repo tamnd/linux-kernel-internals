@@ -9,7 +9,7 @@ Everything in here is committed, and everything in here is an input to the build
 ```
 corpora/
 ├── traces/          # ftrace function_graph and trace_event captures
-├── btf/             # vmlinux BTF blobs for the pinned kernels
+├── btf/             # vmlinux BTF blobs for the pinned kernels, and one small handwritten one
 ├── proc/            # /proc and /sys snapshots
 ├── oops/            # crash text used by the debugging lessons
 └── litmus/          # herd7 and klitmus7 output for the memory model lessons
@@ -24,6 +24,10 @@ Each file has a sibling `.meta.toml` saying where it came from, so a reader can 
 - the tier it came from, since Tier 0 is emulated and 32 bit
 - the command that produced it
 - when it was captured
+
+## The handwritten ones
+
+`traces/handwritten/` and `btf/handwritten/` are not evidence and never become evidence. They exist because a parser with nothing to parse is a parser nobody can trust, and there is no built kernel yet. Every `.meta.toml` in those two directories says `evidence = false`, and the claim checker rejects a claim that points at one, so the rule is enforced rather than remembered.
 
 ## Why files get regenerated rather than edited
 

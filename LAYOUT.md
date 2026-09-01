@@ -5,7 +5,7 @@ What lives where, and why the split falls where it does. Directories appear here
 ```
 linux-kernel-internals/
 ├── kxray/                   # Python: trace, BTF, /proc and dump analysis
-│   ├── btf/                 #   BTF reader: types, fields, offsets, type tags
+│   ├── btf/                 #   BTF reader: types, fields, offsets, holes, type tags
 │   ├── trace/               #   ftrace function_graph and trace_event parsers
 │   ├── proc/                #   /proc and /sys snapshot parsers
 │   ├── source/              #   kernel tree navigation, Kconfig, MAINTAINERS
@@ -46,6 +46,8 @@ That is also why the analysis toolkit is pure Python with no C extensions. It co
 `kxbox/kernel/` is the version and the config, and nothing else. `pin.toml` says which kernel, from which URL, with which checksum, and lists the profiles we build. The `config/` fragments say what each profile turns on. `build.sh` downloads, verifies and builds one profile in a container, and `tools/kconfig` checks the whole lot without a toolchain, so a wrong pin fails CI in seconds instead of an hour into a build.
 
 `corpora/` is committed on purpose. A trace that a lesson depends on is an input to the build, not a scratch file, and a lesson whose evidence is not in the repository is a lesson nobody can check.
+
+Two corpus directories are handwritten and are not evidence. `traces/handwritten/` and `btf/handwritten/` exist so the parsers have something to be tested against before a kernel exists, and both are marked `evidence = false` so the claim checker refuses to let a lesson cite them.
 
 ## Where to put a new file
 
