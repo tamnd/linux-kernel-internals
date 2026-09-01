@@ -70,6 +70,10 @@ kconfig-required:
 kernel profile="A-full":
     ./kxbox/kernel/build.sh {{profile}}
 
+# Draw all four widgets into one page, from the handwritten fixtures, so you can look at them.
+widgets out="/tmp/kxwidgets.html":
+    python3 -m kxwidgets --preview {{out}}
+
 # Rebuild the small handwritten BTF blob the reader is tested against.
 btf-fixture:
     python3 corpora/btf/handwritten/make.py

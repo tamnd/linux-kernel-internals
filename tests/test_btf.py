@@ -341,6 +341,86 @@ def test_a_parameter_with_no_name_comes_out_as_its_type_alone():
     assert btf.parse(b.build()).signature("unnamed") == "int unnamed(int)"
 
 
+# -- ops tables ------------------------------------------------------------------------------
+
+
+def ops_blob() -> bytes:
+    """A struct with two function pointers and one field that is not one."""
+    b = writer.Builder()
+    i32 = b.int_("int", 4)
+    u64 = b.int_("unsigned long long", 8)
+    void_ptr = b.ptr(0)
+    read = b.ptr(b.func_proto(i32, [("how_many", i32)]))
+    write = b.ptr(b.func_proto(0, [("", i32)]))
+    b.struct(
+        "demo",
+        32,
+        [("owner", void_ptr, 0), ("read", read, 64), ("write", write, 128), ("flags", u64, 192)],
+    )
+    return b.build()
+
+
+def test_the_slots_are_the_members_that_are_pointers_to_a_function():
+    table = btf.parse(ops_blob()).ops("demo")
+    assert [one.name for one in table.slots] == ["read", "write"]
+
+
+def test_everything_that_is_not_a_slot_comes_back_as_data():
+    """An ops table with a flags word in it is normal, and the flags word is not an operation."""
+    table = btf.parse(ops_blob()).ops("demo")
+    assert [one.path for one in table.data_fields] == ["owner", "flags"]
+
+
+def test_a_pointer_to_something_that_is_not_a_function_is_not_a_slot():
+    table = btf.parse(ops_blob()).ops("demo")
+    assert "owner" not in [one.name for one in table.slots]
+
+
+def test_a_slot_knows_its_offset_and_its_signature():
+    table = btf.parse(ops_blob()).ops("demo")
+    read = table.slot("read")
+    assert read.byte_offset == 8
+    assert read.signature == "int (*read)(int how_many)"
+
+
+def test_a_slot_with_nothing_in_it_says_so():
+    table = btf.parse(ops_blob()).ops("demo")
+    assert table.filled == []
+    assert all(not one.filled for one in table.slots)
+
+
+def test_filling_a_slot_leaves_the_original_alone():
+    """The interface and one implementation of it have to be able to sit side by side."""
+    table = btf.parse(ops_blob()).ops("demo")
+    filled = table.with_implementations({"read": "demo_read"})
+    assert filled.slot("read").filled_by == "demo_read"
+    assert table.slot("read").filled_by is None
+
+
+def test_filling_a_slot_that_does_not_exist_says_which_one():
+    table = btf.parse(ops_blob()).ops("demo")
+    with pytest.raises(KeyError, match="nonsense"):
+        table.with_implementations({"nonsense": "whatever"})
+
+
+def test_asking_for_a_slot_that_does_not_exist_says_which_one():
+    table = btf.parse(ops_blob()).ops("demo")
+    with pytest.raises(KeyError, match="nonsense"):
+        table.slot("nonsense")
+
+
+def test_an_ops_table_prints_its_slots_and_its_signatures():
+    printed = btf.parse(ops_blob()).ops("demo").table()
+    assert "read" in printed
+    assert "nothing yet" in printed
+    assert "int (*read)(int how_many)" in printed
+
+
+def test_a_struct_with_no_function_pointers_has_no_slots():
+    blob, _ = small()
+    assert btf.parse(blob).ops("point").slots == []
+
+
 # -- the committed fixture -------------------------------------------------------------------
 
 
@@ -381,6 +461,13 @@ def test_the_fixture_reads_the_same_on_a_32_bit_machine_except_for_the_pointers(
     narrow = btf.parse_file(FIXTURE, pointer_size=4).layout("demo_arg")
     assert wide.fields[0].size == 8
     assert narrow.fields[0].size == 4
+
+
+def test_the_fixture_has_an_ops_table_with_three_slots_and_one_field(tiny):
+    """`demo_ops` is in the fixture so the ops reader has something shaped like a real one."""
+    table = tiny.ops("demo_ops")
+    assert [one.name for one in table.slots] == ["open", "write", "release"]
+    assert [one.path for one in table.data_fields] == ["owner"]
 
 
 def test_the_fixture_table_prints_offsets_and_holes(tiny):

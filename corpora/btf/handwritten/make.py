@@ -96,6 +96,24 @@ def build() -> bytes:
     # of its widest member. A trailing hole is the one people miss.
     b.struct("demo_arg", 16, [("name", user_ptr, 0), ("len", u32, 8 * 8)])
 
+    # An ops table: a struct of function pointers with one field in the middle that is not one.
+    # Real ops tables all look like this, and the field that is not an operation is there because
+    # a reader has to see that the tool picks the slots out rather than listing every member.
+    b.struct(
+        "demo_ops",
+        32,
+        [
+            ("owner", void_ptr, 0 * 8),
+            ("open", b.ptr(b.func_proto(i32, [("task", task_ptr)])), 8 * 8),
+            (
+                "write",
+                b.ptr(b.func_proto(i64, [("task", task_ptr), ("buf", user_ptr), ("len", u32)])),
+                16 * 8,
+            ),
+            ("release", b.ptr(b.func_proto(0, [("task", task_ptr)])), 24 * 8),
+        ],
+    )
+
     opened = b.func_proto(i32, [("task", task_ptr), ("", u32)])
     b.func("demo_open", opened)
     b.func("demo_close", b.func_proto(0, [("task", task_ptr)]), linkage=0)

@@ -29,6 +29,7 @@ except ImportError:
 from kxray import colab, tracefs
 from kxray.models import DURATION_MARKERS
 from kxray.trace import function_graph
+from kxwidgets import PredictionGate, SyscallTape
 
 grader = colab.lesson_module("Z02", "grader")
 print("kxray", kxray.__version__, "ready")
@@ -125,6 +126,24 @@ for marker, meaning in DURATION_MARKERS.items():
 ```
 
 ## The thing that will catch you
+
+Before you read this section, answer the question in the next cell. It is the one thing in this lesson that people get wrong for months without noticing, and getting it wrong on the record right now is worth more than being told.
+
+```python
+PredictionGate(
+    "Two lines in a row, the same indentation, one starting `0)` and the next starting `1)`. "
+    "Is the second call happening inside the first one?",
+    options={
+        "a": "yes, the indentation is the call stack",
+        "b": "no, they are two different CPUs and have nothing to do with each other",
+        "c": "sometimes, it depends on the tracer options",
+    },
+    answer="b",
+    why="The trace file is every CPU's ring buffer read out together. The indentation belongs to "
+    "the CPU in brackets and not to the file, so two lines at the same depth from two CPUs are "
+    "two separate stacks that happen to be printed next to each other.",
+)
+```
 
 The trace file holds the output of every CPU in one stream, so indentation belongs to a CPU and not to the file, and two lines next to each other can come from two different call stacks.
 
@@ -260,6 +279,16 @@ print("outermost: ", [f.name for f in tape.roots])
 print("unparsed:  ", len(tape.unparsed))
 print()
 print(tape.tree(max_depth=3))
+```
+
+## Then look at it
+
+The same tape again, drawn. Each box is a call, the width is how long it took, and the row underneath a box is what that call called. The wide box is where your write actually went.
+
+Position from left is call order rather than a clock, because `function_graph` records how long a call took and not when it started. The gap at the right hand end of a box is the time that call spent in itself instead of in anything below it, and on a write that gap is usually small, which is the picture of a function whose whole job is to call the next one down.
+
+```python
+SyscallTape(tape, max_depth=4)
 ```
 
 ## Two wrong answers worth having
