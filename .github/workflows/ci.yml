@@ -47,6 +47,12 @@ jobs:
       - name: Test
         run: uv run python -m pytest
 
+      # The browser half of Tier 0. Node is here to run the tests and nothing else, and there are
+      # no dependencies to install, so this costs a few seconds. What it is worth is the blocking
+      # call across two real threads, which is the part of the design that is either true or not.
+      - name: Browser half
+        run: node --test tests/web/
+
   prose:
     name: prose
     runs-on: ubuntu-latest

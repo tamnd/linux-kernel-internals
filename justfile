@@ -5,7 +5,7 @@ default:
     @just --list
 
 # Everything CI runs, in the same order. Run this before you open a pull request.
-check: lint prose diagrams-check claims refs blueprints kconfig tier0 storyboards notebooks site-check test
+check: lint prose diagrams-check claims refs blueprints kconfig tier0 web storyboards notebooks site-check test
 
 # Install the development dependencies into a local virtual environment.
 setup:
@@ -78,6 +78,14 @@ tier0-report:
 # Fail if a Tier 0 recipe names a capture nobody committed.
 tier0:
     python3 -m kxbox --check
+
+# The browser half of Tier 0: the channel, the shell protocol and the blocking call.
+web:
+    node --test tests/web/
+
+# Serve kxbox/web with the two headers a blocking worker needs. There is nothing to boot yet.
+web-serve:
+    python3 kxbox/web/serve.py
 
 # Build one profile of the pinned kernel in a container. Takes a while the first time.
 kernel profile="A-full":

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Tier 0</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        margin: 0 auto;
+        max-width: 60rem;
+        padding: 2rem 1rem;
+      }
+      h1 {
+        font-size: 1.25rem;
+      }
+      #state {
+        color: #475569;
+      }
+      #console {
+        background: #0f172a;
+        border-radius: 6px;
+        color: #e2e8f0;
+        font-family: ui-monospace, monospace;
+        font-size: 0.8rem;
+        height: 24rem;
+        overflow-y: auto;
+        padding: 0.75rem;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Tier 0: a Linux kernel in this tab</h1>
+    <p id="state">Nothing has been built yet, so this page has nothing to boot. See kxbox/web/README.md.</p>
+    <div id="console" aria-live="polite" aria-label="Guest console output"></div>
+
+    <!-- The emulator itself. Not vendored yet, so this page does not work today. -->
+    <script src="vendor/v86/libv86.js"></script>
+    <script type="module">
+      import { start } from "./page.js";
+
+      const state = document.getElementById("state");
+      const output = document.getElementById("console");
+
+      if (!crossOriginIsolated) {
+        state.textContent =
+          "This page is not cross origin isolated, so the worker cannot block on the emulator. Serve it with kxbox/web/serve.py.";
+      } else if (typeof window.V86 === "undefined") {
+        state.textContent = "v86 is not vendored yet, so there is no emulator to boot.";
+      } else {
+        state.textContent = "Booting.";
+        start()
+          .then(({ emulator, booted }) => {
+            state.textContent = `Booted in ${booted.toFixed(1)} seconds.`;
+            const decoder = new TextDecoder();
+            emulator.add_listener("serial0-output-byte", (byte) => {
+              output.textContent += decoder.decode(new Uint8Array([byte]), { stream: true });
+              output.scrollTop = output.scrollHeight;
+            });
+          })
+          .catch((error) => {
+            state.textContent = `Did not boot: ${error.message}`;
+          });
+      }
+    </script>
+  </body>
+</html>
