@@ -5,7 +5,7 @@ default:
     @just --list
 
 # Everything CI runs, in the same order. Run this before you open a pull request.
-check: lint prose diagrams-check claims refs blueprints kconfig storyboards notebooks site-check test
+check: lint prose diagrams-check claims refs blueprints kconfig tier0 storyboards notebooks site-check test
 
 # Install the development dependencies into a local virtual environment.
 setup:
@@ -70,6 +70,14 @@ kconfig:
 # Print the config symbols the book cannot work without, and what each one gives you.
 kconfig-required:
     python3 -m tools.kconfig --list-required
+
+# What Tier 0 can do on this machine, and which recordings it would fall back to.
+tier0-report:
+    python3 -m kxbox
+
+# Fail if a Tier 0 recipe names a capture nobody committed.
+tier0:
+    python3 -m kxbox --check
 
 # Build one profile of the pinned kernel in a container. Takes a while the first time.
 kernel profile="A-full":

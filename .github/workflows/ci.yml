@@ -78,6 +78,12 @@ jobs:
       - name: Blueprints
         run: python3 -m tools.bpc
 
+      # Every Tier 0 recipe names a capture. This fails when one of them points at a file that
+      # nobody committed, which would otherwise be a lesson cell that works for the person who
+      # wrote it and breaks for the reader.
+      - name: Tier 0 recordings
+        run: python3 -m kxbox --check
+
       # The pinned kernel, and whether every config profile still has what the book depends on.
       # Reads text files, so it belongs here with the prose rather than in the build job.
       - name: Kernel config
