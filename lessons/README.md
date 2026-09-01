@@ -4,12 +4,17 @@ One directory per lesson, named for its identifier. Identifiers come from the cu
 
 ```
 lessons/Z02/
+├── meta.toml        # the identifier, and whether this is a draft or published
 ├── lesson.md        # the prose, in blocks, each with a word cap
 ├── notebook.py      # the marimo notebook the reader runs
 ├── claims.toml      # every claim, with the evidence that backs it
 ├── grader.py        # what has to be true before the lesson is done
 └── assets/          # diagrams, animation sources, images
 ```
+
+## Drafts and published lessons
+
+`meta.toml` carries a status. A draft can say what it expects the evidence to be before that evidence exists, which is how a lesson gets written while the tooling it needs is still being built. A published lesson has to have every claim verified, and `just claims` will not let it through otherwise.
 
 ## Diagrams
 

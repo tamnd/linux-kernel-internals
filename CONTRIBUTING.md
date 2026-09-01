@@ -35,12 +35,29 @@ Every rule here is enforced by `tools/lintprose`, so you do not have to remember
 
 Nothing goes in a lesson that the reader cannot watch happen. That is the whole point of the project, and it is the rule most likely to be broken by accident when you are in a hurry.
 
-Every factual claim carries the evidence that backs it, and the evidence is one of these:
+Every lesson has a `claims.toml` listing what it tells the reader is true and what backs each one. `just claims` checks it, and so does CI. Run `just claim-kinds` to see the kinds of evidence a claim is allowed to rest on:
 
 - a trace, a `/proc` snapshot or a BTF dump committed under `corpora/`
 - a citation into the pinned kernel tree, by file and line, with a context hash so `refcheck` notices when the line moves
 - a litmus test under `tools/memory-model/` with its `herd7` output
+- something the reader runs and sees for themselves
 - an explicit mark saying no one can observe this, of which a lesson gets at most two
+
+A claim looks like this:
+
+```toml
+schema = 1
+lesson = "Z02"
+
+[[claims]]
+id = "Z02-01"
+text = "The kernel writes one line per function entry and one per return."
+evidence_kind = "trace"
+evidence = "corpora/traces/tier0/write-1byte.txt"
+verified = true
+```
+
+Two rules in there are worth spelling out. Every artefact under `corpora/` has a `.meta.toml` beside it saying where it came from, and a claim marked `verified = true` against an artefact whose metadata says `evidence = false` is a build failure. That is what keeps a handwritten fixture from turning into a fact. And a lesson whose `meta.toml` says `status = "published"` has to have every claim verified, which is how a draft is allowed to be honest about what is still missing.
 
 Say which kernel, which config and which architecture. A kernel claim without a configuration attached is not a claim. The pinned tree is Linux 7.2.2 and the pinned configs are in `kxbox/kernel/`.
 
