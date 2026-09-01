@@ -33,6 +33,9 @@ addopts = "-q"
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+# The notebooks are generated from the build.py beside them. Linting output is linting the wrong
+# file, and the cell sources carry notebook magics that are not Python.
+extend-exclude = ["*.ipynb"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
@@ -40,6 +43,6 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 [tool.ruff.lint.per-file-ignores]
 # Tests say the same thing several ways on purpose.
 "tests/*" = ["E501"]
-# A marimo notebook ends a cell with the thing it wants to display, which reads as a useless
-# expression to a linter and is the entire output of the cell to a reader.
-"lessons/*/notebook.py" = ["B018"]
+# A lesson builder holds the lesson prose, and the house rule is that a paragraph is one line, so
+# every paragraph in it is over the limit by design.
+"lessons/*/build.py" = ["E501"]

@@ -24,7 +24,7 @@ linux-kernel-internals/
 ├── kxwidgets/               # anywidget: SyscallTape, StructMap, LockTimeline
 ├── kxmanim/                 # manim scenes and reusable objects
 ├── kxdraw/                  # diagrams as code, out to svg and excalidraw
-├── lessons/                 # 103 lessons: prose, notebook, assets, grader
+├── lessons/                 # 103 lessons: build.py, its notebook, assets, grader
 ├── blueprints/              # the normative specifications, and bpc, their generator
 ├── corpora/                 # pinned traces, BTF dumps, /proc snapshots, oopses
 ├── capstones/               # three tracks, harnesses and scorecards
@@ -39,6 +39,8 @@ linux-kernel-internals/
 
 The line that matters is the tier boundary. `kxray`, `kxwidgets` and the JavaScript half of `kxbox` have to run in a browser under Pyodide, because that is what makes Tier 0 work with nothing installed. `kxprobe` and the kernel build never can, because one links the kernel and the other is a compiler run.
 
+`kxray` also has to run in Google Colab, which every lesson notebook opens in, so it is installable from the repository with pip and imports without a build step. `kxray.tracefs` is the one module that touches a live machine, and it reads and writes files under `/sys/kernel/tracing` rather than calling anything, which is why it stays in the pure Python half.
+
 That is also why the analysis toolkit is pure Python with no C extensions. It costs some speed and it rules out drgn, which is the tool you would reach for first on a real machine. The trade is worth it, because a reader with no local toolchain can still do the work.
 
 `corpora/` is committed on purpose. A trace that a lesson depends on is an input to the build, not a scratch file, and a lesson whose evidence is not in the repository is a lesson nobody can check.
@@ -47,7 +49,7 @@ That is also why the analysis toolkit is pure Python with no C extensions. It co
 
 A new parser goes in `kxray/`, with its fixture in `corpora/` and its test in `tests/`.
 
-A new lesson goes in `lessons/<ID>/`, where the identifier comes from the curriculum and never changes.
+A new lesson goes in `lessons/<ID>/`, where the identifier comes from the curriculum and never changes. The lesson itself is `build.py`, and the `.ipynb` and `lesson.md` beside it are output, written by `just build-lessons` and checked in CI.
 
 A new diagram goes in that lesson's `assets/` as a file named `*.diagram.py`. The `.svg` and `.excalidraw` beside it are output, written by `just diagrams` and checked in CI, so editing them by hand gets reverted by the next build. Every diagram source has to define an `ALT` string, and the build fails without one.
 
