@@ -48,6 +48,10 @@ FILLER = [
 # followed by more prose, has a line break sitting in the middle of a sentence.
 SENTENCE_END = tuple(".!?:")
 
+# The markers bpc puts around a generated section of a blueprint.
+GENERATED_OPEN = re.compile(r"^<!--\s*bpc:generated\b")
+GENERATED_CLOSE = re.compile(r"^<!--\s*bpc:end\b")
+
 WORD_CAPS = {
     "hook": 150,
     "tour": 1500,
@@ -86,6 +90,7 @@ def parse(text: str) -> list[Line]:
     out: list[Line] = []
     in_fence = False
     in_front_matter = False
+    in_generated = False
     fence_marker = ""
 
     for i, raw in enumerate(lines, start=1):
@@ -116,6 +121,18 @@ def parse(text: str) -> list[Line]:
                 out.append(Line(i, raw, False))
                 continue
         if in_fence:
+            out.append(Line(i, raw, False))
+            continue
+
+        # A generated section of a blueprint. Nobody wrote it, so the house style has nothing
+        # to say about it, and where the generator puts its line breaks is not a style choice.
+        if GENERATED_OPEN.match(stripped):
+            in_generated = True
+            out.append(Line(i, raw, False))
+            continue
+        if in_generated:
+            if GENERATED_CLOSE.match(stripped):
+                in_generated = False
             out.append(Line(i, raw, False))
             continue
 

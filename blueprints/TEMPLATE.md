@@ -1,0 +1,126 @@
+---
+blueprint: template
+title: The blueprint template
+status: stub
+pin: v7.2.2
+arch: x86_64
+lessons: []
+generated: [2, 5, 7]
+config-dependent: []
+---
+
+# The blueprint template
+
+Copy this file, rename it after the mechanism, and fill it in. `bpc` checks the shape of what you produce, so the fastest way to find out whether you have got it right is `just blueprints`.
+
+The header above is not decoration. `status` is `stub`, `partial` or `complete`, it is shown on the index, and a blueprint that is thin says so rather than looking finished. `pin` and `arch` say which kernel and which architecture this describes, because a kernel claim with no configuration attached is not a claim. `complete` also needs a `reviewed-by`, and the reviewer is whoever most recently implemented against it.
+
+One rule matters more than the rest. A blueprint never points at a lesson. An implementer reading this has not read the lesson and is not going to, so anything they need goes here even when the lesson already said it. `bpc` fails the build on the phrases people reach for when they are about to break this rule.
+
+## §1 Purpose and boundary
+
+What this mechanism is responsible for, in three or four sentences.
+
+Then the list that does the work: what it is **not** responsible for, one line each, with the name of the blueprint that owns it. Kernel subsystems bleed into each other, and this list is what stops sixty blueprints from turning into one.
+
+## §2 Data structures
+
+<!-- bpc:generated section=2 hash=a94c01afb3370911 -->
+This section is generated from the BTF of the pinned kernel and cannot be written by hand.
+
+Nothing is generated yet. `kxray.btf` reads BTF, the pinned kernel provides it, and neither exists,
+so this block is a placeholder that the build guards until they do.
+
+When it lands, each structure carries its fields with real offsets and sizes, which fields depend
+on which config symbol, the size of the structure under the minimal, teaching and distro configs,
+and the ownership and reference counting rule for every pointer field.
+<!-- bpc:end section=2 -->
+
+## §3 Algorithms
+
+What the mechanism does, as numbered steps or as pseudocode, written from the code and cited line by line.
+
+Write it so somebody who has never read Linux could implement it. That is a higher bar than describing it to somebody who has, and it is the bar that finds the steps you were skipping over.
+
+Where Linux picked one of several defensible designs, say so here and put the alternatives in section 9.
+
+## §4 Invariants, locking and context
+
+Three subsections, and none of them are optional. A kernel mechanism without its concurrency rules is not specified, it is described.
+
+### §4a Invariants
+
+Numbered, each stating what has to be true and when, and ending with what enforces it. See NOTATION.md for the format:
+
+1. Example: the counter and the tree agree at every point where a lock is not held. [unchecked]
+
+`[unchecked]` is allowed. The count is on the scorecard, because an invariant that nothing enforces is where the next bug lives.
+
+### §4b Locking discipline
+
+For every field in section 2 and every step in section 3: what protects it. A lock, RCU, being per CPU, atomicity, single ownership at this point, or a reference the caller holds. `none` is an answer too, and it is one you have to defend.
+
+Then the acquisition order for every pair of locks this mechanism takes, written as a chain.
+
+### §4c Execution context
+
+For every entry point, the answer for all six contexts in NOTATION.md, what it may do in each, and the `PREEMPT_RT` delta.
+
+The RT line is not an appendix. On RT a `spin_lock()` sleeps, so a blueprint that does not state its preemption assumptions is describing a kernel that many readers are not running.
+
+## §5 Observable behaviour
+
+<!-- bpc:generated section=5 hash=dc82f493fc8d1af5 -->
+This section is generated from the corpus and from the running kernel.
+
+Nothing is generated yet. It needs golden artefacts captured from the pinned kernel, and there
+are none, so this block is a placeholder that the build guards.
+
+When it lands, it holds the tracepoints that fire and in what order, the /proc and /sys files
+that change and how, the counters that move, and the function_graph frames that appear. Every
+entry names a corpus artefact by id, so the specification can be checked against a recording
+rather than against somebody's memory.
+<!-- bpc:end section=5 -->
+
+## §6 Edge cases and failure modes
+
+Write this before section 3. Edge cases come from tests, from `git log`, from syzbot and from `Fixes:` trailers, and algorithms come from reading code. Doing the harder research first is the only way it gets done at all.
+
+A blueprint at `complete` needs all nine tags from NOTATION.md, and `bpc` checks for them:
+
+- **allocation-failure.** What happens at each allocation site when there is no memory.
+- **concurrent-entry.** Another CPU is in here at the same time.
+- **wrong-context.** Called from an interrupt, from atomic context, from NMI.
+- **signal.** A signal arrives in the middle, and the restart or `EINTR` decision.
+- **object-freed.** The object goes away under a reference the caller thought they held.
+- **refcount-zero.** The count reaches zero at the wrong moment.
+- **boundary-cases.** Zero, one, and the maximum.
+- **hostile-input.** A malformed or malicious value from userspace.
+- **bug-message.** The `BUG_ON` or `WARN_ON` condition, with the exact text it prints.
+
+That last one is the entry a reader will search for at three in the morning, and tying the message to a specification entry is an artefact that does not exist anywhere else.
+
+## §7 Interfaces
+
+<!-- bpc:generated section=7 hash=5e609553681c7c9a -->
+This section is generated from BTF and from the tree.
+
+Nothing is generated yet. It needs the pinned kernel, so this block is a placeholder that the
+build guards until there is one.
+
+When it lands, it holds the function prototypes with their BTF signatures including type tags,
+the ops structs the mechanism defines or consumes, which symbols are exported and under which
+export class, and the userspace visible surface with its stability class from Documentation/ABI.
+<!-- bpc:end section=7 -->
+
+## §8 Configuration and architecture dependence
+
+Which `CONFIG_*` symbols change any of the above, and how. What differs between x86-64 and arm64. Which parts are architecture specific because the hardware forces it, and which are architecture specific because of history.
+
+A blueprint that quietly describes x86-64 as universal is worse than no blueprint, and this section is how that is prevented.
+
+## §9 Reimplementation notes
+
+What a different kernel could do instead.
+
+Which of Linux's choices are forced by the hardware, which by the syscall ABI, which by compatibility with its own past, and which are arbitrary. The most valuable sentence a blueprint can hold is that Linux does X, nothing requires X, another kernel could do Y, and here is what Y would cost. Section 9 is graded on how many of those it has.

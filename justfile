@@ -5,7 +5,7 @@ default:
     @just --list
 
 # Everything CI runs, in the same order. Run this before you open a pull request.
-check: lint prose diagrams-check claims notebooks test
+check: lint prose diagrams-check claims blueprints notebooks test
 
 # Install the development dependencies into a local virtual environment.
 setup:
@@ -37,6 +37,14 @@ claims:
 # Print the kinds of evidence a claim is allowed to rest on.
 claim-kinds:
     python3 -m tools.claimledger --list-kinds
+
+# Check the shape of every blueprint, and the seals on its generated sections.
+blueprints:
+    python3 -m tools.bpc
+
+# Recompute the seals after regenerating a section.
+reseal:
+    python3 -m tools.bpc --reseal blueprints
 
 # Check that every lesson notebook is a valid marimo notebook.
 notebooks:
