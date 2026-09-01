@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Node, for the Tier 0 bridge and the widgets
+node_modules/
+*.tsbuildinfo
+
+# Site output
+site/_build/
+.cache/
+
+# Kernel build artefacts. The recipe is in the repo, the output is not.
+kxbox/kernel/build/
+kxbox/kernel/*.bzImage
+kxbox/rootfs/build/
+kxbox/rootfs/*.img
+*.ko
+*.o
+*.mod
+*.mod.c
+.tmp_versions/
+Module.symvers
+modules.order
+
+# Traces and dumps land here while you work. Anything a lesson depends on goes
+# into corpora/ instead, committed, so the build is reproducible.
+scratch/
+*.trace.raw
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
+*.swp

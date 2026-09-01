@@ -38,7 +38,7 @@ The usual result is that people read about the kernel for months, feel like they
 
 60 blueprints. Each one a normative specification you could implement against without reading the lesson, and none of them allowed to say "see the chapter". The structure sections are generated from BTF, straight out of the running kernel, so the field offsets in this book cannot be stale or wrong.
 
-Three capstones, each with a real external grader that will fail work which merely looks correct. A filesystem, judged by xfstests. A device driver, written in C and then again in Rust, judged by the kernel's own debug options and by fault injection. A `sched_ext` scheduler, which you can load on the machine you are sitting at, watch fail, and get your machine back, because the watchdog evicts it. No previous generation of kernel learners could do that last one.
+Three capstones, each with a real external grader that will fail work that only looks correct. A filesystem, judged by xfstests. A device driver, written in C and then again in Rust, judged by the kernel's own debug options and by fault injection. A `sched_ext` scheduler, which you can load on the machine you are sitting at, watch fail, and get your machine back, because the watchdog evicts it. No previous generation of kernel learners could do that last one.
 
 ## What this will not claim
 

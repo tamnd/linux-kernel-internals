@@ -1,0 +1,34 @@
+# Task runner for the repository.
+# Run `just` with no arguments to see the list.
+
+default:
+    @just --list
+
+# Everything CI runs, in the same order. Run this before you open a pull request.
+check: lint prose test
+
+# Install the development dependencies into a local virtual environment.
+setup:
+    uv venv
+    uv pip install -e ".[dev]"
+
+# Python style and correctness.
+lint:
+    uvx ruff check .
+    uvx ruff format --check .
+
+# Fix what can be fixed automatically.
+fmt:
+    uvx ruff check --fix .
+    uvx ruff format .
+
+# House style for prose. The rules are in tools/lintprose/rules.py.
+prose:
+    python3 -m tools.lintprose README.md CONTRIBUTING.md LAYOUT.md lessons blueprints corpora
+
+# Print the prose rules and what each one is for.
+prose-rules:
+    python3 -m tools.lintprose --list-rules .
+
+test:
+    python3 -m pytest

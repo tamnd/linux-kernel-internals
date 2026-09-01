@@ -1,0 +1,53 @@
+# Repository layout
+
+What lives where, and why the split falls where it does. Directories appear here before they have anything in them, because the plan is public and it is easier to argue with a plan you can see.
+
+```
+linux-kernel-internals/
+├── kxray/                   # Python: trace, BTF, /proc and dump analysis
+│   ├── btf/                 #   BTF reader: types, fields, offsets, type tags
+│   ├── trace/               #   ftrace function_graph and trace_event parsers
+│   ├── proc/                #   /proc and /sys snapshot parsers
+│   ├── source/              #   kernel tree navigation, Kconfig, MAINTAINERS
+│   ├── models/              #   the shared model everything else renders
+│   ├── replay/              #   recorded Tier 1 session playback
+│   └── corpus/              #   pinned artefacts and the diff normaliser
+├── kxprobe/                 # C module and BPF programs. GPL-2.0-only.
+│   ├── module/              #   an out of tree module for lessons that need one
+│   ├── bpf/                 #   CO-RE programs for what ftrace cannot express
+│   └── patches/             #   teaching patches against the pinned tree
+├── kxbox/                   # Tier 0: v86, kernel image, rootfs, the JS bridge
+│   ├── vendor/v86/          #   pinned upstream, BSD-2-Clause
+│   ├── kernel/              #   build recipe, .config, the built bzImage
+│   ├── rootfs/              #   busybox, strace, our tools
+│   └── bridge/              #   run a command, read a file, collect a trace
+├── kxwidgets/               # anywidget: SyscallTape, StructMap, LockTimeline
+├── kxmanim/                 # manim scenes and reusable objects
+├── lessons/                 # 103 lessons: prose, notebook, assets, grader
+├── blueprints/              # the normative specifications, and bpc, their generator
+├── corpora/                 # pinned traces, BTF dumps, /proc snapshots, oopses
+├── capstones/               # three tracks, harnesses and scorecards
+├── conformance/             # kxdiff, graders, KUnit and kselftest drivers
+├── site/                    # the published book
+├── containers/              # the Tier 1 image, devcontainer, CI image
+├── tools/                   # refcheck, claimledger, driftbot, coverage, lintprose
+└── justfile
+```
+
+## Why the split is where it is
+
+The line that matters is the tier boundary. `kxray`, `kxwidgets` and the JavaScript half of `kxbox` have to run in a browser under Pyodide, because that is what makes Tier 0 work with nothing installed. `kxprobe` and the kernel build never can, because one links the kernel and the other is a compiler run.
+
+That is also why the analysis toolkit is pure Python with no C extensions. It costs some speed and it rules out drgn, which is the tool you would reach for first on a real machine. The trade is worth it, because a reader with no local toolchain can still do the work.
+
+`corpora/` is committed on purpose. A trace that a lesson depends on is an input to the build, not a scratch file, and a lesson whose evidence is not in the repository is a lesson nobody can check.
+
+## Where to put a new file
+
+A new parser goes in `kxray/`, with its fixture in `corpora/` and its test in `tests/`.
+
+A new lesson goes in `lessons/<ID>/`, where the identifier comes from the curriculum and never changes.
+
+A new checker goes in `tools/`, with tests, and gets wired into `justfile` and CI in the same pull request. A checker that is not in CI is a suggestion.
+
+Anything that has to run inside the kernel goes in `kxprobe/`, and it is GPL-2.0-only with `MODULE_LICENSE("GPL")` at the top. There is no choice about this and no exceptions.
