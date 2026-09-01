@@ -26,7 +26,33 @@ Sections 2, 5 and 7 are produced by `bpc`, the blueprint compiler, from the BTF 
 
 This is the point. Field offsets in books about the kernel are wrong within a release or two, and a reader has no way to tell. Here they cannot be stale, because the build reads them out of the same kernel the lessons are traced on.
 
-Today `bpc` is version 0.1 and generates nothing, because there is no pinned kernel to read BTF from. What it does now is guard the shape: the nine sections in order, the header fields, an invariant that names what checks it, the nine edge cases on anything marked `complete`, and a seal on each generated section so that a hand edit fails the build. The guard has to exist before the first generated section does, rather than after somebody has already edited one.
+`bpc` is version 0.2 and it does generate. Point it at a BTF blob and section 2 becomes a field table with real offsets, sizes and type tags, and section 7 becomes prototypes and an ops table with a row per slot. Section 5 comes from the trace corpus instead. Run it with no blob and it still writes those sections, but what it writes is the empty state, which names every structure and every interface the mechanism needs and then says plainly that nothing has been read yet.
+
+That empty state is what is committed today, because no kernel has been built for this project yet. The alternative was to invent a plausible field table, and an invented offset in a published blueprint reads exactly like a real one.
+
+### How a generated section says where it came from
+
+The first line inside every generated block is a provenance line:
+
+    <!-- bpc:source kind=btf path=corpora/btf/handwritten/tiny.btf evidence=false pin=v7.2.2 arch=x86_64 -->
+
+It is inside the seal, so it cannot be changed without breaking the hash. `kind` is `btf`, `corpus` or `none`. `evidence` is false when the source is a handwritten fixture rather than something read off a real kernel, and a blueprint with `status: complete` fails the build if any generated section is not evidence. A fixture generated field table and a kernel generated one look identical on the page, so the difference is written down and enforced rather than left to memory.
+
+### Two layers against a hand edit
+
+The seal catches an edit to a generated section. Resealing after an edit defeats the seal, so the plain `bpc` run also regenerates every section into memory and compares. An edit that was resealed still fails, and so does a section whose corpus has moved on underneath it.
+
+## Notation
+
+## Citations
+
+A blueprint that says something about Linux points at the code it got that from. The marker goes in the middle of the sentence, like `[page-fault-R13]`, and it resolves against `page-fault.refs.toml` sitting beside the document.
+
+Each entry gives a path and an anchor, where the anchor is at least twelve characters of text to find in that file. Never a line number. A line number is right on the day it is typed and wrong after the next patch, and it fails silently, because a stale line number still points at a line.
+
+`refcheck` checks both directions. A marker with no entry fails, and so does an entry that nothing points at, which is nearly always a sentence that got rewritten and quietly lost its evidence.
+
+Running `just refs-confirm <a real linux tree>` finds every anchor, writes down the line it landed on and flips `confirmed`. Nothing in this repository has been confirmed yet, because there is no kernel tree here.
 
 ## Notation
 

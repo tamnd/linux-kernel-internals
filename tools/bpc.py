@@ -1,21 +1,26 @@
-"""bpc, the blueprint compiler, version 0.1.
+"""bpc, the blueprint compiler, version 0.2.
 
-    python3 -m tools.bpc                    check every blueprint
-    python3 -m tools.bpc blueprints/vfs.md  check one
-    python3 -m tools.bpc --reseal PATH      recompute the seals on the generated sections
+    python3 -m tools.bpc                       check every blueprint
+    python3 -m tools.bpc blueprints/vfs.md     check one
+    python3 -m tools.bpc --generate            rewrite sections 2, 5 and 7 and reseal
+    python3 -m tools.bpc --generate --btf PATH the same, with a kernel to read types from
+    python3 -m tools.bpc --reseal PATH         recompute the seals without regenerating
 
 A blueprint is a specification of one mechanism, written so that somebody can implement against
 it without reading the lesson. Nine sections, always the same nine, always in the same order, so
 that a reader who has read one can find anything in any of the others.
 
-Version 0.1 checks the shape and guards the generated sections. It does not generate anything
-yet, because generating section 2 needs BTF from the pinned kernel and the pinned kernel is not
-built. What it does do is make a hand edit to a generated section fail the build, which is the
-property that has to be in place before the first generated section exists rather than after.
+Six of those sections are written by a person. Sections 2, 5 and 7 are not, because they are facts
+about one build of one kernel and those go stale without ever looking wrong. `--generate` writes
+them from BTF and from the corpus, and the content is sealed with a hash of itself so that a hand
+edit fails the build rather than surviving until somebody notices.
 
-The seal is a hash of the content between the markers. `--reseal` recomputes it. That looks like
-a way around the check and it is not the point of it: when the generator lands, resealing becomes
-part of generating, and the check is what stops the output drifting from its source in between.
+Two things carry through every check here. The first is the seal, which catches an edit. The second
+is the provenance line at the top of each generated block, which says what the content was read
+from and whether that source is evidence. It lives inside the seal, so it cannot be adjusted
+quietly, and a blueprint whose generated sections came from nothing or from a handwritten fixture
+is not allowed to call itself complete. Offsets that came from nowhere look exactly like offsets
+that came from a kernel, and this is the only thing standing between the two.
 """
 
 from __future__ import annotations
@@ -27,6 +32,8 @@ import sys
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
+
+from tools import bpcgen
 
 BLUEPRINTS = "blueprints"
 
@@ -330,6 +337,42 @@ def _check_seals(path: str, seals: list[Seal]) -> list[Finding]:
     return found
 
 
+def _check_provenance(path: str, seals: list[Seal], status: str) -> list[Finding]:
+    """Every generated block says where it came from, and complete means it came from a kernel.
+
+    The second half is the one that does the work. A field table generated from a fixture that was
+    written by hand reads exactly like a field table generated from a kernel, and a reader has no
+    way to tell them apart. So the source is recorded inside the sealed content, and a blueprint
+    resting on a source that is not evidence stays at `partial` until a kernel exists.
+    """
+    found: list[Finding] = []
+    for seal in seals:
+        source = bpcgen.parse_source(seal.content)
+        if source is None:
+            found.append(
+                Finding(
+                    path,
+                    seal.open_line,
+                    "provenance",
+                    f"section {seal.section} does not say what it was generated from, "
+                    "run bpc --generate",
+                )
+            )
+            continue
+        if status == "complete" and not source.evidence:
+            where = source.path or "nothing"
+            found.append(
+                Finding(
+                    path,
+                    seal.open_line,
+                    "provenance",
+                    f"status is complete and section {seal.section} came from {where}, "
+                    "which is not evidence",
+                )
+            )
+    return found
+
+
 def _check_lesson_references(path: str, lines: list[str]) -> list[Finding]:
     found = []
     for number, raw in enumerate(lines, start=1):
@@ -394,6 +437,7 @@ def check(path: Path) -> list[Finding]:
     seals, seal_problems = find_seals(lines)
     found.extend(Finding(name, f.line, f.rule, f.message) for f in seal_problems)
     found.extend(_check_seals(name, seals))
+    found.extend(_check_provenance(name, seals, status))
     found.extend(_check_lesson_references(name, lines))
     found.extend(_check_invariants(name, lines, bounds))
 
@@ -422,6 +466,69 @@ def reseal(path: Path) -> int:
     return changed
 
 
+def generate(
+    path: Path,
+    *,
+    btf_path: Path | None = None,
+    root: Path | None = None,
+    dry_run: bool = False,
+) -> tuple[int, list[Finding]]:
+    """Rewrite every generated section from its source, and reseal. Returns how many changed.
+
+    Sections are spliced from the bottom of the file upwards, so the line numbers found for the
+    blocks higher up are still correct after the ones below them have changed length. Resealing
+    happens here rather than being a separate step a person has to remember, because a generator
+    that leaves the file failing its own check is a generator nobody runs twice.
+
+    `dry_run` is what CI uses. It reports what would change and writes nothing, which turns a hand
+    edited section into a failure without needing a kernel present to notice.
+
+    One section gets skipped in a dry run: a block whose committed content came from BTF, when
+    this run has no BTF to read. Regenerating it here would replace a real field table with the
+    empty state, and reporting that as drift would mean CI demanding the good version be deleted.
+    """
+    root = root or Path()
+    lines = path.read_text(encoding="utf-8").split("\n")
+    header, _ = parse_front_matter(lines)
+    request = bpcgen.Request.from_header(header)
+
+    seals, _ = find_seals(lines)
+    problems: list[Finding] = []
+    changed = 0
+
+    for seal in sorted(seals, key=lambda s: s.open_line, reverse=True):
+        if seal.section not in GENERATED:
+            continue
+        committed = bpcgen.parse_source(seal.content)
+        if dry_run and btf_path is None and committed is not None and committed.kind == "btf":
+            continue
+        rendered = bpcgen.render(seal.section, request, root=root, btf_path=btf_path)
+        problems.extend(
+            Finding(str(path), seal.open_line, "generate", one) for one in rendered.problems
+        )
+        body = rendered.text.rstrip("\n").split("\n")
+        if body == seal.content.split("\n"):
+            continue
+        changed += 1
+        if dry_run:
+            problems.append(
+                Finding(
+                    str(path),
+                    seal.open_line,
+                    "generate",
+                    f"section {seal.section} is not what the generator produces, "
+                    "so it was hand edited or its source moved",
+                )
+            )
+            continue
+        lines[seal.open_line : seal.close_line - 1] = body
+
+    if changed and not dry_run:
+        path.write_text("\n".join(lines), encoding="utf-8")
+        reseal(path)
+    return changed, problems
+
+
 def find_blueprints(roots: Iterable[str]) -> list[Path]:
     """Every markdown file with a blueprint header. README and NOTATION have none."""
     found: list[Path] = []
@@ -439,12 +546,33 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="bpc", description="Check the blueprints.")
     ap.add_argument("paths", nargs="*", default=[BLUEPRINTS], help="Blueprints or directories")
     ap.add_argument("--reseal", action="store_true", help="Recompute the generated section hashes")
+    ap.add_argument(
+        "--generate", action="store_true", help="Rewrite sections 2, 5 and 7, then reseal"
+    )
+    ap.add_argument("--btf", help="BTF to read types from, such as /sys/kernel/btf/vmlinux")
+    ap.add_argument("--root", default=".", help="Where corpora/ lives, for section 5")
     args = ap.parse_args(argv)
 
     blueprints = find_blueprints(args.paths or [BLUEPRINTS])
     if not blueprints:
         print("bpc: no blueprints yet")
         return 0
+
+    if args.generate:
+        btf_path = Path(args.btf) if args.btf else None
+        if btf_path is not None and not btf_path.exists():
+            print(f"bpc: {btf_path} is not there", file=sys.stderr)
+            return 1
+        problems: list[Finding] = []
+        for path in blueprints:
+            changed, found = generate(path, btf_path=btf_path, root=Path(args.root))
+            problems.extend(found)
+            print(f"{path}: {changed} section(s) rewritten")
+        for finding in problems:
+            print(finding)
+        if btf_path is None:
+            print("bpc: no --btf, so sections 2 and 7 say so rather than guessing")
+        return 1 if problems else 0
 
     if args.reseal:
         for path in blueprints:
@@ -453,7 +581,14 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     findings = [f for path in blueprints for f in check(path)]
-    for finding in findings:
+    # And then the strongest form of the same question: does the generator still produce what is
+    # committed. The seal catches an edit to the output, and this catches an edit that was resealed
+    # afterwards, plus the case where the corpus a section was generated from has moved on.
+    for path in blueprints:
+        _, drift = generate(path, root=Path(args.root), dry_run=True)
+        findings.extend(drift)
+
+    for finding in sorted(findings, key=lambda f: (f.path, f.line, f.rule)):
         print(finding)
 
     if findings:

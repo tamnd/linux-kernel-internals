@@ -26,13 +26,13 @@ linux-kernel-internals/
 │   └── storyboards/         #   one toml per animation, checked in CI
 ├── kxdraw/                  # diagrams as code, out to svg and excalidraw
 ├── lessons/                 # 103 lessons: build.py, its notebook, assets, grader
-├── blueprints/              # the normative specifications, and bpc, their generator
+├── blueprints/              # the normative specifications: one .md, one .refs.toml, assets/
 ├── corpora/                 # pinned traces, BTF dumps, /proc snapshots, oopses
 ├── capstones/               # three tracks, harnesses and scorecards
 ├── conformance/             # kxdiff, graders, KUnit and kselftest drivers
 ├── site/                    # the published book
 ├── containers/              # the Tier 1 image, devcontainer, CI image
-├── tools/                   # lintprose, claimledger, refcheck, bpc, kconfig, nbbuild
+├── tools/                   # lintprose, claimledger, refcheck, bpc, bpcgen, kconfig, nbbuild
 └── justfile
 ```
 
@@ -54,6 +54,8 @@ That is also why the analysis toolkit is pure Python with no C extensions. It co
 
 `kxbox/kernel/` is the version and the config, and nothing else. `pin.toml` says which kernel, from which URL, with which checksum, and lists the profiles we build. The `config/` fragments say what each profile turns on. `build.sh` downloads, verifies and builds one profile in a container, and `tools/kconfig` checks the whole lot without a toolchain, so a wrong pin fails CI in seconds instead of an hour into a build.
 
+`tools/bpc.py` and `tools/bpcgen.py` are split for one reason. `bpc` is the checker and it runs on every push, so it has to load in a fraction of a second and must not need a BTF reader or a trace parser to answer a question about the shape of a document. `bpcgen` is the generator, and it does need those, so it imports them lazily inside the functions that use them. `bpc` imports `bpcgen` and not the other way round.
+
 `corpora/` is committed on purpose. A trace that a lesson depends on is an input to the build, not a scratch file, and a lesson whose evidence is not in the repository is a lesson nobody can check.
 
 Two corpus directories are handwritten and are not evidence. `traces/handwritten/` and `btf/handwritten/` exist so the parsers have something to be tested against before a kernel exists, and both are marked `evidence = false` so the claim checker refuses to let a lesson cite them.
@@ -70,8 +72,10 @@ A new widget goes in `kxwidgets/`, takes a model out of `kxray.models` and nothi
 
 A new animation goes in `kxmanim/storyboards/` as a `.toml` file, and it starts at `status = "draft"`, which is a status that refuses to render. Write the beats, the captions and the alt text first and the drawing second. If writing the alt text is hard, the scene is trying to say two things at once and the fix is two scenes or one fewer. The still it names has to exist before the check passes, because most readers of this book will never press play.
 
+A new blueprint goes in `blueprints/` as `<name>.md`, copied from `TEMPLATE.md`, with `<name>.refs.toml` beside it for its citations and any diagrams in `blueprints/assets/`. Write sections 1, 3, 4, 6, 8 and 9 by hand and leave 2, 5 and 7 to `just blueprints-generate`, which fills them from BTF and the corpus and reseals them. Do not type inside a sealed block.
+
 A new checker goes in `tools/`, with tests, and gets wired into `justfile` and CI in the same pull request. A checker that is not in CI is a suggestion.
 
-A citation into the kernel goes in `refs.toml` beside the lesson, anchored on a piece of text rather than on a line number, and the prose refers to it by identifier. A path into this repository that does not exist yet goes in `refcheck.toml` with a reason.
+A citation into the kernel goes in `refs.toml` beside the lesson, or in `<name>.refs.toml` beside the blueprint, anchored on a piece of text rather than on a line number, and the prose refers to it by identifier. A path into this repository that does not exist yet goes in `refcheck.toml` with a reason.
 
 Anything that has to run inside the kernel goes in `kxprobe/`, and it is GPL-2.0-only with `MODULE_LICENSE("GPL")` at the top. There is no choice about this and no exceptions.

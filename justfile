@@ -54,6 +54,11 @@ refs-planned:
 blueprints:
     python3 -m tools.bpc
 
+# Rewrite sections 2, 5 and 7 of every blueprint from BTF and the corpus, then reseal.
+# With no btf= it writes the honest empty state, which is what CI has to see today.
+blueprints-generate btf="":
+    python3 -m tools.bpc --generate {{ if btf == "" { "" } else { "--btf " + btf } }}
+
 # Recompute the seals after regenerating a section.
 reseal:
     python3 -m tools.bpc --reseal blueprints

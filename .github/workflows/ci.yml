@@ -72,7 +72,9 @@ jobs:
       - name: References
         run: python3 -m tools.refcheck
 
-      # The blueprint shape, and the seal on every generated section.
+      # The blueprint shape, the seal on every generated section, and a run of the generator to
+      # check that what is committed is still what it produces. The second one is what catches an
+      # edit that was resealed afterwards, which the seal on its own cannot.
       - name: Blueprints
         run: python3 -m tools.bpc
 

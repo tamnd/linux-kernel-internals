@@ -394,3 +394,81 @@ def test_main_fails_when_something_is_wrong(tmp_path):
 @pytest.mark.parametrize("token", ["tools/refcheck.py", "lessons/Z02/meta.toml"])
 def test_prose_paths_finds_a_backticked_path(token):
     assert refcheck.prose_paths(f"words `{token}` words\n") == [(1, token)]
+
+
+# -- blueprints ---------------------------------------------------------------------------------
+
+BLUEPRINT_REFS = """
+schema = 1
+
+[[references]]
+id = "widget-R1"
+path = "mm/memory.c"
+anchor = "handle_pte_fault"
+kernel = "7.2.2"
+confirmed = false
+line = 0
+"""
+
+
+def with_blueprint(tmp_path: Path, document: str, refs: str = BLUEPRINT_REFS) -> Path:
+    root = repo(tmp_path)
+    directory = root / "blueprints"
+    directory.mkdir()
+    (directory / "widget.md").write_text(document)
+    (directory / "widget.refs.toml").write_text(refs)
+    return root
+
+
+def test_a_blueprint_citation_resolves_against_the_refs_beside_it(tmp_path):
+    root = with_blueprint(tmp_path, "The dispatch happens here [widget-R1].\n")
+    assert check(root) == ""
+
+
+def test_a_citation_marker_with_no_entry_is_caught(tmp_path):
+    root = with_blueprint(tmp_path, "The dispatch happens here [widget-R9].\n")
+    assert "cites widget-R9" in check(root)
+
+
+def test_a_citation_nothing_points_at_is_caught(tmp_path):
+    """Half of this check, and the half people forget.
+
+    A sentence gets rewritten and loses its marker, the entry stays behind, and the file still
+    looks thoroughly cited. Nothing else in the build would notice.
+    """
+    root = with_blueprint(tmp_path, "The dispatch happens here.\n")
+    assert "not cited anywhere in the blueprint" in check(root)
+
+
+def test_a_blueprint_citation_id_has_to_start_with_the_blueprint_name(tmp_path):
+    refs = BLUEPRINT_REFS.replace("widget-R1", "gadget-R1")
+    root = with_blueprint(tmp_path, "Here [gadget-R1].\n", refs=refs)
+    assert "id should start with widget-R" in check(root)
+
+
+def test_a_blueprint_with_no_refs_file_is_left_alone(tmp_path):
+    root = repo(tmp_path)
+    (root / "blueprints").mkdir()
+    (root / "blueprints" / "widget.md").write_text("A stub, with nothing cited yet.\n")
+    assert refcheck.find_blueprints(root) == []
+    assert check(root) == ""
+
+
+def test_confirming_walks_blueprint_citations_too(tmp_path):
+    root = with_blueprint(tmp_path, "Here [widget-R1].\n")
+    tree = tmp_path / "linux"
+    (tree / "mm").mkdir(parents=True)
+    (tree / "mm" / "memory.c").write_text("static void handle_pte_fault(void)\n{\n}\n")
+
+    findings, resolved = refcheck.confirm(root, tree, write=True)
+    assert findings == []
+    assert resolved == 1
+    assert "confirmed = true" in (root / "blueprints" / "widget.refs.toml").read_text()
+
+
+def test_the_page_fault_blueprint_cites_every_reference_it_declares():
+    document = ROOT / "blueprints" / "page-fault.md"
+    references, problems = refcheck.read_references(ROOT / "blueprints" / "page-fault.refs.toml")
+    assert problems == []
+    assert len(references) == 28
+    assert refcheck.check_blueprint_citations(document, references) == []
