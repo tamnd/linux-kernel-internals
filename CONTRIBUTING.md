@@ -97,6 +97,19 @@ All three share one vocabulary, in `kxray/vocabulary.py`. Teal is a filesystem e
 
 Colour is never the only thing carrying the meaning. Whatever the colour says, the label says too.
 
+## The site
+
+The book is MkDocs with the Material theme, and the lesson pages are the committed notebooks rendered with the output they were committed with. Nothing is executed when the site is built.
+
+```sh
+just setup-site
+just site-serve
+```
+
+`site/head.yml` and the pages in `site/docs/` are yours to edit. `site/mkdocs.yml` is generated, and so is `site/docs/stylesheets/vocabulary.css`. Run `just site` after adding a lesson or a blueprint, and commit what it changes. CI fails when either is out of date, which is what stops a new lesson from being published as a page nobody can reach.
+
+Adding a lesson or a blueprint needs nothing else. The navigation is worked out from what is on disk.
+
 ## Pull requests
 
 One idea per pull request. A lesson, a tool, a blueprint, a fix.

@@ -52,6 +52,8 @@ Colab is a real Linux machine, which is what makes this work. A lesson that need
 | S05, the first ops plug | Not started | planned | |
 | C09, lockdep | Not started | planned | |
 
+There is also a book, built from the same files, where each lesson page is the notebook with the output it was committed with. It builds in CI on every pull request and it is not published yet, because turning on GitHub Pages is a decision rather than a build step. Until it is, `just setup-site && just site-serve` gives you the whole thing on localhost.
+
 Three lessons is the M0 pilot. They exist to find out whether the format works before 100 more get written in it.
 
 ## How a lesson is put together

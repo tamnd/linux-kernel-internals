@@ -1,0 +1,72 @@
+site_name: Linux kernel internals
+site_description: A visual teardown of the Linux kernel, with a real kernel booting in your browser
+site_url: https://tamnd.github.io/linux-kernel-internals/
+repo_url: https://github.com/tamnd/linux-kernel-internals
+repo_name: tamnd/linux-kernel-internals
+edit_uri: ""
+copyright: Prose and diagrams CC BY-SA 4.0. Tooling MIT.
+
+docs_dir: docs
+site_dir: _build
+
+theme:
+  name: material
+  language: en
+  features:
+    # A reader who lands on one page from a search should be able to see where they are without
+    # scrolling, so the whole navigation is expanded rather than folded.
+    - navigation.expand
+    - navigation.top
+    - content.code.copy
+    - search.highlight
+  palette:
+    # Both, because kernel work happens at both ends of the day and the diagrams have to survive
+    # either. Every SVG in the book is drawn on an explicit background for that reason.
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light
+
+extra_css:
+  - stylesheets/vocabulary.css
+
+plugins:
+  - search
+  # The lesson pages are the committed notebooks, rendered with the output they were committed
+  # with. Nothing is executed at build time. A page that ran on the build machine would show
+  # numbers from the build machine, and the whole point of a lesson here is that you run it.
+  - mkdocs-jupyter:
+      execute: false
+      ignore_h1_titles: true
+      # No download button. The notebook already opens with a Colab badge in its first cell, and
+      # a copy saved from here would be a copy that never gets the next fix.
+      include_source: false
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+
+validation:
+  # A link that points at nothing is a broken promise, and this book is mostly promises about
+  # where to look. Under `--strict` these stop the build.
+  links:
+    absolute_links: ignore
+    unrecognized_links: warn
+  nav:
+    omitted_files: warn

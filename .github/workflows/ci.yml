@@ -60,7 +60,7 @@ jobs:
       # The house style rules, from tools/lintprose. This job has no dependencies
       # on purpose, so a prose only change gets an answer in a few seconds.
       - name: House style
-        run: python3 -m tools.lintprose README.md CONTRIBUTING.md LAYOUT.md lessons blueprints corpora kxbox
+        run: python3 -m tools.lintprose README.md CONTRIBUTING.md LAYOUT.md lessons blueprints corpora kxbox site
 
       # Every claim a lesson makes has to name the evidence behind it, and the evidence has to
       # exist and be allowed to count. Standard library only, so it runs here with the prose.
@@ -88,3 +88,33 @@ jobs:
       # is the point. The rules run on every push and the renderer does not have to.
       - name: Storyboards
         run: python3 -m kxmanim
+
+      # The navigation and the site stylesheet are generated from what is on disk. This catches a
+      # lesson that was added without being wired into the book, which would otherwise be a page
+      # nobody can reach and nobody would notice.
+      - name: Site
+        run: python3 -m tools.sitebuild --check
+
+  # The book itself, in a job of its own because the theme and the notebook renderer are a slow
+  # install and most pushes do not touch either. Strict, so a link that points at nothing fails.
+  site:
+    name: site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install
+        run: uv sync --extra site
+
+      - name: Stage
+        run: uv run python -m tools.sitebuild
+
+      - name: Build
+        run: cd site && uv run mkdocs build --strict

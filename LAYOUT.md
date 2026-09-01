@@ -30,9 +30,9 @@ linux-kernel-internals/
 ├── corpora/                 # pinned traces, BTF dumps, /proc snapshots, oopses
 ├── capstones/               # three tracks, harnesses and scorecards
 ├── conformance/             # kxdiff, graders, KUnit and kselftest drivers
-├── site/                    # the published book
+├── site/                    # the published book: head.yml, docs/, and the staged copies
 ├── containers/              # the Tier 1 image, devcontainer, CI image
-├── tools/                   # lintprose, claimledger, refcheck, bpc, bpcgen, kconfig, nbbuild
+├── tools/                   # lintprose, claimledger, refcheck, bpc, kconfig, nbbuild, sitebuild
 └── justfile
 ```
 
@@ -55,6 +55,10 @@ That is also why the analysis toolkit is pure Python with no C extensions. It co
 `kxbox/kernel/` is the version and the config, and nothing else. `pin.toml` says which kernel, from which URL, with which checksum, and lists the profiles we build. The `config/` fragments say what each profile turns on. `build.sh` downloads, verifies and builds one profile in a container, and `tools/kconfig` checks the whole lot without a toolchain, so a wrong pin fails CI in seconds instead of an hour into a build.
 
 `tools/bpc.py` and `tools/bpcgen.py` are split for one reason. `bpc` is the checker and it runs on every push, so it has to load in a fraction of a second and must not need a BTF reader or a trace parser to answer a question about the shape of a document. `bpcgen` is the generator, and it does need those, so it imports them lazily inside the functions that use them. `bpc` imports `bpcgen` and not the other way round.
+
+`site/` is MkDocs, and it is mostly generated. `head.yml` and the three pages in `site/docs/` are written by hand. `mkdocs.yml` is `head.yml` with a navigation tree appended, worked out from the lessons and blueprints that are on disk, so a lesson cannot be added and left with no page and cannot be removed and leave a dead entry. `site/docs/stylesheets/vocabulary.css` comes out of `kxray/vocabulary.py`, so the site is painted from the same list the diagrams and the widgets read.
+
+The lessons and the blueprints are copied into `site/docs/` at build time and those copies are ignored by git. MkDocs can only see what is under its docs directory, and a file that exists twice in a repository is a file that will disagree with itself.
 
 `corpora/` is committed on purpose. A trace that a lesson depends on is an input to the build, not a scratch file, and a lesson whose evidence is not in the repository is a lesson nobody can check.
 
