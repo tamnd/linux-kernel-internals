@@ -5,7 +5,7 @@ default:
     @just --list
 
 # Everything CI runs, in the same order. Run this before you open a pull request.
-check: lint prose diagrams-check claims blueprints notebooks test
+check: lint prose diagrams-check claims blueprints kconfig notebooks test
 
 # Install the development dependencies into a local virtual environment.
 setup:
@@ -24,7 +24,7 @@ fmt:
 
 # House style for prose. The rules are in tools/lintprose/rules.py.
 prose:
-    python3 -m tools.lintprose README.md CONTRIBUTING.md LAYOUT.md lessons blueprints corpora
+    python3 -m tools.lintprose README.md CONTRIBUTING.md LAYOUT.md lessons blueprints corpora kxbox
 
 # Print the prose rules and what each one is for.
 prose-rules:
@@ -45,6 +45,18 @@ blueprints:
 # Recompute the seals after regenerating a section.
 reseal:
     python3 -m tools.bpc --reseal blueprints
+
+# Check the pinned kernel and every config profile built from it.
+kconfig:
+    python3 -m tools.kconfig
+
+# Print the config symbols the book cannot work without, and what each one gives you.
+kconfig-required:
+    python3 -m tools.kconfig --list-required
+
+# Build one profile of the pinned kernel in a container. Takes a while the first time.
+kernel profile="A-full":
+    ./kxbox/kernel/build.sh {{profile}}
 
 # Rebuild every lesson notebook and its markdown from the build.py beside it.
 build-lessons:
