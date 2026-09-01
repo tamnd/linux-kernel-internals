@@ -358,7 +358,7 @@ lesson.md("""## What is not settled yet
 
 This lesson is a draft, and here is the exact reason.
 
-Every claim it makes is registered in `claims.toml` beside this file, and every one is marked unverified. The trace claims need a real capture on the pinned kernel, and there is no way to make one until `kxbox` boots that kernel in a browser. The two source claims need the pinned kernel tree checked in and `refcheck` running, so that a citation is a line the build can find again rather than a line number somebody typed once and never checked.
+Every claim it makes is registered in `claims.toml` beside this file, and every one is marked unverified. The trace claims need a real capture on the pinned kernel, and there is no way to make one until `kxbox` boots that kernel in a browser. The two source claims each name a citation in `refs.toml` beside this file, and neither citation is confirmed, because confirming one means finding its anchor in a real kernel tree and there is not one here yet.
 
 There are handwritten traces in `corpora/traces/handwritten/`. They exist so the parser had something to test against, they are marked `evidence = false`, and no claim here points at them. The claim ledger fails the build if one ever tries.
 

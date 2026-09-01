@@ -4,10 +4,15 @@ part = "Z"
 status = "draft"
 
 # What the lesson is written against. A kernel claim with no configuration attached is not a
-# claim, so this block is not optional and refcheck will read it once it exists.
+# claim, so this block is not optional and refcheck reads it.
+#
+# The profile is the one from kxbox/kernel/pin.toml, which is where the version, the architecture
+# and the config fragments all live together. Naming the profile gets all of them at once, and it
+# means a profile that gets renamed fails a check rather than leaving this pointing at a build
+# nobody makes any more.
 kernel = "7.2.2"
 arch = "x86"
-config = "kxbox/kernel/teaching.config"
+profile = "A-full"
 
 # Tier 0 is the browser kernel under v86. Uniprocessor, 32 bit, emulated timing.
 tier = 0

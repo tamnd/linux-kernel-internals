@@ -1,0 +1,31 @@
+schema = 1
+
+# Citations into the pinned kernel tree.
+#
+# None of these are confirmed, and that is the honest state rather than an oversight. Confirming
+# one means running `python3 -m tools.refcheck --tree <a real linux tree> --confirm`, which finds
+# the anchor, writes down the line it is on and flips the flag. There is no kernel tree on the
+# machine this was written on, so nobody has done that yet, and until somebody does these cannot
+# verify anything.
+#
+# The anchor is a piece of text to find, never a line number. A line number is right on the day it
+# is typed and wrong after the next patch, and the wrongness is silent, because a stale line number
+# still points at a line.
+
+[[references]]
+id = "Z02-R1"
+path = "kernel/trace/trace_functions_graph.c"
+anchor = "print_graph_entry_leaf"
+kernel = "7.2.2"
+confirmed = false
+line = 0
+note = "The function that prints a call and its return on one line when the call had no children. This is where the single line a leaf gets comes from."
+
+[[references]]
+id = "Z02-R2"
+path = "Documentation/trace/ftrace.rst"
+anchor = "means that the function exceeded 100 usecs"
+kernel = "7.2.2"
+confirmed = false
+line = 0
+note = "The table of slowness markers. The kernel prints the marker and not the threshold, so this table is the only place the thresholds are written down."
