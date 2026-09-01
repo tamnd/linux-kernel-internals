@@ -1,0 +1,97 @@
+schema = 1
+
+# The kernel this project teaches, pinned. Every trace, every BTF dump, every field offset and
+# every line number in the book comes from this tree and no other. A kernel claim without a
+# version, a config and an architecture attached is not a claim.
+#
+# The checksums below were read from the signed sums file on kernel.org on 2026-09-01. They are
+# not copied from a blog post and not typed from memory. `build.sh` verifies the tarball against
+# them and stops if it does not match.
+
+[kernel]
+version = "7.2.2"
+series = "v7.x"
+moniker = "stable"
+released = "2026-08-28"
+tarball = "linux-7.2.2.tar.xz"
+url = "https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-7.2.2.tar.xz"
+sums = "https://cdn.kernel.org/pub/linux/kernel/v7.x/sha256sums.asc"
+sha256 = "7d0e7ce14f98c43efe880cffbf354a59be45928fdf7170d7333c374ae91c0d83"
+size_bytes = 160089944
+recorded = "2026-09-01"
+
+# The fallback tree, used only by profile C. 6.18 is the current longterm, so choosing it is
+# choosing a kernel that will still be getting fixes for years rather than the newest thing.
+[fallback]
+version = "6.18.48"
+series = "v6.x"
+moniker = "longterm"
+released = "2026-08-28"
+tarball = "linux-6.18.48.tar.xz"
+url = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.48.tar.xz"
+sums = "https://cdn.kernel.org/pub/linux/kernel/v6.x/sha256sums.asc"
+sha256 = "5ebdadb10a4b5708fc6b1c457764a110bc49f8150cc3502c59b921ead8c6fc8c"
+size_bytes = 154608908
+recorded = "2026-09-01"
+
+[toolchain]
+# Pinned in the container so that two people who build this get the same image. The kernel build
+# is sensitive to all three of these, and BTF generation is sensitive to pahole in particular.
+image = "debian:trixie-slim"
+gcc = "14"
+binutils = "2.44"
+pahole = "1.30"
+
+# The kill criterion, in the order the profiles get tried. A is what the book wants. B and C give
+# something up, and each one says what and why. If all four fail, Tier 0 becomes fully recorded
+# and the pedagogy spec has to be rewritten, which is a decision made in the open at M0.
+#
+# `kill_criterion = false` marks a profile that is built for a lesson rather than for the reader's
+# browser, so a failure there does not settle anything about whether Tier 0 works.
+
+[[profiles]]
+name = "A-full"
+order = 1
+kernel = "kernel"
+fragments = ["config/v86.config", "config/teaching.config"]
+compression = "xz"
+kill_criterion = true
+summary = "Everything the book wants, with BTF embedded in the image."
+
+[[profiles]]
+name = "A-gzip"
+order = 2
+kernel = "kernel"
+fragments = ["config/v86.config", "config/teaching.config", "config/gzip.config"]
+compression = "gzip"
+kill_criterion = true
+summary = "Profile A with a gzip image. Bigger to download, faster to decompress, and which one wins in a browser is measured rather than argued about."
+
+[[profiles]]
+name = "B-btf-external"
+order = 3
+kernel = "kernel"
+fragments = ["config/v86.config", "config/teaching.config", "config/btf-external.config"]
+drops = ["CONFIG_DEBUG_INFO_BTF"]
+drops_reason = "BTF adds several megabytes to an image a browser pays for twice, once to download and once to decompress. This profile ships the BTF as a separate blob that kxray fetches when a lesson needs it, so the boot gets faster and the type information is still there."
+compression = "xz"
+kill_criterion = true
+summary = "Profile A with BTF served beside the image rather than inside it."
+
+[[profiles]]
+name = "C-longterm"
+order = 4
+kernel = "fallback"
+fragments = ["config/v86.config", "config/teaching.config"]
+compression = "xz"
+kill_criterion = true
+summary = "The whole teaching config on the 6.18 longterm tree, for the case where 7.2 is simply too large to boot in a tab."
+
+[[profiles]]
+name = "D-lockdep"
+order = 5
+kernel = "kernel"
+fragments = ["config/v86.config", "config/teaching.config", "config/lockdep.config"]
+compression = "xz"
+kill_criterion = false
+summary = "Profile A plus lockdep and the memory debuggers, for lesson C09. Deliberately slow and deliberately not the image a reader boots by default."

@@ -18,7 +18,7 @@ linux-kernel-internals/
 │   └── patches/             #   teaching patches against the pinned tree
 ├── kxbox/                   # Tier 0: v86, kernel image, rootfs, the JS bridge
 │   ├── vendor/v86/          #   pinned upstream, BSD-2-Clause
-│   ├── kernel/              #   build recipe, .config, the built bzImage
+│   ├── kernel/              #   pin.toml, config fragments, build.sh, results
 │   ├── rootfs/              #   busybox, strace, our tools
 │   └── bridge/              #   run a command, read a file, collect a trace
 ├── kxwidgets/               # anywidget: SyscallTape, StructMap, LockTimeline
@@ -31,7 +31,7 @@ linux-kernel-internals/
 ├── conformance/             # kxdiff, graders, KUnit and kselftest drivers
 ├── site/                    # the published book
 ├── containers/              # the Tier 1 image, devcontainer, CI image
-├── tools/                   # refcheck, claimledger, driftbot, coverage, lintprose
+├── tools/                   # lintprose, claimledger, bpc, kconfig, nbbuild, diagrams
 └── justfile
 ```
 
@@ -42,6 +42,8 @@ The line that matters is the tier boundary. `kxray`, `kxwidgets` and the JavaScr
 `kxray` also has to run in Google Colab, which every lesson notebook opens in, so it is installable from the repository with pip and imports without a build step. `kxray.tracefs` is the one module that touches a live machine, and it reads and writes files under `/sys/kernel/tracing` rather than calling anything, which is why it stays in the pure Python half.
 
 That is also why the analysis toolkit is pure Python with no C extensions. It costs some speed and it rules out drgn, which is the tool you would reach for first on a real machine. The trade is worth it, because a reader with no local toolchain can still do the work.
+
+`kxbox/kernel/` is the version and the config, and nothing else. `pin.toml` says which kernel, from which URL, with which checksum, and lists the profiles we build. The `config/` fragments say what each profile turns on. `build.sh` downloads, verifies and builds one profile in a container, and `tools/kconfig` checks the whole lot without a toolchain, so a wrong pin fails CI in seconds instead of an hour into a build.
 
 `corpora/` is committed on purpose. A trace that a lesson depends on is an input to the build, not a scratch file, and a lesson whose evidence is not in the repository is a lesson nobody can check.
 

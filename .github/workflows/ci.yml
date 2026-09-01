@@ -60,7 +60,7 @@ jobs:
       # The house style rules, from tools/lintprose. This job has no dependencies
       # on purpose, so a prose only change gets an answer in a few seconds.
       - name: House style
-        run: python3 -m tools.lintprose README.md CONTRIBUTING.md LAYOUT.md lessons blueprints corpora
+        run: python3 -m tools.lintprose README.md CONTRIBUTING.md LAYOUT.md lessons blueprints corpora kxbox
 
       # Every claim a lesson makes has to name the evidence behind it, and the evidence has to
       # exist and be allowed to count. Standard library only, so it runs here with the prose.
@@ -70,3 +70,8 @@ jobs:
       # The blueprint shape, and the seal on every generated section.
       - name: Blueprints
         run: python3 -m tools.bpc
+
+      # The pinned kernel, and whether every config profile still has what the book depends on.
+      # Reads text files, so it belongs here with the prose rather than in the build job.
+      - name: Kernel config
+        run: python3 -m tools.kconfig
