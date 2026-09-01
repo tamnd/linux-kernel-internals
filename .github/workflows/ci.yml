@@ -34,6 +34,11 @@ jobs:
           uvx ruff check .
           uvx ruff format --check .
 
+      # Diagrams are generated from Python. If the committed output is out of date, say so with
+      # the file names rather than through a test failure somebody has to decode.
+      - name: Diagrams
+        run: uv run python -m tools.diagrams --check
+
       - name: Test
         run: uv run python -m pytest
 

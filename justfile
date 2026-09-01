@@ -5,7 +5,7 @@ default:
     @just --list
 
 # Everything CI runs, in the same order. Run this before you open a pull request.
-check: lint prose test
+check: lint prose diagrams-check test
 
 # Install the development dependencies into a local virtual environment.
 setup:
@@ -29,6 +29,14 @@ prose:
 # Print the prose rules and what each one is for.
 prose-rules:
     python3 -m tools.lintprose --list-rules .
+
+# Rebuild every diagram from its Python source.
+diagrams:
+    python3 -m tools.diagrams
+
+# Fail if a committed diagram is out of date with its source.
+diagrams-check:
+    python3 -m tools.diagrams --check
 
 test:
     python3 -m pytest
