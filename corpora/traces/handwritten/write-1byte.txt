@@ -1,0 +1,31 @@
+# tracer: function_graph
+#
+# CPU  DURATION                  FUNCTION CALLS
+# |     |   |                     |   |   |   |
+ 0)              |  ksys_write() {
+ 0)              |    fdget_pos() {
+ 0)   0.132 us   |      __fget_light();
+ 0)   0.418 us   |    }
+ 0)              |    vfs_write() {
+ 0)              |      rw_verify_area() {
+ 0)   0.101 us   |        security_file_permission();
+ 0)   0.377 us   |      }
+ 0)              |      new_sync_write() {
+ 0)              |        shmem_file_write_iter() {
+ 0)              |          generic_perform_write() {
+ 0)              |            shmem_write_begin() {
+ 0)              |              shmem_get_folio_gfp() {
+ 0)   0.148 us   |                filemap_get_entry();
+ 0) + 11.632 us  |                shmem_alloc_folio();
+ 0)   0.216 us   |                __folio_mark_uptodate();
+ 0) + 12.883 us  |              }
+ 0) + 13.244 us  |            }
+ 0)   0.309 us   |            copy_page_from_iter_atomic();
+ 0)              |            shmem_write_end() {
+ 0)   0.164 us   |              folio_mark_dirty();
+ 0)   0.541 us   |            }
+ 0) + 14.608 us  |          }
+ 0) + 14.999 us  |        }
+ 0) + 15.345 us  |      }
+ 0) + 16.157 us  |    }
+ 0) + 17.032 us  |  }
