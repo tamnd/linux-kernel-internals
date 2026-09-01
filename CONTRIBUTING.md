@@ -31,6 +31,14 @@ Every rule here is enforced by `tools/lintprose`, so you do not have to remember
 
 **Length caps.** A lesson hook is at most 150 words, a tour at most 1500, a whole lesson at most 2500. Blocks are marked with an HTML comment so the cap follows the writing rather than the file. A lesson that will not fit is two lessons.
 
+## Writing a lesson
+
+A lesson is `lessons/<ID>/build.py`, and the notebook and the `lesson.md` beside it are output. Edit the builder, run `just build-lessons`, and both get rewritten. CI fails when a committed notebook disagrees with its builder, so never edit the `.ipynb` by hand.
+
+The house style above applies to the markdown cells, because `lintprose` reads the generated `lesson.md` and cannot tell where the words came from. Keep each paragraph on one line inside the builder too. That puts most paragraphs over the Python line length, which is why `lessons/*/build.py` is exempt from that one rule and from nothing else.
+
+Every lesson has to run in Google Colab from the badge at the top with nothing installed. That means the first code cell installs the toolkit, no cell reads a file by a relative path, and any cell that needs a live kernel says what to do when there is not one. `lessons/README.md` has the details.
+
 ## Claims and evidence
 
 Nothing goes in a lesson that the reader cannot watch happen. That is the whole point of the project, and it is the rule most likely to be broken by accident when you are in a hurry.

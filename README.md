@@ -2,7 +2,7 @@
 
 A complete visual teardown of the Linux kernel, taught from zero, with a real kernel booting in your browser.
 
-Status: planning. Nothing is built yet. The work is laid out in [13 milestones](https://github.com/tamnd/linux-kernel-internals/milestones), starting with [M0](https://github.com/tamnd/linux-kernel-internals/issues/1), which exists to find out whether the central idea works at all.
+Status: early. The toolkit and the checkers are being built in the open and the first lesson exists as a draft. The work is laid out in [13 milestones](https://github.com/tamnd/linux-kernel-internals/milestones), starting with [M0](https://github.com/tamnd/linux-kernel-internals/issues/1), which exists to find out whether the central idea works at all.
 
 ## The problem
 
@@ -39,6 +39,39 @@ The usual result is that people read about the kernel for months, feel like they
 60 blueprints. Each one a normative specification you could implement against without reading the lesson, and none of them allowed to say "see the chapter". The structure sections are generated from BTF, straight out of the running kernel, so the field offsets in this book cannot be stale or wrong.
 
 Three capstones, each with a real external grader that will fail work that only looks correct. A filesystem, judged by xfstests. A device driver, written in C and then again in Rust, judged by the kernel's own debug options and by fault injection. A `sched_ext` scheduler, which you can load on the machine you are sitting at, watch fail, and get your machine back, because the watchdog evicts it. No previous generation of kernel learners could do that last one.
+
+## The lessons
+
+Every lesson is a Jupyter notebook. Click the badge and it opens in Google Colab and runs there with nothing installed, because the first cell installs the toolkit and everything after it is the lesson.
+
+Colab is a real Linux machine, which is what makes this work. A lesson that needs a running kernel prints what your runtime can and cannot do before it asks you to do anything, so you are never following instructions that were never going to work on the machine you are sitting at.
+
+| Lesson | What you come out able to do | Status | Run it |
+| --- | --- | --- | --- |
+| Z02, your first trace | Turn on `function_graph`, read the output, and know why the indentation belongs to a CPU rather than to the file | draft | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/tamnd/linux-kernel-internals/blob/main/lessons/Z02/Z02.ipynb) |
+| S05, the first ops plug | Not started | planned | |
+| C09, lockdep | Not started | planned | |
+
+Three lessons is the M0 pilot. They exist to find out whether the format works before 100 more get written in it.
+
+## How a lesson is put together
+
+One directory per lesson, and one file in it that you edit:
+
+```
+lessons/Z02/
+├── build.py       the lesson itself, prose and cells, the file you edit
+├── Z02.ipynb      generated, committed, what the Colab badge opens
+├── lesson.md      generated, committed, what you read here on GitHub
+├── meta.toml      draft or published, and which kernel, architecture and tier
+├── claims.toml    every claim the lesson makes, and the evidence behind it
+├── grader.py      what has to be true before the lesson is done
+└── assets/        diagrams as Python, with the svg and excalidraw beside them
+```
+
+A notebook is JSON with the prose stored as lists of strings. Change one word in a paragraph and the diff is unreadable, so the source is `build.py` and the notebook is output. `just build-lessons` rewrites both outputs, and CI fails when a committed notebook and its builder disagree. The notebook stays committed anyway, because somebody who clicked a badge cannot run a build step first.
+
+Writing a lesson in Python buys two things that hand editing a notebook cannot. The Colab badge is generated from the path the notebook is about to be written to, so it cannot point at the wrong lesson, which is the first mistake anybody makes when copying a lesson. And `lesson.claim("Z02-05")` fetches the claim's own words out of `claims.toml` and records where in the lesson it was made, then the build fails unless the next cell is code and it arrives before the next heading. A lesson cannot assert something and quietly never show it.
 
 ## What this will not claim
 

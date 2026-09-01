@@ -39,9 +39,10 @@ jobs:
       - name: Diagrams
         run: uv run python -m tools.diagrams --check
 
-      # A lesson notebook that does not load is a lesson nobody can do.
+      # The notebook a reader opens from a Colab badge is committed, and it is generated from the
+      # build.py beside it. This is what stops the two from drifting apart.
       - name: Notebooks
-        run: uvx --from marimo marimo check --strict lessons/*/notebook.py
+        run: uv run python -m tools.nbbuild --check
 
       - name: Test
         run: uv run python -m pytest

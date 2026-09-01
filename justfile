@@ -46,9 +46,13 @@ blueprints:
 reseal:
     python3 -m tools.bpc --reseal blueprints
 
-# Check that every lesson notebook is a valid marimo notebook.
+# Rebuild every lesson notebook and its markdown from the build.py beside it.
+build-lessons:
+    python3 -m tools.nbbuild
+
+# Fail if a committed notebook or lesson.md is out of date with its builder.
 notebooks:
-    uvx --from marimo marimo check --strict lessons/*/notebook.py
+    python3 -m tools.nbbuild --check
 
 # Rebuild every diagram from its Python source.
 diagrams:
