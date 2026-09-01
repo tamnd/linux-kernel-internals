@@ -40,3 +40,6 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 [tool.ruff.lint.per-file-ignores]
 # Tests say the same thing several ways on purpose.
 "tests/*" = ["E501"]
+# A marimo notebook ends a cell with the thing it wants to display, which reads as a useless
+# expression to a linter and is the entire output of the cell to a reader.
+"lessons/*/notebook.py" = ["B018"]

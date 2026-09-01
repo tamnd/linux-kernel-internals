@@ -5,7 +5,7 @@ default:
     @just --list
 
 # Everything CI runs, in the same order. Run this before you open a pull request.
-check: lint prose diagrams-check claims test
+check: lint prose diagrams-check claims notebooks test
 
 # Install the development dependencies into a local virtual environment.
 setup:
@@ -37,6 +37,10 @@ claims:
 # Print the kinds of evidence a claim is allowed to rest on.
 claim-kinds:
     python3 -m tools.claimledger --list-kinds
+
+# Check that every lesson notebook is a valid marimo notebook.
+notebooks:
+    uvx --from marimo marimo check --strict lessons/*/notebook.py
 
 # Rebuild every diagram from its Python source.
 diagrams:

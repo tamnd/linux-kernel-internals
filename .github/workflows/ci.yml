@@ -39,6 +39,10 @@ jobs:
       - name: Diagrams
         run: uv run python -m tools.diagrams --check
 
+      # A lesson notebook that does not load is a lesson nobody can do.
+      - name: Notebooks
+        run: uvx --from marimo marimo check --strict lessons/*/notebook.py
+
       - name: Test
         run: uv run python -m pytest
 
