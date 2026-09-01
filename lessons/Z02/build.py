@@ -178,6 +178,8 @@ The second line is not inside the first one no matter how it is indented. If you
 
 There is one depth per CPU. The parser in `kxray.trace` keeps one stack per CPU for exactly this reason, and the first test written against it was the one with two CPUs interleaved. The cell below feeds it a two CPU sample and shows you two outermost calls rather than one nested pair.
 
+{lesson.image("one-file-two-stacks.svg", "One file on the left holding six interleaved lines, and an arrow labelled split by the CPU column leading to two boxes on the right: CPU 0 with a call stack three deep, and CPU 1 with a single call that was never inside it.")}
+
 On Tier 0 you will not see this, because v86 gives you a single processor and every line says `0)`. That makes it a good place to learn the format and a bad place to learn the trap, so the trap is here in writing, and the two CPU capture is a Tier 1 experiment.
 """)
 

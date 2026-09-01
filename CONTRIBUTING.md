@@ -71,6 +71,20 @@ Say which kernel, which config and which architecture. A kernel claim without a 
 
 Tier 0 is the browser kernel under v86. It is uniprocessor, it is 32 bit, and its timing is emulated. A claim that depends on real concurrency, on 64 bit layout or on real timing cannot cite Tier 0 evidence, and CI will reject it if it tries.
 
+## Pictures
+
+There are three ways to draw something here and they are not interchangeable.
+
+A **diagram** is a `*.diagram.py` file in a lesson's `assets/`, and it is the right answer for a shape: how the parts fit together, what points at what, where a boundary is. The `.svg` and `.excalidraw` beside it are output. Every diagram source defines an `ALT` string and the build fails without one.
+
+A **widget** is a class in `kxwidgets/`, and it is the right answer for something a reader wants to look at their own data through. It draws plain HTML with the styling inline, ships no JavaScript, and has to draw itself as text as well, because that text is what a screen reader gets and what a test asserts on.
+
+An **animation** is a storyboard in `kxmanim/storyboards/`, and it is the right answer only for a sequence in time. There are about four of those in the whole book. Before you write one, read the rules in `kxmanim/storyboard.py`, because they are enforced by `just storyboards` and by CI: ninety seconds at most, one idea stated as the title, only the nine primitives, a caption and a piece of alt text on every beat, and a still picture that makes the same point without moving. Write the captions and the alt text first. If the alt text is hard to write, the scene is doing two things and the fix is to cut one of them.
+
+All three share one vocabulary, in `kxray/vocabulary.py`. Teal is a filesystem everywhere. The eight layers run top to bottom everywhere. A dashed pointer means no reference is held everywhere. If you need a shape that is not in there, that is a conversation before it is a commit.
+
+Colour is never the only thing carrying the meaning. Whatever the colour says, the label says too.
+
 ## Pull requests
 
 One idea per pull request. A lesson, a tool, a blueprint, a fix.

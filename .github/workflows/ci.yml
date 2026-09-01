@@ -80,3 +80,9 @@ jobs:
       # Reads text files, so it belongs here with the prose rather than in the build job.
       - name: Kernel config
         run: python3 -m tools.kconfig
+
+      # Every animation storyboard: the ninety second budget, the captions, the alt text, and
+      # whether the still it names is really on disk. Standard library only, and no manim, which
+      # is the point. The rules run on every push and the renderer does not have to.
+      - name: Storyboards
+        run: python3 -m kxmanim

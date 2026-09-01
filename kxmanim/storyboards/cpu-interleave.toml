@@ -1,0 +1,50 @@
+id = "cpu-interleave"
+idea = "The trace file holds every CPU at once, so the indentation belongs to a CPU"
+still = "lessons/Z02/assets/one-file-two-stacks.svg"
+status = "draft"
+
+# The lines this animation shows were written by hand so the parser had something to work
+# against. They are not a capture. Nobody has run a real trace on a real machine here, and the
+# durations in the captions are made up numbers that look plausible, which is exactly the kind of
+# thing a reader would take for a measurement if it were not said out loud.
+inputs = ["corpora/traces/handwritten/write-1byte.txt"]
+evidence = false
+blocked_on = """A function_graph capture from a machine with more than one CPU, with a real
+interleave in it. Tier 0 cannot produce one because v86 is uniprocessor, so this needs Tier 1 or
+it needs kxbox to grow a second CPU, and the second of those is not going to happen."""
+
+[[beat]]
+seconds = 10
+caption = "Here is a trace file, six lines of it, in the order the kernel wrote them."
+alt = "Six lines of function_graph output stacked in a single column, each one indented, with a number in the leftmost column that most readers skip straight past."
+shows = ["trace-cell"]
+
+[[beat]]
+seconds = 12
+caption = "Read it the obvious way and vfs_write called handle_mm_fault, one level deeper."
+alt = "A pointer follows the indentation down the column, joining vfs_write to the line under it, drawing the call stack a reader would naturally assume is there."
+shows = ["trace-cell"]
+
+[[beat]]
+seconds = 10
+caption = "It did not. Look at the first column, which is the CPU number."
+alt = "The leftmost column lights up on every line, showing zero, one, zero, one, zero, zero, and the assumed call stack drawn in the last beat greys out."
+shows = ["trace-cell", "cpu-lane"]
+
+[[beat]]
+seconds = 14
+caption = "The lines slide apart into two lanes, one for each CPU, and the stacks come out different."
+alt = "The six lines separate into two horizontal lanes. CPU 0 keeps three calls nested three deep. CPU 1 keeps one call, on its own, that was never inside anything on CPU 0."
+shows = ["cpu-lane", "trace-cell"]
+
+[[beat]]
+seconds = 12
+caption = "There is one ring buffer per CPU, and reading the file merges them."
+alt = "Two separate ring buffers, one per lane, feeding into the single file the reader started with, which is where the interleaving comes from."
+shows = ["cpu-lane"]
+
+[[beat]]
+seconds = 10
+caption = "So indentation belongs to a CPU. One call stack per CPU, never one per file."
+alt = "The two lanes stay separate and the closing line of text repeats the rule, with both lanes still visible underneath it."
+shows = ["cpu-lane"]
