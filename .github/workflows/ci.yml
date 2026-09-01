@@ -65,3 +65,7 @@ jobs:
       # exist and be allowed to count. Standard library only, so it runs here with the prose.
       - name: Claim ledger
         run: python3 -m tools.claimledger
+
+      # The blueprint shape, and the seal on every generated section.
+      - name: Blueprints
+        run: python3 -m tools.bpc

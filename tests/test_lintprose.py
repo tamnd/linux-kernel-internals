@@ -84,3 +84,27 @@ def test_clean_document_has_no_findings():
         "| tracer | what it shows |\n| --- | --- |\n| function_graph | every call and return |\n"
     )
     assert check_text(text, "lessons/Z02/lesson.md") == []
+
+
+def test_a_generated_blueprint_section_is_not_prose():
+    # Nobody hand writes a generated section, so where the generator puts its line breaks is
+    # not a style choice and the house style has nothing to say about it.
+    text = (
+        "# A blueprint\n\n"
+        "<!-- bpc:generated section=2 hash=0123456789abcdef -->\n"
+        "struct folio, obviously the simplest one, and it is easy to read\n"
+        "because the generator wraps at eighty columns\n"
+        "<!-- bpc:end section=2 -->\n\n"
+        "Written by a person, and held to the rules.\n"
+    )
+    assert check_text(text, "blueprints/folio.md") == []
+
+
+def test_the_rules_come_back_after_a_generated_section_closes():
+    text = (
+        "<!-- bpc:generated section=2 hash=0123456789abcdef -->\n"
+        "anything at all\n"
+        "<!-- bpc:end section=2 -->\n\n"
+        "This part is obviously fine.\n"
+    )
+    assert "dismissive" in rules_fired(text, "blueprints/folio.md")
