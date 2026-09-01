@@ -16,11 +16,14 @@ linux-kernel-internals/
 │   ├── module/              #   an out of tree module for lessons that need one
 │   ├── bpf/                 #   CO-RE programs for what ftrace cannot express
 │   └── patches/             #   teaching patches against the pinned tree
-├── kxbox/                   # Tier 0: v86, kernel image, rootfs, the JS bridge
+├── kxbox/                   # Tier 0: the session, the fallback, v86, the kernel image
+│   ├── session.py           #   boot(), the Box, and the banner every lesson prints first
+│   ├── corpus.py            #   the recorded backend, which is what CI and most readers get
+│   ├── bridge.py            #   the Python half of the conversation with v86
 │   ├── vendor/v86/          #   pinned upstream, BSD-2-Clause
 │   ├── kernel/              #   pin.toml, config fragments, build.sh, results
 │   ├── rootfs/              #   busybox, strace, our tools
-│   └── bridge/              #   run a command, read a file, collect a trace
+│   └── bridge/              #   the JavaScript half, four calls, see PROTOCOL.md
 ├── kxwidgets/               # SyscallTape, StructMap, OpsExplorer, PredictionGate
 ├── kxmanim/                 # the nine primitives, storyboards, the manim adapter
 │   └── storyboards/         #   one toml per animation, checked in CI
@@ -60,6 +63,8 @@ That is also why the analysis toolkit is pure Python with no C extensions. It co
 
 The lessons and the blueprints are copied into `site/docs/` at build time and those copies are ignored by git. MkDocs can only see what is under its docs directory, and a file that exists twice in a repository is a file that will disagree with itself.
 
+`kxbox/` has two backends behind one interface and they hand back the same objects. That is not tidiness. A fallback written as a branch gives you one path that runs constantly and one that runs for a reader on a Tuesday, and the second one is the one that will be broken. `box.trace(...)` returns a `kxray.models.Tape` whether it came off a kernel or out of `corpora/tier0/`, so the widget and the blueprint downstream cannot tell which they got. `KXBOX_DISABLE=1` forces the recording and CI runs everything that way.
+
 `corpora/` is committed on purpose. A trace that a lesson depends on is an input to the build, not a scratch file, and a lesson whose evidence is not in the repository is a lesson nobody can check.
 
 Two corpus directories are handwritten and are not evidence. `traces/handwritten/` and `btf/handwritten/` exist so the parsers have something to be tested against before a kernel exists, and both are marked `evidence = false` so the claim checker refuses to let a lesson cite them.
@@ -77,6 +82,8 @@ A new widget goes in `kxwidgets/`, takes a model out of `kxray.models` and nothi
 A new animation goes in `kxmanim/storyboards/` as a `.toml` file, and it starts at `status = "draft"`, which is a status that refuses to render. Write the beats, the captions and the alt text first and the drawing second. If writing the alt text is hard, the scene is trying to say two things at once and the fix is two scenes or one fewer. The still it names has to exist before the check passes, because most readers of this book will never press play.
 
 A new blueprint goes in `blueprints/` as `<name>.md`, copied from `TEMPLATE.md`, with `<name>.refs.toml` beside it for its citations and any diagrams in `blueprints/assets/`. Write sections 1, 3, 4, 6, 8 and 9 by hand and leave 2, 5 and 7 to `just blueprints-generate`, which fills them from BTF and the corpus and reseals them. Do not type inside a sealed block.
+
+A new Tier 0 recording goes in `corpora/` with its `.meta.toml`, and gets a name in `corpora/tier0/recipes.toml`. The name is what a lesson asks for and what the fallback answers, so a capture that is not listed there is a capture no lesson can reach.
 
 A new checker goes in `tools/`, with tests, and gets wired into `justfile` and CI in the same pull request. A checker that is not in CI is a suggestion.
 
