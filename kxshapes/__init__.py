@@ -1,7 +1,7 @@
-"""The nine shapes every animation is built out of, as data rather than as drawing.
+"""The nine shapes every picture in this project is built out of, as data rather than as drawing.
 
-There are nine and there will keep being nine. A reader who has watched three animations should
-already know what every shape on screen means, and that only works if the set is closed and small.
+There are nine and there will keep being nine. A reader who has met three of these pictures should
+already know what every shape in them means, and that only works if the set is closed and small.
 Adding a tenth shape because one scene wanted something is how a visual language turns into a pile
 of pictures.
 
@@ -15,13 +15,23 @@ of pictures.
     Context badge   which of the six contexts this is running in
     Memory slot     a chunk of memory, drawn at a size you can compare
 
-Nothing in this file imports manim. Everything here is a dataclass with numbers in it, so the
-whole visual system can be tested on a laptop with no video encoder, and so the same primitives
-could be rendered to something other than video later without any of this changing.
+This is a package of its own rather than part of either renderer, and the reason is the whole
+point of the exercise. `kxwidgets` draws these as HTML in a notebook and `kxmanim` draws them as
+video, and if the arithmetic lived in either one then the other would have to redo it. Two
+renderers doing their own arithmetic is two renderers that disagree, and they disagree in the
+worst possible way, which is that both pictures look fine and one of them is wrong.
 
-Every primitive has an `alt()` that says what it is in words. That is not a courtesy. An animation
-that cannot be described in words is an animation that half the readers get nothing from, and
-writing the description is usually how you find out the scene is trying to say two things at once.
+So the numbers are worked out once, here, from `kxray.models` objects, and both renderers are
+handed the answer. A widget and an animation of the same trace agree box for box because there is
+only one place the boxes come from.
+
+Nothing here imports manim, and nothing here emits HTML. Everything is a dataclass with numbers in
+it, so the whole visual system can be tested on a laptop with no video encoder, and a third
+renderer could be added later without touching any of this.
+
+Every shape has an `alt()` that says what it is in words. That is not a courtesy. A picture that
+cannot be described in words is a picture that half the readers get nothing from, and writing the
+description is usually how you find out it is trying to say two things at once.
 """
 
 from __future__ import annotations
