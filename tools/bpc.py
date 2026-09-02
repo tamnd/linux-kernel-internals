@@ -60,6 +60,8 @@ GENERATED = (2, 5, 7)
 
 STATUSES = ("stub", "partial", "complete")
 
+TEMPLATE = "TEMPLATE.md"
+
 REQUIRED_KEYS = ("blueprint", "title", "status", "pin", "arch", "lessons", "generated")
 
 # The fixed set from NOTATION.md. A blueprint at complete needs all nine.
@@ -564,7 +566,13 @@ def main(argv: list[str] | None = None) -> int:
             print(f"bpc: {btf_path} is not there", file=sys.stderr)
             return 1
         problems: list[Finding] = []
+        # The template is left alone. Its generated blocks are meant to show the state a new
+        # blueprint starts in, which is the state with no kernel behind it, and filling them from
+        # whichever vmlinux happened to be on the machine would put a path nobody else has into
+        # the file every new blueprint is copied from.
         for path in blueprints:
+            if path.name == TEMPLATE:
+                continue
             changed, found = generate(path, btf_path=btf_path, root=Path(args.root))
             problems.extend(found)
             print(f"{path}: {changed} section(s) rewritten")

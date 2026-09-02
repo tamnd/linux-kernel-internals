@@ -400,7 +400,12 @@ def section_7(request: Request, root: Path, btf_path: Path | None) -> Rendered:
                 out.append(f"| `{name}` | `{btf.signature(name)}` |")
             except (KeyError, BtfError) as problem:
                 problems.append(f"section 7: {name}: {problem}")
-                out.append(f"| `{name}` | not in `{btf_path}` |")
+                # BTF records the functions this build actually emitted. A name missing from it is
+                # a real fact about the build rather than a gap in the blueprint, and there are
+                # only two ways it happens: the compiler inlined the function away, or the config
+                # never compiled it. Which one is a question for the prose, so the table says the
+                # thing it knows and leaves the reason to somebody who checked.
+                out.append(f"| `{name}` | no symbol in this build, inlined or configured out |")
         out.append("")
 
     for name in request.ops:

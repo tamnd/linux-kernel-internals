@@ -421,6 +421,77 @@ def test_a_struct_with_no_function_pointers_has_no_slots():
     assert btf.parse(blob).ops("point").slots == []
 
 
+# -- pulling the blob out of a vmlinux --------------------------------------------------------
+
+
+def wrap_in_elf(payload: bytes, *, name: bytes = b".BTF", wide: bool = True) -> bytes:
+    """The smallest ELF image that has one named section in it holding `payload`.
+
+    A real vmlinux is a hundred megabytes and cannot be committed, so the shape is built here
+    instead. Three sections: the empty one at index zero that every ELF has, the string table
+    holding the names, and the one carrying the payload.
+    """
+    order = "<"
+    names = b"\0" + name + b"\0.shstrtab\0"
+    header_size, entry_size = (64, 64) if wide else (52, 40)
+    names_at = header_size
+    payload_at = names_at + len(names)
+    table_at = payload_at + len(payload)
+
+    def section(name_offset: int, offset: int, size: int) -> bytes:
+        if wide:
+            return struct.pack(order + "IIQQQQIIQQ", name_offset, 1, 0, 0, offset, size, 0, 0, 1, 0)
+        return struct.pack(order + "IIIIIIIIII", name_offset, 1, 0, 0, offset, size, 0, 0, 1, 0)
+
+    head = bytearray(b"\x7fELF" + bytes(header_size - 4))
+    head[4] = 2 if wide else 1
+    head[5] = 1
+    if wide:
+        struct.pack_into(order + "Q", head, 0x28, table_at)
+        struct.pack_into(order + "HHH", head, 0x3A, entry_size, 3, 2)
+    else:
+        struct.pack_into(order + "I", head, 0x20, table_at)
+        struct.pack_into(order + "HHH", head, 0x2E, entry_size, 3, 2)
+    table = (
+        section(0, 0, 0)
+        + section(1, payload_at, len(payload))
+        + section(1 + len(name) + 1, names_at, len(names))
+    )
+    return bytes(head) + names + payload + table
+
+
+def test_a_raw_blob_on_disk_is_read_as_it_is(tmp_path):
+    """This is the `/sys/kernel/btf/vmlinux` case, and it is the one that already worked."""
+    blob, _ = small()
+    path = tmp_path / "vmlinux"
+    path.write_bytes(blob)
+    assert btf.parse_file(path).layout("point").size == 8
+
+
+@pytest.mark.parametrize("wide", [True, False], ids=["64 bit", "32 bit"])
+def test_a_vmlinux_has_its_btf_section_pulled_out(tmp_path, wide):
+    blob, _ = small()
+    path = tmp_path / "vmlinux"
+    path.write_bytes(wrap_in_elf(blob, wide=wide))
+    assert btf.parse_file(path).layout("point").size == 8
+
+
+def test_a_vmlinux_built_without_btf_says_which_option_is_missing(tmp_path):
+    """The wrong answer here is `does not start with the BTF magic number`, which sends a
+    reader looking at the file instead of at their config."""
+    path = tmp_path / "vmlinux"
+    path.write_bytes(wrap_in_elf(b"nothing to see", name=b".comment"))
+    with pytest.raises(BtfError, match="CONFIG_DEBUG_INFO_BTF"):
+        btf.parse_file(path)
+
+
+def test_something_that_is_neither_still_says_magic(tmp_path):
+    path = tmp_path / "vmlinux"
+    path.write_bytes(b"not an elf and not btf either" * 8)
+    with pytest.raises(BtfError, match="magic"):
+        btf.parse_file(path)
+
+
 # -- the committed fixture -------------------------------------------------------------------
 
 

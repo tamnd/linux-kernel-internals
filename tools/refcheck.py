@@ -10,7 +10,9 @@ There are two kinds of reference in this repository and both of them rot.
 The first is a path into this repository, written in prose, in backticks. A file gets moved and
 forty documents keep pointing at where it used to be. Nobody notices, because prose does not fail
 to compile. This is not hypothetical. The first run of this checker found a lesson pointing at a
-teaching config that had moved into a subdirectory when the kernel got pinned.
+teaching config that had moved into a subdirectory when the kernel got pinned. The exception is a
+path a build makes, such as the vmlinux a generated blueprint section says it read its types out
+of. That file is absent in a fresh checkout by design, and naming it is the whole point.
 
 The second is a citation into the kernel tree. This is the one the project cannot afford to get
 wrong, because a lesson that says "see mm/memory.c:5310" is worthless the moment somebody adds ten
@@ -47,6 +49,13 @@ LESSONS = Path("lessons")
 BLUEPRINTS = Path("blueprints")
 PLANNED = Path("refcheck.toml")
 PIN = Path("kxbox/kernel/pin.toml")
+
+# Things a build makes. These are not in a fresh checkout and they are not meant to be, so
+# "does not exist" is the normal state rather than a stale reference. They cannot go in the
+# planned list either, because that list fails when a path turns up and these turn up on any
+# machine that has run a build. A blueprint generated from a kernel says which vmlinux it read,
+# and that sentence has to name the real path or it is not provenance.
+BUILD_OUTPUT = ("kxbox/kernel/build/", "site/_build/")
 
 # The top level of a kernel tree. A citation whose first segment is not one of these is not a
 # path into the kernel, it is a typo or a path into this repository by mistake.
@@ -189,6 +198,8 @@ def check_document(
     generated = path.name in ("lesson.md",)
     for number, token in prose_paths(path.read_text(encoding="utf-8")):
         if token.split("/")[0] not in tops:
+            continue
+        if token.startswith(BUILD_OUTPUT):
             continue
         if exists(root, token) or token in planned:
             continue

@@ -131,6 +131,24 @@ def test_a_placeholder_is_not_a_path(tmp_path):
     assert check(repo(tmp_path, docs={"README.md": text})) == ""
 
 
+def test_a_path_a_build_makes_is_allowed_to_be_missing(tmp_path):
+    """A generated blueprint section names the vmlinux it read its types out of.
+
+    That file is not in a checkout and is not supposed to be, so demanding it exist would mean
+    either dropping the provenance or committing a hundred megabytes. Neither is an option, and
+    the planned list is no help because it fails the moment a path turns up, which this one does
+    on any machine that has run a build.
+    """
+    text = "Generated from `kxbox/kernel/build/A-full/vmlinux`, for i386.\n"
+    assert check(repo(tmp_path, docs={"README.md": text})) == ""
+
+
+def test_a_path_that_only_looks_like_a_build_output_is_still_checked(tmp_path):
+    """The exception is the build directory itself and not everything under kxbox."""
+    root = repo(tmp_path, docs={"README.md": "See `kxbox/kernel/nothing_here.py`.\n"})
+    assert "does not exist" in check(root)
+
+
 def test_a_path_that_is_not_ours_is_ignored(tmp_path):
     """`mm/memory.c` in prose is the kernel, not this repository, and is not ours to check."""
     assert check(repo(tmp_path, docs={"README.md": "The fault path is in `mm/memory.c`.\n"})) == ""

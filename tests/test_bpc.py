@@ -294,6 +294,22 @@ def test_generating_leaves_the_file_passing_its_own_check(tmp_path):
     assert bpc.check(path) == []
 
 
+def test_generating_leaves_the_template_alone(tmp_path):
+    """The template is the file every new blueprint starts as a copy of.
+
+    Regenerating it fills its sections from whichever kernel happened to be on the machine, so
+    the next person to start a blueprint inherits a path only one laptop has and a set of field
+    offsets for an architecture they may not be on.
+    """
+    template = write(tmp_path, blueprint(name="TEMPLATE"), name="TEMPLATE.md")
+    real = write(tmp_path, blueprint(extra_header="structures: [vm_fault]"))
+    before = template.read_text()
+
+    assert bpc.main(["--generate", "--root", str(tmp_path), str(tmp_path)]) == 0
+    assert template.read_text() == before
+    assert real.read_text() != blueprint(extra_header="structures: [vm_fault]")
+
+
 def test_generating_twice_changes_nothing_the_second_time(tmp_path):
     path = write(tmp_path, blueprint(extra_header="structures: [vm_fault]"))
     bpc.generate(path, root=tmp_path)
@@ -436,15 +452,37 @@ PAGE_FAULT = ROOT / "blueprints" / "page-fault.md"
 
 
 def test_the_page_fault_blueprint_is_partial_and_says_why():
+    """Sections 2 and 7 come from the pinned kernel now. Section 5 is the one still waiting.
+
+    It is generated from a handwritten trace in the corpus, and a handwritten trace is not
+    evidence of anything. Recording that here means the day a real trace lands, this test is
+    what asks whether the status should move.
+    """
     lines = PAGE_FAULT.read_text().split("\n")
     header, _ = bpc.parse_front_matter(lines)
     assert header["status"] == "partial"
     assert header["pin"] == "v7.2.2"
+    assert header["arch"] == "i386", "the only build this project has is the 32 bit one"
 
+    evidence = {}
     for section in bpc.GENERATED:
         source = bpcgen.parse_source(generated(PAGE_FAULT, section))
         assert source is not None
-        assert source.evidence is False, f"section {section} claims evidence it does not have"
+        assert source.pin == header["pin"]
+        assert source.arch == header["arch"]
+        evidence[section] = source.evidence
+
+    assert evidence == {2: True, 5: False, 7: True}
+
+
+def test_the_page_fault_blueprint_read_its_types_out_of_the_built_kernel():
+    """A number here that does not match the build is the failure this whole file is about."""
+    section = generated(PAGE_FAULT, 2)
+    assert "4 byte pointers" in section
+    # `struct vm_fault` on the pinned build. On 64 bit it is bigger, and that is the point of
+    # saying which machine every one of these tables is about.
+    head = section.split("### struct vm_fault")[1]
+    assert head.lstrip().startswith("56 bytes, 21 field(s)")
 
 
 def test_the_page_fault_blueprint_carries_all_nine_edge_cases():
