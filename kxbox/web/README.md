@@ -24,6 +24,12 @@ A request goes to the page as a message, which is queued before the worker goes 
 
 `page.js`, `worker.js` and `index.html` are the wiring. `serve.py` serves this directory with the two headers a blocking worker needs, which `python3 -m http.server` does not send.
 
+`checks.js` is the list of things a lesson stops working without, and it is one list rather than two because a check that passes under node and is never run in a tab is a check for the wrong machine.
+
+`harness.js` is what the page does: boot, time it, run the checks, wait for Python, take one trace, and leave everything it learned on `window.kxResults`. `first-tape.py` is that trace, and it is real Python that a lesson could contain rather than a demo written for this page.
+
+`measure.js` runs the whole of that in Chrome and prints the numbers. It drives the browser over the DevTools protocol directly rather than through a driver library, which is one fewer thing to pin for about eighty lines of code. `just web-measure` is the short way to run it.
+
 `headless.js` boots the same kernel under node instead of on a page. There is no worker and no shared buffer in it, because nothing is blocking on that side and it is allowed to await. Everything below that, which is the part that talks to the kernel, is the same code the page runs.
 
 `vendor.toml` pins v86 by commit and by sha256 of every file taken from it. `python3 -m tools.vendor` fetches them and `--check` says whether what is on disk is what the pin asked for. The vendored files are not committed.
@@ -36,7 +42,9 @@ Running it found two bugs that the tests had been passing over. A write to any t
 
 Everything that can be checked without an emulator still is, because that is what runs in CI. `just web` runs it. Forty one tests, and the useful ones are the parsing of a serial stream that contains the prompt and the echo of the command, a write arriving in pieces and ending up as one file, two commands not interleaving on the one shell, and a blocking call across two real threads with the answer deliberately late.
 
-Node's worker threads are not a browser, and node running v86 is not a tab. What they share with one is `Atomics.wait`, `SharedArrayBuffer` and `postMessage`, which is the part of this that is ours. How long a reader waits for a boot in an actual browser is still unmeasured.
+It also runs in a browser now, which is what M0 was actually asking. `just web-measure` boots the pinned kernel in Chrome on a throwaway profile, runs the same ten checks, brings Pyodide up in the worker, and takes one filtered trace of a write all the way through the bridge and back. A shell in about seven seconds in a visible window, ten checks passing, and seventeen frames of a real tape drawn by the same widget a notebook would use. The numbers and the four surprises are in `../kernel/RESULTS.md`.
+
+The surprise worth repeating here is that a visible window is three to four times slower than a headless one at booting and about five times slower at running guest code, because v86 paces itself against the compositor when there is one. Every node number this project quoted before is therefore optimistic about what a reader waits for, and none of them was wrong about whether it works.
 
 ## What the guest needs
 

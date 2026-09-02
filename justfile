@@ -96,9 +96,19 @@ tier0:
 web:
     node --test tests/web/*.test.js
 
+# Build the project as a wheel where the worker can fetch it. Pyodide has no checkout to import
+# from, so the only way Python in a tab gets kxray is to install it, and micropip installs wheels.
+web-wheel:
+    uv build --wheel --out-dir kxbox/web/build
+
 # Serve Tier 0 with the two headers a blocking worker needs, and open /web/ in a browser.
-web-serve:
+web-serve: web-wheel
     python3 kxbox/web/serve.py
+
+# The kill criterion: boot the kernel in a real browser and time it. Fills in the browser table
+# in kxbox/kernel/RESULTS.md, which is the one measurement node cannot make.
+web-measure profile="A-full": web-wheel
+    node kxbox/web/measure.js --profile {{profile}}
 
 # Fetch v86 at the pinned commit, checked against the sha256 of every file in web/vendor.toml.
 vendor:

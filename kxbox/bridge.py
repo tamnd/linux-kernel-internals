@@ -16,9 +16,13 @@ may block, so Python is the worker and v86 is on the page, and the answer comes 
 That is a real constraint on where the book can be hosted and it is written down rather than
 discovered later.
 
-Nobody has run any of this against v86, because the kernel is not built and the emulator is not
-vendored. What is here is the protocol, the Python side of it, and a stand in that the tests drive
-it with, so that when the emulator arrives the argument is about the emulator rather than this.
+This has now run in a browser against a real kernel. `just web-measure` opens the harness page in
+Chrome, and `kxbox/web/first-tape.py` takes one filtered trace of a write through every layer of
+the arrangement above: Python in the worker, a blocking call over the shared buffer, JavaScript on
+the page, a busybox shell on a serial line, the tracer inside the guest, and a parsed tape coming
+back. The numbers are in `kxbox/kernel/RESULTS.md`. Everything below was written against a test
+double before that and none of it changed when the emulator arrived, which is the nicest thing
+that can be said about a protocol.
 """
 
 from __future__ import annotations

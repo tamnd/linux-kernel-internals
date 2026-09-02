@@ -25,6 +25,13 @@ export const DEFAULTS = {
   cmdline: "console=ttyS0 quiet nokaslr",
 };
 
+// The profile is a build of the same source with one decision changed, and the browser table in
+// RESULTS.md has a row per profile, so the page has to be able to boot any of them. Everything
+// else about a profile is the same, which is why this is one line rather than a second config.
+export function imagesFor(profile) {
+  return profile && profile !== "A-full" ? { bzimage: `/kernel/build/${profile}/bzImage` } : {};
+}
+
 // v86 speaks bytes. Everything above here speaks strings.
 export function serialFor(emulator) {
   const decoder = new TextDecoder();
@@ -58,6 +65,41 @@ export function waitForBoot(serial, seconds = 60) {
   });
 }
 
+// The worker, as something with two methods instead of as a message pump.
+//
+// Everything a caller wants from Python is "is it up" and "run this and give me back a string",
+// and both of those are promises. Cells are numbered because two of them can be in flight and
+// answers are not guaranteed to come back in the order they were asked for.
+export class Python {
+  constructor(worker) {
+    this.worker = worker;
+    this.next = 0;
+    this.waiting = new Map();
+    this.up = new Promise((resolve, reject) => {
+      this.settleBoot = { resolve, reject };
+    });
+  }
+
+  // Called by the page for every message that is not a protocol request.
+  receive(data) {
+    if (data.ready === true) return this.settleBoot.resolve(data.version || "");
+    if (data.ready === false) return this.settleBoot.reject(new Error(data.error));
+
+    const pending = this.waiting.get(data.cell);
+    if (!pending) return undefined;
+    this.waiting.delete(data.cell);
+    return data.error ? pending.reject(new Error(data.error)) : pending.resolve(data.value);
+  }
+
+  run(code) {
+    const cell = (this.next += 1);
+    return new Promise((resolve, reject) => {
+      this.waiting.set(cell, { resolve, reject });
+      this.worker.postMessage({ cell, code });
+    });
+  }
+}
+
 export async function start(options = {}) {
   const settings = { ...DEFAULTS, ...options };
 
@@ -80,12 +122,15 @@ export async function start(options = {}) {
   const host = new Host(new Guest(serial), new Answerer(channel));
 
   const worker = new Worker("worker.js", { type: "module" });
-  // The worker sends two kinds of message: requests, which have a `call`, and news about itself,
-  // which does not. Only the first kind is the protocol.
+  const python = new Python(worker);
+  // The worker sends two kinds of message: requests, which have a `call`, and everything else,
+  // which is the worker talking about itself. Only the first kind is the protocol.
   worker.addEventListener("message", (event) => {
-    if (event.data && event.data.call) host.handle(event.data);
+    const data = event.data || {};
+    if (data.call) host.handle(data);
+    else python.receive(data);
   });
   worker.postMessage({ channel });
 
-  return { emulator, worker, host, booted };
+  return { emulator, worker, host, python, booted };
 }

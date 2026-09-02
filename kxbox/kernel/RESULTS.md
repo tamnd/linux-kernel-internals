@@ -2,7 +2,7 @@
 
 The bar is in `README.md`. A profile passes when it boots to a shell in under thirty seconds on a mid range laptop with `/proc`, `/sys/kernel/tracing`, `dmesg` and `insmod` all working.
 
-**The kernel builds and it boots.** That was the open question for the whole of M0 and it is now answered for the part that a script can answer. What is not answered is the browser, and the two are kept in separate tables below for exactly that reason.
+**The kernel builds, it boots, and it boots in a browser.** That was the open question for the whole of M0. The browser numbers and the node numbers are kept in separate tables below, because they turned out to differ by more than anybody expected and averaging them away would hide the useful part.
 
 ## Build
 
@@ -26,18 +26,31 @@ The toolchain for each build is recorded next to the image in `toolchain.toml`. 
 
 ## Boot in a browser
 
-Measured in a browser tab, from the moment the page asks v86 to start to the moment a shell prompt is readable.
+**The kernel boots in a browser tab and the whole stack works in one.** That is the kill criterion answered, and it is answered with a lot of room to spare.
 
-Every row names the machine and the browser, because thirty seconds on a developer's laptop and thirty seconds on a five year old Chromebook are different claims, and only one of them is the claim this project needs.
+Filled in by `just web-measure PROFILE`, which starts the server, starts Chrome on a profile it throws away afterwards, opens the harness page and reads the numbers back off it. Every row names the machine and the browser, because thirty seconds on a developer's laptop and thirty seconds on a five year old Chromebook are different claims, and only one of them is the claim this project needs.
 
-| Profile | Machine | Browser | Download | Decompress | To shell | Pass | Date |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `A-full` | | | | | | not measured | |
-| `A-gzip` | | | | | | not measured | |
-| `B-btf-external` | | | | | | not measured | |
-| `C-longterm` | | | | | | not measured | |
+`To shell` is from the emulator starting to the guest printing its ready marker. `Python up` is Pyodide downloading, starting and installing this project as a wheel, which happens while the checks run. `One write` is a whole round trip through the bridge: Python asks for a trace, the tracer goes on inside the guest, one write happens, and a parsed tape comes back and is drawn.
 
-This table is still empty and that is the honest state of it. Nobody has opened the page in a browser and timed it.
+| Profile | Machine | Browser | Window | To shell | Python up | One write | Checks | Pass | Date |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `A-full` | M4 laptop, 10 cores, 128 MiB guest | Chrome 152 | visible | 6.9s to 8.5s | 8.9s | 38s | 10 of 10 | yes | 2026-09-02 |
+| `A-full` | M4 laptop, 10 cores, 128 MiB guest | Chrome 152 | headless | 2.0s to 2.2s | 2.1s to 3.8s | 7.4s | 10 of 10 | yes | 2026-09-02 |
+| `A-gzip` | M4 laptop, 10 cores, 128 MiB guest | Chrome 152 | headless | 1.3s | 2.0s | 7.4s | 10 of 10 | yes | 2026-09-02 |
+| `B-btf-external` | M4 laptop, 10 cores, 128 MiB guest | Chrome 152 | headless | 1.8s | 2.9s | 8.1s | 10 of 10 | yes | 2026-09-02 |
+| `C-longterm` | | | | | | | | not measured | |
+
+Four things came out of this that were not expected, and all four are worth keeping.
+
+**A visible window is three to four times slower than a headless one, and the gap is much wider than that on guest work.** A boot goes from about 2 seconds to about 7, and the traced write goes from 7 seconds to 38. That is v86 pacing itself against the compositor in a real window and running flat out without one, so the headless numbers are the ones to ignore when the question is what a reader waits for. They are kept in the table because the difference is the interesting part.
+
+**`A-gzip` boots fastest, which is the opposite of what the build table suggested.** It is the largest image by a third and it reaches a shell in 1.3 seconds against 2.2. Faster decompression wins, at least when the image comes off localhost.
+
+**This cannot price the download, and the download is half the question.** Everything here is served from `127.0.0.1`, so a 3.25 MiB image and a 4.36 MiB image cost the same nothing to fetch. The choice between `A-full` and `A-gzip` is a real trade and this measurement does not settle it. What it does settle is that decompression is not the reason to prefer xz.
+
+**Python beside the kernel works, and that was never certain.** `kxbox/bridge.py` finds the bridge object, `micropip` installs this project into Pyodide, and `kxray` parses a trace that came out of a kernel running a few metres away in the same tab. Every one of those was written against a test double until now.
+
+Not in this table and worth saying: Firefox. The measurement script drives Chrome over the DevTools protocol and Firefox does not speak it, so a Firefox row has to be taken by hand off the same page. Nobody has.
 
 ## Boot without a browser
 
@@ -73,8 +86,10 @@ Two things in that row were broken on the first build and are only yes because o
 
 ## The decision
 
-Not made, and it should not be made from this page.
+`A-full` stays the default, and the kill criterion is answered.
 
-What can be said today is that the pessimistic outcome is off the table. The worry was that a 7.2 kernel with BTF and full tracing would be too large or too slow to run under v86 at all, and that Tier 0 would have to become a recorded replay with rule 3 of the pedagogy rewritten around it. That has not happened. A 3.25 MiB image boots in single digit seconds outside a browser with everything the book needs turned on.
+The worry was that a 7.2 kernel with BTF and full tracing would be too large or too slow to run under v86 at all, and that Tier 0 would have to become a recorded replay with rule 3 of the pedagogy rewritten around it. That has not happened. A 3.25 MiB image reaches a shell in seven seconds in a real Chrome window on this laptop, with tracing, `dmesg`, modules and BTF all working, and with Python running beside it and reading a trace back out.
 
-What is left is a measurement, not a redesign. Somebody has to open the page in Chrome and in Firefox on ordinary hardware and fill in the browser table. If that comes back over thirty seconds, `A-gzip` and `B-btf-external` are the next two things to try, in that order, and they exist for this.
+Seven seconds against a bar of thirty is enough room that the answer is unlikely to flip on slower hardware, but that is an argument and not a measurement. Two rows in the table above are still empty and both matter more than another row from this laptop. Somebody has to run it on an ordinary machine rather than an M4, and somebody has to run it in Firefox, which the script cannot drive.
+
+`A-gzip` and `B-btf-external` were the fallbacks if this failed. They are not needed and they stay built and measured anyway, because the numbers they give are the price list for two decisions this project may want to revisit, and because a fallback that has never been run is not a fallback.

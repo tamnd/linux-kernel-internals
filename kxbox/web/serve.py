@@ -13,6 +13,10 @@ looks broken in a way that has nothing to do with the emulator. Hence this file.
 
 The same two headers are the reason the interactive page cannot live on GitHub Pages, which is
 written down in PROTOCOL.md rather than left to be found out.
+
+It also serves the project as a wheel, out of `web/build`, because the worker installs it into
+Pyodide with `micropip` and micropip will only fetch over http. That is the only reason the wheel
+is built at all.
 """
 
 from __future__ import annotations
@@ -61,6 +65,9 @@ NEEDED = {
     "web/vendor/v86/libv86.mjs": "python3 -m tools.vendor",
     "rootfs/build/initrd.gz": "sh kxbox/rootfs/build.sh",
     "kernel/build/A-full/bzImage": "sh kxbox/kernel/build.sh A-full",
+    "web/build/linux_kernel_internals-0.0.0-py3-none-any.whl": (
+        "uv build --wheel --out-dir kxbox/web/build"
+    ),
 }
 
 
