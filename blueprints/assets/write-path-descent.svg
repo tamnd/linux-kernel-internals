@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 940" width="1140" height="940" role="img" aria-label="Where one byte goes">
+  <title>Where one byte goes</title>
+  <desc>A descent down the left side of the picture, from the write system call to a dirty folio in the page cache, with a note on the right of each step saying what it decides. From the top: the write system call looks up the file descriptor; vfs_write checks the file is open for writing and asks the security modules; the file operations table is consulted, and a box off to the side notes that a file with a write_iter but no write is wrapped in a kiocb and an iov_iter, which is nearly every file; the filesystem's write_iter takes the inode lock, checks the size limits, drops setuid bits and updates the modification time; then generic_perform_write, whose three steps are drawn below it and repeat once per folio, which are write_begin to find or allocate the folio, an atomic copy of the bytes in from userspace, and write_end to mark it dirty and unlock it. Underneath is a red band across the whole width reading that the system call returns here and the byte is in memory with a dirty flag on it. Below that band, in grey, are the three things that happen later and on another thread: writeback finds the dirty folio, the filesystem builds block requests, and the device stores it. Notes at the bottom say that a write returning 1 has promised one byte is in the page cache and nothing more, and that fsync is what turns that into a promise about storage.</desc>
+  <defs>
+    <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#495057"/>
+    </marker>
+  </defs>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="40.0" y="44.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="20.0" fill="#1e1e1e" text-anchor="start" dominant-baseline="middle">Where one byte goes</text>
+  <text x="40.0" y="70.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">One write() of one byte, from the system call down to where it stops.</text>
+  <rect x="40.0" y="104.0" width="480.0" height="48.0" rx="8" fill="#d0ebff" stroke="#1971c2" stroke-width="2"/>
+  <text x="280.0" y="128.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="14.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle">write(fd, buf, 1)</text>
+  <text x="560.0" y="118.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">the descriptor is looked up, and its position is the one thing locked here</text>
+  <rect x="40.0" y="176.0" width="480.0" height="56.0" rx="8" fill="none" stroke="#1e1e1e" stroke-width="2"/>
+  <text x="280.0" y="195.9" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#1e1e1e" text-anchor="middle" dominant-baseline="middle">vfs_write</text>
+  <text x="280.0" y="212.1" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#1e1e1e" text-anchor="middle" dominant-baseline="middle">open for writing? address readable? security modules happy?</text>
+  <text x="560.0" y="190.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">every refusal that does not need the filesystem happens here</text>
+  <rect x="40.0" y="256.0" width="480.0" height="48.0" rx="8" fill="none" stroke="#1e1e1e" stroke-width="2"/>
+  <text x="280.0" y="280.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#1e1e1e" text-anchor="middle" dominant-baseline="middle">f_op-&gt;write, or wrap it and call f_op-&gt;write_iter</text>
+  <rect x="560.0" y="250.0" width="540.0" height="60.0" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+  <text x="830.0" y="265.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="12.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">nearly every file takes the second branch: a kiocb and an</text>
+  <text x="830.0" y="280.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="12.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">iov_iter are built on the stack, and the byte is described</text>
+  <text x="830.0" y="295.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="12.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">rather than passed</text>
+  <rect x="40.0" y="328.0" width="480.0" height="72.0" rx="8" fill="none" stroke="#1e1e1e" stroke-width="2"/>
+  <text x="280.0" y="347.8" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#1e1e1e" text-anchor="middle" dominant-baseline="middle">the filesystem's write_iter</text>
+  <text x="280.0" y="364.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#1e1e1e" text-anchor="middle" dominant-baseline="middle">take the inode lock, check the limits,</text>
+  <text x="280.0" y="380.2" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#1e1e1e" text-anchor="middle" dominant-baseline="middle">drop setuid, update the modification time</text>
+  <text x="560.0" y="346.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">the inode lock is why two writes to one file do not interleave</text>
+  <rect x="40.0" y="424.0" width="480.0" height="48.0" rx="8" fill="#d0ebff" stroke="#1971c2" stroke-width="2"/>
+  <text x="280.0" y="448.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="14.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle">generic_perform_write</text>
+  <text x="560.0" y="438.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">the three steps below run once per folio, so a one byte write runs them once</text>
+  <rect x="40.0" y="496.0" width="480.0" height="40.0" rx="8" fill="none" stroke="#1e1e1e" stroke-width="2"/>
+  <text x="280.0" y="516.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#1e1e1e" text-anchor="middle" dominant-baseline="middle">write_begin: find the folio, or allocate one</text>
+  <rect x="40.0" y="560.0" width="480.0" height="40.0" rx="8" fill="none" stroke="#1e1e1e" stroke-width="2"/>
+  <text x="280.0" y="580.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#1e1e1e" text-anchor="middle" dominant-baseline="middle">copy the bytes in, without ever sleeping</text>
+  <text x="560.0" y="574.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">this copy cannot sleep, because a fault here could reach back into this filesystem</text>
+  <rect x="40.0" y="624.0" width="480.0" height="40.0" rx="8" fill="none" stroke="#1e1e1e" stroke-width="2"/>
+  <text x="280.0" y="644.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#1e1e1e" text-anchor="middle" dominant-baseline="middle">write_end: mark it dirty, unlock it</text>
+  <rect x="40.0" y="700.0" width="1060.0" height="44.0" rx="8" fill="#ffe3e3" stroke="#e03131" stroke-width="2"/>
+  <text x="570.0" y="722.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="14.0" fill="#e03131" text-anchor="middle" dominant-baseline="middle">the system call returns here, and the byte is in memory with a dirty flag on it</text>
+  <rect x="40.0" y="776.0" width="320.0" height="44.0" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+  <text x="200.0" y="798.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="12.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">writeback finds the dirty folio</text>
+  <rect x="410.0" y="776.0" width="320.0" height="44.0" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+  <text x="570.0" y="798.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="12.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">the filesystem builds block requests</text>
+  <rect x="780.0" y="776.0" width="320.0" height="44.0" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+  <text x="940.0" y="798.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="12.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">the device stores it</text>
+  <line x1="280.0" y1="152.0" x2="280.0" y2="176.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <line x1="280.0" y1="232.0" x2="280.0" y2="256.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <line x1="520.0" y1="280.0" x2="560.0" y2="280.0" stroke="#495057" stroke-width="2" stroke-dasharray="8 6" marker-end="url(#head)"/>
+  <line x1="280.0" y1="304.0" x2="280.0" y2="328.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <line x1="280.0" y1="400.0" x2="280.0" y2="424.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <line x1="280.0" y1="472.0" x2="280.0" y2="496.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <line x1="280.0" y1="536.0" x2="280.0" y2="560.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <line x1="280.0" y1="600.0" x2="280.0" y2="624.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <line x1="280.0" y1="664.0" x2="570.0" y2="700.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <line x1="570.0" y1="744.0" x2="200.0" y2="776.0" stroke="#495057" stroke-width="2" stroke-dasharray="8 6" marker-end="url(#head)"/>
+  <line x1="360.0" y1="798.0" x2="410.0" y2="798.0" stroke="#495057" stroke-width="2" stroke-dasharray="8 6" marker-end="url(#head)"/>
+  <line x1="730.0" y1="798.0" x2="780.0" y2="798.0" stroke="#495057" stroke-width="2" stroke-dasharray="8 6" marker-end="url(#head)"/>
+  <text x="40.0" y="856.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="14.0" fill="#1e1e1e" text-anchor="start" dominant-baseline="middle">Everything in grey happens later, on another thread, at a time the write did not choose.</text>
+  <text x="40.0" y="880.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="14.0" fill="#1e1e1e" text-anchor="start" dominant-baseline="middle">A write that returns 1 has promised that one byte is in the page cache. Nothing more.</text>
+  <text x="40.0" y="912.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">fsync is what turns that into a promise about storage, and it is a separate mechanism with its own blueprint.</text>
+</svg>
