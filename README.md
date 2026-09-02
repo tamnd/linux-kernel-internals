@@ -49,7 +49,7 @@ Colab is a real Linux machine, which is what makes this work. A lesson that need
 | Lesson | What you come out able to do | Status | Run it |
 | --- | --- | --- | --- |
 | Z02, your first trace | Turn on `function_graph`, read the output, and know why the indentation belongs to a CPU rather than to the file | draft | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/tamnd/linux-kernel-internals/blob/main/lessons/Z02/Z02.ipynb) |
-| S05, the first ops plug | Not started | planned | |
+| S05, the first ops plug | Count the operations tables in your own kernel, and say what chose the code that ran when you wrote a byte | draft | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/tamnd/linux-kernel-internals/blob/main/lessons/S05/S05.ipynb) |
 | C09, lockdep | Not started | planned | |
 
 There is also a book, built from the same files, where each lesson page is the notebook with the output it was committed with. It builds in CI on every pull request and it is not published yet, because turning on GitHub Pages is a decision rather than a build step. Until it is, `just setup-site && just site-serve` gives you the whole thing on localhost.

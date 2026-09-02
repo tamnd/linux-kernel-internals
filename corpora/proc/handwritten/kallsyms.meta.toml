@@ -1,0 +1,18 @@
+source = "handwritten"
+evidence = false
+reason = "Twenty four lines written by hand in the documented format, so the reader had something to parse before anybody had a kernel to read one off. Not a snapshot of any machine. No lesson may cite it."
+
+describes = "a few lines shaped like /proc/kallsyms, with ops tables in three spellings"
+kernel = "none"
+arch = "none"
+
+# ext4_aops is in there on purpose. It is a real ops table instance whose name does not end in any
+# of the three suffixes, so it is exactly what the naming convention misses, and there is a test
+# that says so rather than a comment hoping somebody notices.
+
+# What the parser has to get right, and what the tests compare against.
+symbols = 24
+ops_tables = 13
+readonly_ops = 11
+addresses_hidden = true
+modules = ["e1000"]

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 600" width="1040" height="600" role="img" aria-label="One write, three tables">
+  <title>One write, three tables</title>
+  <desc>At the top, one box labelled your program calling write of fd, one byte. An arrow leads down to a box labelled vfs_write in fs slash read_write dot c, with a line underneath reading it calls file arrow f underscore op arrow write underscore iter. Three arrows fan out from it, each labelled with the file that was opened. The left arrow, for a file on ext4, leads to a box holding ext4_file_operations and under it ext4_file_write_iter. The middle arrow, for a file on tmpfs, leads to a box holding shmem_file_operations and under it shmem_file_write_iter. The right arrow, for a pipe, leads to a box holding pipefifo_fops and under it pipe_write. A note at the bottom says the VFS chose the slot and the filesystem chose the code, and that nothing above the fork knows which of the three it is talking to.</desc>
+  <defs>
+    <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#495057"/>
+    </marker>
+  </defs>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="40.0" y="44.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="20.0" fill="#1e1e1e" text-anchor="start" dominant-baseline="middle">One write, three tables</text>
+  <text x="40.0" y="70.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">The same system call, the same VFS code, three different implementations underneath.</text>
+  <rect x="400.0" y="104.0" width="260.0" height="54.0" rx="8" fill="none" stroke="#1e1e1e" stroke-width="2"/>
+  <text x="530.0" y="131.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="14.0" fill="#1e1e1e" text-anchor="middle" dominant-baseline="middle">write(fd, "x", 1)</text>
+  <rect x="360.0" y="200.0" width="340.0" height="76.0" rx="8" fill="#d0ebff" stroke="#1971c2" stroke-width="2"/>
+  <text x="530.0" y="238.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="15.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle">vfs_write()</text>
+  <text x="360.0" y="292.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">it calls file-&gt;f_op-&gt;write_iter, whatever that is</text>
+  <line x1="530.0" y1="158.0" x2="530.0" y2="200.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <rect x="60.0" y="380.0" width="280.0" height="90.0" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+  <text x="200.0" y="408.8" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">ext4_file_operations</text>
+  <text x="200.0" y="425.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle"></text>
+  <text x="200.0" y="441.2" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">ext4_file_write_iter</text>
+  <rect x="380.0" y="380.0" width="280.0" height="90.0" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+  <text x="520.0" y="408.8" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">shmem_file_operations</text>
+  <text x="520.0" y="425.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle"></text>
+  <text x="520.0" y="441.2" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">shmem_file_write_iter</text>
+  <rect x="700.0" y="380.0" width="280.0" height="90.0" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+  <text x="840.0" y="408.8" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">pipefifo_fops</text>
+  <text x="840.0" y="425.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle"></text>
+  <text x="840.0" y="441.2" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">pipe_write</text>
+  <line x1="360.0" y1="238.0" x2="340.0" y2="425.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <text x="360.0" y="331.5" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">opened on ext4</text>
+  <line x1="530.0" y1="276.0" x2="520.0" y2="380.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <text x="535.0" y="328.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">opened on tmpfs</text>
+  <line x1="700.0" y1="238.0" x2="700.0" y2="425.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <text x="710.0" y="331.5" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">a pipe</text>
+  <text x="40.0" y="506.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="14.0" fill="#1e1e1e" text-anchor="start" dominant-baseline="middle">The VFS picked the slot. The filesystem picked the code that is in it.</text>
+  <text x="40.0" y="530.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="14.0" fill="#1e1e1e" text-anchor="start" dominant-baseline="middle">Nothing above the fork knows or cares which of the three it is talking to.</text>
+  <text x="40.0" y="566.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">That is the whole mechanism. There is no switch on the file type anywhere in the VFS.</text>
+</svg>
