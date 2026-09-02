@@ -1,0 +1,37 @@
+schema = 1
+
+# Citations into the pinned kernel tree.
+#
+# None of these are confirmed, and that is the honest state rather than an oversight. Confirming
+# one means running `python3 -m tools.refcheck --tree <a real linux tree> --confirm`, which finds
+# the anchor, writes down the line it is on and flips the flag. There is no kernel tree on the
+# machine this was written on.
+#
+# The anchor is a piece of text to find, never a line number.
+
+[[references]]
+id = "S05-R1"
+path = "fs/read_write.c"
+anchor = "file->f_op->write_iter"
+kernel = "7.2.2"
+confirmed = false
+line = 0
+note = "The dispatch itself. vfs_write does not know how to write to anything, it reads a pointer out of the file and calls whatever is there."
+
+[[references]]
+id = "S05-R2"
+path = "fs/open.c"
+anchor = "fops_get(inode->i_fop)"
+kernel = "7.2.2"
+confirmed = false
+line = 0
+note = "Where the pointer comes from. Opening a file copies the ops pointer out of the inode into the file, which is the moment the implementation gets chosen."
+
+[[references]]
+id = "S05-R3"
+path = "Documentation/filesystems/vfs.rst"
+anchor = "This describes how the VFS can manipulate an open file"
+kernel = "7.2.2"
+confirmed = false
+line = 0
+note = "The description of file_operations, and the place that says which members a filesystem has to fill in and which it may leave empty."

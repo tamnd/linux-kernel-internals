@@ -1,0 +1,55 @@
+schema = 1
+lesson = "S05"
+
+# Two of these six are settled the moment a reader runs the lesson, because they are counts taken
+# off the reader's own kernel and no kernel of ours is needed to make them true. The other four
+# are not settled here. Three want a kernel tree to confirm a citation against, and one wants a
+# capture, which wants kxbox to boot.
+#
+# `pending` says what will settle each claim. It is a note to the next person, not a field the
+# ledger reads.
+
+[[claims]]
+id = "S05-01"
+text = "The VFS does not know how to write to any filesystem. It reads a function pointer out of the open file and calls whatever is in it, so the filesystem chose the code that runs and the VFS only chose the slot."
+evidence_kind = "source"
+evidence = "S05-R1"
+pending = "somebody with a 7.2.2 tree runs refcheck --tree --confirm, which resolves the anchor"
+verified = false
+
+[[claims]]
+id = "S05-02"
+text = "The pointer is put there when the file is opened, copied out of the inode, so the implementation is chosen once at open time and every later call follows the same pointer."
+evidence_kind = "source"
+evidence = "S05-R2"
+pending = "somebody with a 7.2.2 tree runs refcheck --tree --confirm, which resolves the anchor"
+verified = false
+
+[[claims]]
+id = "S05-03"
+text = "A running kernel holds hundreds of ops tables, and they can be counted by name in the kernel symbol table without root and without anything installed."
+evidence_kind = "experiment"
+pending = "the reader runs the counting cell against their own /proc/kallsyms and reads the number"
+verified = false
+
+[[claims]]
+id = "S05-04"
+text = "Most ops tables sit in the kernel's read only data section, which is what const looks like from outside, so one table is shared by every object that uses it rather than copied into each one."
+evidence_kind = "experiment"
+pending = "the reader counts the section letters on their own machine and sees the ratio"
+verified = false
+
+[[claims]]
+id = "S05-05"
+text = "Most slots in an ops table are allowed to be empty, and the caller checks a slot before calling it, so a missing operation comes back as an error rather than as a crash."
+evidence_kind = "source"
+evidence = "S05-R3"
+pending = "somebody with a 7.2.2 tree runs refcheck --tree --confirm, which resolves the anchor"
+verified = false
+
+[[claims]]
+id = "S05-06"
+text = "Two writes of the same size to two different kinds of file run different kernel functions underneath the same vfs_write, and the names of those functions say which table was plugged in."
+evidence_kind = "trace"
+pending = "a function_graph capture of a write to a regular file and a write to a pipe, taken from the browser once kxbox boots"
+verified = false

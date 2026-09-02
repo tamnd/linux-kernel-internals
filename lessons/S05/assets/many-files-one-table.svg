@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 580" width="1040" height="580" role="img" aria-label="Three files, one table">
+  <title>Three files, one table</title>
+  <desc>On the left, three boxes stacked, each labelled struct file and each holding two fields: f_op and private_data. The first is fd 3 with private data pointing at its own ext4 state, the second is fd 7 with its own, the third is fd 12 with its own. Three arrows leave the f_op field of each box and meet at a single box on the right labelled const struct file_operations ext4_file_operations, marked read only data. That box lists five slots: read_iter, write_iter, open, release and one slot shown as empty. A note underneath says three files, one table, and that the per file state is in private_data rather than in the table, because the table is shared and constant.</desc>
+  <defs>
+    <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#495057"/>
+    </marker>
+  </defs>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="40.0" y="44.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="20.0" fill="#1e1e1e" text-anchor="start" dominant-baseline="middle">Three files, one table</text>
+  <text x="40.0" y="70.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">How many copies of the operations does a thousand open files need? One.</text>
+  <rect x="560.0" y="150.0" width="440.0" height="200.0" rx="8" fill="#d0ebff" stroke="#1971c2" stroke-width="2"/>
+  <text x="780.0" y="197.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle">const struct file_operations</text>
+  <text x="780.0" y="212.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle">ext4_file_operations</text>
+  <text x="780.0" y="227.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle"></text>
+  <text x="780.0" y="242.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle">read_iter   ext4_file_read_iter</text>
+  <text x="780.0" y="257.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle">write_iter  ext4_file_write_iter</text>
+  <text x="780.0" y="272.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle">open        ext4_file_open</text>
+  <text x="780.0" y="287.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle">release     ext4_release_file</text>
+  <text x="780.0" y="302.5" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle">get_unmapped_area   empty</text>
+  <text x="560.0" y="136.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="12.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">read only data, one instance for the whole machine</text>
+  <rect x="60.0" y="120.0" width="360.0" height="88.0" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+  <text x="240.0" y="149.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">struct file  (fd 3)</text>
+  <text x="240.0" y="164.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">  f_op          --&gt;</text>
+  <text x="240.0" y="179.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">  private_data  its own</text>
+  <line x1="420.0" y1="164.0" x2="560.0" y2="250.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <rect x="60.0" y="250.0" width="360.0" height="88.0" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+  <text x="240.0" y="279.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">struct file  (fd 7)</text>
+  <text x="240.0" y="294.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">  f_op          --&gt;</text>
+  <text x="240.0" y="309.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">  private_data  its own</text>
+  <line x1="420.0" y1="294.0" x2="560.0" y2="250.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <rect x="60.0" y="380.0" width="360.0" height="88.0" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+  <text x="240.0" y="409.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">struct file  (fd 12)</text>
+  <text x="240.0" y="424.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">  f_op          --&gt;</text>
+  <text x="240.0" y="439.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">  private_data  its own</text>
+  <line x1="420.0" y1="424.0" x2="560.0" y2="250.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <text x="40.0" y="500.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="14.0" fill="#1e1e1e" text-anchor="start" dominant-baseline="middle">The table is shared and constant, so nothing about one file can live in it.</text>
+  <text x="40.0" y="524.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="14.0" fill="#1e1e1e" text-anchor="start" dominant-baseline="middle">Everything that differs between two open files is in the file, usually private_data.</text>
+  <text x="40.0" y="556.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">An empty slot is not a crash. The caller checks it and falls back or returns an error.</text>
+</svg>

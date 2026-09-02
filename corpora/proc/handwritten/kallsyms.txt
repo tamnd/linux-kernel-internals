@@ -1,0 +1,24 @@
+0000000000000000 T vfs_write
+0000000000000000 T vfs_read
+0000000000000000 T do_dentry_open
+0000000000000000 t new_sync_write
+0000000000000000 R ext4_file_operations
+0000000000000000 R ext4_dir_operations
+0000000000000000 R ext4_file_inode_operations
+0000000000000000 R ext4_aops
+0000000000000000 R shmem_file_operations
+0000000000000000 R shmem_inode_operations
+0000000000000000 R pipefifo_fops
+0000000000000000 R tty_fops
+0000000000000000 R proc_pid_maps_operations
+0000000000000000 R sock_ops
+0000000000000000 r simple_dir_operations
+0000000000000000 d loop_mq_ops
+0000000000000000 D nf_conntrack_hook_ops
+0000000000000000 B kallsyms_test_buffer
+0000000000000000 T __x64_sys_write
+0000000000000000 t ext4_file_write_iter
+0000000000000000 t shmem_file_write_iter
+0000000000000000 t pipe_write
+0000000000000000 T generic_perform_write
+0000000000000000 R e1000_netdev_ops	[e1000]
