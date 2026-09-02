@@ -1,0 +1,49 @@
+id = "lock-cycle"
+idea = "Lockdep draws a graph rather than waiting for a hang, and refuses the edge that closes it"
+still = "lessons/C09/assets/the-cycle.svg"
+status = "draft"
+
+# The three source claims this rests on are verified against the pinned tree. The splat itself is
+# claim C09-02, which settles when somebody builds the two thread module and loads it, so the
+# report in the last beat is the shape of one rather than a copy of one that a machine printed.
+inputs = ["lessons/C09/refs.toml"]
+evidence = false
+blocked_on = """A real splat out of dmesg, which is claim C09-02 and wants the two thread module
+built and loaded. The graph and the rule are from the source and are verified. The wording of the
+report in the last beat is not, and it should be replaced with a captured one."""
+
+[[beat]]
+seconds = 12
+caption = "Two threads, two mutexes, and a bug almost every run will not show you."
+alt = "Two frame cards side by side, one for each thread, each in process context with its badge showing, and a line of text saying both of them finished and neither one ever blocked."
+shows = ["frame-card", "context-badge"]
+
+[[beat]]
+seconds = 14
+caption = "Lockdep is not watching the threads. It is building a graph of lock classes."
+alt = "The two thread cards fade back and two object boxes take the front, one for each mutex, each labelled with its class rather than with its address, which is what lockdep records."
+shows = ["object-box"]
+
+[[beat]]
+seconds = 14
+caption = "Thread one held A and took B, so an edge goes from A to B."
+alt = "A solid pointer thread is drawn from the first lock box to the second, labelled held when this one was taken, with the moment it was recorded marked as the instant thread one took the second mutex."
+shows = ["object-box", "pointer-thread"]
+
+[[beat]]
+seconds = 16
+caption = "Thread two holds B and takes A. That edge would close the loop, so it is refused."
+alt = "A second pointer thread starts from the second lock box back towards the first, drawn dashed because it has not been added, and the graph freezes at the moment the two edges would meet."
+shows = ["object-box", "pointer-thread"]
+
+[[beat]]
+seconds = 14
+caption = "The report arrives now, on a run where nothing waited and nothing hung."
+alt = "The numbered chain of a lockdep report appears beside the graph, highest number first, with the entry numbered zero marked as the lock being taken right now and the top entry as the one already held."
+shows = ["object-box", "frame-card"]
+
+[[beat]]
+seconds = 12
+caption = "Then lockdep switches itself off, and from here it checks nothing at all."
+alt = "The graph greys out and a single line reads debug_locks colon zero, with a note that everything after the first report of the boot is unchecked no matter how much locking runs."
+shows = ["object-box"]

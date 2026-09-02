@@ -10,6 +10,7 @@ it are skipped when manim is not installed, which on most machines is always.
 
 from __future__ import annotations
 
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -502,6 +503,72 @@ def test_a_storyboard_asking_for_a_shape_nobody_can_draw_is_flagged():
     assert unrenderable(got) == ["memory-slot"]
 
 
+def test_an_object_box_is_laid_out_with_a_row_per_field_and_the_hidden_ones_counted(tiny):
+    """The count of hidden fields has to survive into the drawing.
+
+    A box that shows four fields of a forty field struct and does not say so tells the reader the
+    struct is small, and that is a picture being wrong rather than a picture being simple.
+    """
+    from kxmanim.scene import box_of
+
+    layout = tiny.layout("demo_task")
+    first = layout.fields[0].path
+    drawn = box_of(ObjectBox.of(layout, show=[first]), 0.0, 2.0)
+
+    assert len(drawn["rows"]) == 1
+    assert drawn["hidden"] == len(layout.fields) - 1
+    assert drawn["rows"][0]["offset"] == layout.fields[0].byte_offset
+    # Rows go downwards from the header, so every one of them sits below where the box starts.
+    assert all(row["y"] < drawn["y"] for row in drawn["rows"])
+
+
+def test_a_pointer_thread_is_drawn_by_what_it_promises_rather_than_by_taste():
+    from kxmanim.scene import thread_of
+
+    owning = thread_of(PointerThread.of("file", "f_op", "file_operations"), (0, 0), (3, 0))
+    borrowed = thread_of(
+        PointerThread.of("file", "f_inode", "inode", kind="borrowed"), (0, 0), (3, 0)
+    )
+
+    assert owning["dash"] == []
+    assert borrowed["dash"] != []
+    assert "no reference is held" in borrowed["promise"]
+
+
+def test_an_ops_plug_draws_a_socket_per_slot_and_marks_the_empty_ones(tiny):
+    """An empty socket is not a null pointer, and the drawing must not imply that it is.
+
+    What sits in a function pointer is a fact about a running machine. BTF can say the socket
+    exists and what shape a plug has to be, and nothing else can say what is in it, so a socket
+    nobody has looked up is drawn hollow rather than drawn as nothing.
+    """
+    from kxmanim.scene import plug_of
+
+    table = tiny.ops("demo_ops", instance="demo_shmem_ops").with_implementations(
+        {"write": "demo_shmem_write"}
+    )
+    drawn = plug_of(OpsPlug.of(table), 0.0, 2.0)
+
+    assert len(drawn["sockets"]) == 3
+    assert drawn["filled"] == 1
+    assert drawn["empty"] == 2
+    filled = [one for one in drawn["sockets"] if one["filled_by"]]
+    assert [one["label"] for one in filled] == ["write"]
+    assert filled[0]["stroke"] != drawn["sockets"][0]["stroke"]
+
+
+def test_the_three_lessons_of_this_milestone_each_have_an_animation():
+    """One animation each for Z02, S05 and C09, which is what the milestone asks for.
+
+    The link is the still. Every storyboard names one, no animation is load-bearing, and the still
+    lives in the lesson it belongs to, so the lesson a storyboard is for is not a field somebody
+    can forget to update.
+    """
+    stills = {one.still for one in load_all(STORYBOARDS)}
+    for slug in ("Z02", "S05", "C09"):
+        assert any(one.startswith(f"lessons/{slug}/") for one in stills), slug
+
+
 def test_the_shipped_storyboards_only_ask_for_shapes_that_exist():
     for one in load_all(STORYBOARDS):
         assert unrenderable(one) == [], one.source
@@ -531,10 +598,22 @@ def test_every_storyboard_names_inputs_that_are_really_there():
 
 
 def test_no_storyboard_claims_evidence_it_does_not_have():
-    """Same rule as the corpus and the citations. Nothing here has run on a real kernel."""
+    """Same rule as the corpus and the citations, and it used to be simpler than this.
+
+    Every storyboard was once `evidence = false`, because nothing here had run on a real kernel.
+    One of them can say true now, and the rule that matters is unchanged: a storyboard either
+    names inputs that are evidence, or it says in `blocked_on` what it is waiting for. Neither
+    means it is drawn from nothing and nobody wrote down that it was.
+    """
     for one in load_all(STORYBOARDS):
-        assert not one.evidence
-        assert one.blocked_on
+        if one.evidence:
+            assert one.inputs, f"{one.source} claims evidence and names no inputs"
+            for name in one.inputs:
+                meta = (ROOT / name).with_suffix(".meta.toml")
+                assert meta.exists(), f"{name} backs a storyboard and has no metadata"
+                assert tomllib.loads(meta.read_text())["evidence"] is True, name
+        else:
+            assert one.blocked_on, f"{one.source} has no evidence and does not say what it wants"
 
 
 # -- the manim adapter, which most machines cannot run -----------------------------------------
