@@ -2,7 +2,7 @@
 
 The kernel is the subject of this book. The rootfs is the smallest thing that lets you talk to it.
 
-One statically linked busybox and one init script. That is the whole image, and it comes to 647 KiB compressed, next to a 3.25 MiB kernel.
+One statically linked busybox, one nine kilobyte program called `touchpage`, and one init script. That is the whole image, and it comes to 648 KiB compressed, next to a 3.25 MiB kernel.
 
 ## Building it
 
@@ -10,9 +10,19 @@ One statically linked busybox and one init script. That is the whole image, and 
 sh kxbox/rootfs/build.sh
 ```
 
-No container and no root. It downloads busybox, checks it against the sha256 in `pin.toml`, asks the binary which applets it has and stops if one the bridge needs is missing, then makes a cpio archive with `cpio -R 0:0` so every file is owned by root without anybody having to be root to say so.
+No root. It downloads busybox, checks it against the sha256 in `pin.toml`, asks the binary which applets it has and stops if one the bridge needs is missing, compiles `touchpage.c`, then makes a cpio archive with `cpio -R 0:0` so every file is owned by root without anybody having to be root to say so.
+
+The one compiled thing needs the container, because it is 32-bit x86 and the machine building it usually is not. That is the same container the kernel is built in, so it adds no toolchain that was not already needed. A machine with no docker gets an image without it and a warning saying what that costs.
 
 The output is `build/initrd.gz` and it is not committed.
+
+## touchpage
+
+There is no way to trace one page fault with busybox. Running any applet faults about thirty times before it reaches your code, because a fork copies on write and an exec pages a binary in, and a trace with thirty faults in it is a trace where somebody has to tell the reader which one is theirs.
+
+`touchpage` maps one anonymous page, turns the tracer on, writes one byte to it, and turns the tracer off. Nothing else may fault inside that window, which is why it has no C library in it at all and why it runs the whole sequence once against `/dev/null` first. It goes straight to the syscalls, which costs thirty lines of assembly and saves seven hundred kilobytes, because a static glibc with one `printf` in it is bigger than everything else in this image put together.
+
+`corpora/traces/tier0/page-fault.txt` is what it produces.
 
 ## Why an upstream binary
 

@@ -8,7 +8,8 @@ Everything in here is committed, and everything in here is an input to the build
 
 ```
 corpora/
-├── traces/          # ftrace function_graph and trace_event captures
+├── traces/tier0/    # captures off the pinned kernel running under v86
+├── traces/handwritten/  # parser fixtures, written from the documented format
 ├── btf/             # vmlinux BTF blobs for the pinned kernels, and one small handwritten one
 ├── proc/            # /proc and /sys snapshots, and three handwritten files
 ├── oops/            # crash and lockdep text used by the debugging lessons
@@ -20,7 +21,9 @@ corpora/
 
 `tier0/recipes.toml` is what makes the offline fallback work. Each entry has a name, the command that produced it, and which capture answers it. A lesson asks for a recording by name, the emulator runs the command when it is there, and the recording answers when it is not.
 
-A recipe is added by capturing something on a real Tier 0 session and committing it. Not by writing one. The two listed today point at handwritten traces, which is stated in their metadata and in the banner every lesson prints, and they get replaced by captures the day a kernel boots.
+A recipe is added by capturing something on a real Tier 0 session and committing it. Not by writing one. `page-fault` is a capture now, taken off the pinned kernel booted under v86 and filed in `traces/tier0/`. `write-1byte` is still handwritten, which is stated in its metadata and in the banner every lesson prints, and it gets replaced the same way.
+
+Taking that first capture corrected two things the recipe had asserted from reading the source. It named `exc_page_fault` as a function to filter on, and ftrace will not attach to that one at all. It named `do_anonymous_page`, which the compiler inlined out of this build. Neither was a careless guess and both were wrong, which is the argument for the whole arrangement.
 
 ## What every artefact records
 

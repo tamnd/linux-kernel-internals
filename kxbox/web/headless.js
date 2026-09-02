@@ -107,6 +107,7 @@ const CHECKS = [
   { name: "write", what: "turning a tracer on, which is a single redirect", run: (box) => box.write("/tmp/probe", "one\ntwo\n") },
   { name: "readback", what: "the write above actually landing", run: (box) => box.read("/tmp/probe") },
   { name: "modules", what: "every part that ends in a change", run: (box) => box.sh("test -d /sys/module") },
+  { name: "touchpage", what: "a page fault trace with one fault in it instead of thirty", run: (box) => box.sh("/bin/touchpage") },
 ];
 
 async function smoke() {

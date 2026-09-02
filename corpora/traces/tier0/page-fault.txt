@@ -1,0 +1,63 @@
+# tracer: function_graph
+#
+# CPU  TASK/PID         DURATION                  FUNCTION CALLS
+# |     |    |           |   |                     |   |   |   |
+ 0)   touchpa-36   | + 21.875 us   |  mutex_unlock();
+ 0)   touchpa-36   |               |  lock_mm_and_find_vma() {
+ 0)   touchpa-36   |   4.792 us    |    down_read_trylock();
+ 0)   touchpa-36   |               |    find_vma() {
+ 0)   touchpa-36   |   3.875 us    |      __rcu_read_lock();
+ 0)   touchpa-36   |   3.791 us    |      __rcu_read_unlock();
+ 0)   touchpa-36   | + 25.667 us   |    }
+ 0)   touchpa-36   | + 46.792 us   |  }
+ 0)   touchpa-36   |               |  handle_mm_fault() {
+ 0)   touchpa-36   |               |    pte_offset_map_rw_nolock() {
+ 0)   touchpa-36   |   3.541 us    |      __rcu_read_lock();
+ 0)   touchpa-36   | + 12.375 us   |    }
+ 0)   touchpa-36   |   3.583 us    |    __rcu_read_unlock();
+ 0)   touchpa-36   |               |    __vmf_anon_prepare() {
+ 0)   touchpa-36   |               |      __anon_vma_prepare() {
+ 0)   touchpa-36   |               |        kmem_cache_alloc_noprof() {
+ 0)   touchpa-36   |               |          slab_alloc_node() {
+ 0)   touchpa-36   |   3.583 us    |            alloc_from_pcs.isra.0();
+ 0)   touchpa-36   |   4.041 us    |            ___slab_alloc();
+ 0)   touchpa-36   | + 21.250 us   |          }
+ 0)   touchpa-36   | + 29.875 us   |        }
+ 0)   touchpa-36   |               |        find_mergeable_anon_vma() {
+ 0)   touchpa-36   |   4.208 us    |          anon_vma_compatible();
+ 0)   touchpa-36   |   4.167 us    |          anon_vma_compatible();
+ 0)   touchpa-36   | + 27.042 us   |        }
+ 0)   touchpa-36   |               |        kmem_cache_alloc_noprof() {
+ 0)   touchpa-36   |               |          slab_alloc_node() {
+ 0)   touchpa-36   |   3.542 us    |            alloc_from_pcs.isra.0();
+ 0)   touchpa-36   |   3.917 us    |            ___slab_alloc();
+ 0)   touchpa-36   | + 20.667 us   |          }
+ 0)   touchpa-36   | + 29.125 us   |        }
+ 0)   touchpa-36   |   3.834 us    |        down_write();
+ 0)   touchpa-36   |   4.208 us    |        anon_vma_interval_tree_insert();
+ 0)   touchpa-36   |   3.875 us    |        up_write();
+ 0)   touchpa-36   | ! 131.917 us  |      }
+ 0)   touchpa-36   | ! 140.500 us  |    }
+ 0)   touchpa-36   |               |    __folio_alloc_noprof() {
+ 0)   touchpa-36   |               |      __alloc_frozen_pages_noprof() {
+ 0)   touchpa-36   | + 10.333 us   |        get_page_from_freelist();
+ 0)   touchpa-36   | + 20.125 us   |      }
+ 0)   touchpa-36   | + 28.708 us   |    }
+ 0)   touchpa-36   |               |    pte_offset_map_lock() {
+ 0)   touchpa-36   |   3.459 us    |      __rcu_read_lock();
+ 0)   touchpa-36   | + 11.834 us   |    }
+ 0)   touchpa-36   |   3.708 us    |    vmf_pte_changed();
+ 0)   touchpa-36   |               |    map_anon_folio_pte_nopf() {
+ 0)   touchpa-36   |   3.625 us    |      pte_mkwrite();
+ 0)   touchpa-36   |               |      folio_add_new_anon_rmap() {
+ 0)   touchpa-36   |   3.750 us    |        __folio_mod_stat();
+ 0)   touchpa-36   | + 12.750 us   |      }
+ 0)   touchpa-36   |               |      folio_add_lru_vma() {
+ 0)   touchpa-36   |               |        folio_add_lru() {
+ 0)   touchpa-36   |   3.916 us    |          folio_mark_accessed();
+ 0)   touchpa-36   |   4.125 us    |          __folio_batch_add_and_move();
+ 0)   touchpa-36   | + 21.584 us   |        }
+ 0)   touchpa-36   | + 30.542 us   |      }
+ 0)   touchpa-36   | + 66.166 us   |    }
+ 0)   touchpa-36   |   3.458 us    |    __rcu_read_unlock();
+ 0)   touchpa-36   | ! 341.000 us  |  }

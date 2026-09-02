@@ -10,7 +10,9 @@ The call sequences are plausible and the arithmetic is consistent, which is what
 
 ## When these go away
 
-They do not, but they stop being the interesting ones. Once `kxbox` boots the pinned kernel, real captures land in `corpora/traces/` beside them, with `evidence = true` and the command that produced them. At that point these stay as parser fixtures, because a real capture is a bad regression test: it is long, it is noisy, and it changes when the kernel changes for reasons that have nothing to do with the parser.
+They do not, but they have stopped being the interesting ones. `kxbox` boots the pinned kernel now, and the first real capture is in `../tier0/`, with `evidence = true` and the command that produced it. These stay as parser fixtures, because a real capture is a bad regression test: it is long, it is noisy, and it changes when the kernel changes for reasons that have nothing to do with the parser.
+
+It is worth comparing `page-fault.txt` here with `../tier0/page-fault.txt`, because the two were meant to be the same thing and they are not. This one has `__handle_mm_fault` and `do_anonymous_page` in it, and the real one has neither, because the compiler flattened both. This one starts at `exc_page_fault`, and the real one cannot, because ftrace is not allowed to attach there. Everything in this file was written from the source by somebody being careful, and it is still wrong in two ways that only a capture would find.
 
 ## The files
 

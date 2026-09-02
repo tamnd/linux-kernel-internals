@@ -451,28 +451,32 @@ def test_a_dry_run_with_no_btf_leaves_a_section_that_came_from_btf_alone(tmp_pat
 PAGE_FAULT = ROOT / "blueprints" / "page-fault.md"
 
 
-def test_the_page_fault_blueprint_is_partial_and_says_why():
-    """Sections 2 and 7 come from the pinned kernel now. Section 5 is the one still waiting.
+def test_every_generated_section_of_page_fault_rests_on_the_pinned_kernel():
+    """All three now. Sections 2 and 7 out of its BTF, section 5 out of a capture off it.
 
-    It is generated from a handwritten trace in the corpus, and a handwritten trace is not
-    evidence of anything. Recording that here means the day a real trace lands, this test is
-    what asks whether the status should move.
+    Nothing here says the status may move. `complete` also needs a person in `reviewed-by`, and
+    a checker cannot decide that a human read something.
     """
     lines = PAGE_FAULT.read_text().split("\n")
     header, _ = bpc.parse_front_matter(lines)
-    assert header["status"] == "partial"
     assert header["pin"] == "v7.2.2"
     assert header["arch"] == "i386", "the only build this project has is the 32 bit one"
 
-    evidence = {}
     for section in bpc.GENERATED:
         source = bpcgen.parse_source(generated(PAGE_FAULT, section))
         assert source is not None
         assert source.pin == header["pin"]
         assert source.arch == header["arch"]
-        evidence[section] = source.evidence
+        assert source.evidence, f"section {section} came from {source.kind}, which is not evidence"
 
-    assert evidence == {2: True, 5: False, 7: True}
+
+def test_page_fault_stays_partial_until_a_person_has_read_it():
+    header, _ = bpc.parse_front_matter(PAGE_FAULT.read_text().split("\n"))
+    if header["status"] == "complete":
+        assert header.get("reviewed-by"), "complete without a reviewer"
+    else:
+        assert header["status"] == "partial"
+        assert "reviewed-by" not in header, "there is a reviewer, so this can go to complete"
 
 
 def test_the_page_fault_blueprint_read_its_types_out_of_the_built_kernel():
@@ -496,4 +500,4 @@ def test_the_page_fault_blueprint_names_the_structures_it_will_generate_from():
     request = bpcgen.Request.from_header(header)
     assert "vm_fault" in request.structures
     assert "handle_mm_fault" in request.interfaces
-    assert request.artefacts == ("traces/handwritten/page-fault",)
+    assert request.artefacts == ("traces/tier0/page-fault",)
