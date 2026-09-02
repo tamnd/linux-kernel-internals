@@ -3,24 +3,22 @@ idea = "The VFS never knew how to write to your filesystem, it followed a pointe
 still = "lessons/S05/assets/one-write-three-tables.svg"
 status = "draft"
 
-# The two source claims behind this are verified, and the sockets in the drawing come out of the
-# same struct file_operations the lesson reads. What is not here is a trace of the split actually
-# happening, which is claim S05-06 and is still open, so the two write_iter names in the last two
-# beats are read out of the kernel source rather than off a machine that ran them.
-inputs = ["lessons/S05/refs.toml"]
-evidence = false
-blocked_on = """A function_graph capture of a write to a regular file next to a write to a pipe,
-which is claim S05-06. Both trees start at vfs_write and split one call down, and until that
-capture exists the split in beats five and six is drawn from the source rather than recorded."""
+# The split at the end of this is recorded now. `corpora/traces/tier0/two-writes.txt` is one tracer
+# window with two writes in it, one to a file on tmpfs and one to a pipe, and both trees start at
+# `vfs_write` and go different ways one call down. The last two beats read their names off that
+# capture rather than out of the kernel source, which is also how the wrong name in the old version
+# of this file got found: the pipe write is `anon_pipe_write`, not `pipe_write`.
+inputs = ["corpora/traces/tier0/two-writes.txt"]
+evidence = true
 
 [[beat]]
-seconds = 12
+seconds = 10
 caption = "One program, one write call, one byte. Nothing here says which filesystem."
 alt = "A single frame card labelled write of fd, one byte, sitting on its own with an arrow pointing down into the kernel, and no filesystem named anywhere on screen."
 shows = ["frame-card"]
 
 [[beat]]
-seconds = 12
+seconds = 10
 caption = "It lands in vfs_write, which is the same code for every file on the machine."
 alt = "A second frame card labelled vfs_write in fs slash read_write dot c appears under the first one, in the filesystem colour, with a note that this one function handles every write on the machine."
 shows = ["frame-card", "context-badge"]
@@ -44,7 +42,13 @@ alt = "An ops plug for struct file_operations, drawn as a column of named socket
 shows = ["ops-plug"]
 
 [[beat]]
-seconds = 14
+seconds = 12
 caption = "Change the file and the same socket holds different code. That is the whole trick."
-alt = "The ops plug swaps twice, from shmem_file_operations to pipefifo_fops, with the write_iter socket keeping its position and its offset while the name plugged into it changes from shmem_file_write_iter to pipe_write."
+alt = "The ops plug swaps from shmem_file_operations to pipefifo_fops, with the write_iter socket keeping its position and its byte offset while the name plugged into it changes from shmem_file_write_iter to anon_pipe_write."
 shows = ["ops-plug", "pointer-thread"]
+
+[[beat]]
+seconds = 12
+caption = "Here are both of those writes, recorded one after the other, in one capture."
+alt = "Two trace cells from the same function graph capture sit side by side, each opening on vfs_write and each showing a different name one line in, shmem_file_write_iter on the left and anon_pipe_write on the right, with only the right hand tree ending in a wakeup."
+shows = ["trace-cell", "ops-plug"]
