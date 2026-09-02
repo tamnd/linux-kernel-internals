@@ -1,0 +1,107 @@
+# tracer: function_graph
+#
+# CPU  TASK/PID         DURATION                  FUNCTION CALLS
+# |     |    |           |   |                     |   |   |   |
+ 0)   twowrit-36   | + 17.250 us   |  mutex_unlock();
+ 0)   twowrit-36   |               |  vfs_write() {
+ 0)   twowrit-36   |               |    shmem_file_write_iter() {
+ 0)   twowrit-36   |   4.958 us    |      down_write();
+ 0)   twowrit-36   |               |      generic_write_checks() {
+ 0)   twowrit-36   |               |        generic_write_checks_count() {
+ 0)   twowrit-36   |   5.208 us    |          generic_write_check_limits();
+ 0)   twowrit-36   | + 15.750 us   |        }
+ 0)   twowrit-36   | + 26.042 us   |      }
+ 0)   twowrit-36   |               |      file_remove_privs() {
+ 0)   twowrit-36   |               |        file_remove_privs_flags() {
+ 0)   twowrit-36   |   4.291 us    |          setattr_should_drop_suidgid();
+ 0)   twowrit-36   |               |          cap_inode_need_killpriv() {
+ 0)   twowrit-36   |               |            __vfs_getxattr() {
+ 0)   twowrit-36   |   4.167 us    |              strcmp();
+ 0)   twowrit-36   |   3.916 us    |              strcmp();
+ 0)   twowrit-36   |   5.458 us    |              xattr_resolve_name();
+ 0)   twowrit-36   |               |              shmem_xattr_handler_get() {
+ 0)   twowrit-36   |               |                xattr_full_name() {
+ 0)   twowrit-36   |   3.916 us    |                  strlen();
+ 0)   twowrit-36   | + 13.250 us   |                }
+ 0)   twowrit-36   |   4.125 us    |                simple_xattr_get();
+ 0)   twowrit-36   | + 32.083 us   |              }
+ 0)   twowrit-36   | + 71.667 us   |            }
+ 0)   twowrit-36   | + 82.583 us   |          }
+ 0)   twowrit-36   | ! 116.750 us  |        }
+ 0)   twowrit-36   | ! 125.916 us  |      }
+ 0)   twowrit-36   |               |      file_update_time() {
+ 0)   twowrit-36   |               |        file_update_time_flags() {
+ 0)   twowrit-36   |               |          current_time() {
+ 0)   twowrit-36   |   4.209 us    |            ktime_get_coarse_real_ts64_mg();
+ 0)   twowrit-36   | + 14.833 us   |          }
+ 0)   twowrit-36   | + 24.875 us   |        }
+ 0)   twowrit-36   | + 33.959 us   |      }
+ 0)   twowrit-36   |               |      generic_perform_write() {
+ 0)   twowrit-36   |               |        balance_dirty_pages_ratelimited() {
+ 0)   twowrit-36   |               |          balance_dirty_pages_ratelimited_flags() {
+ 0)   twowrit-36   |   3.917 us    |            inode_to_bdi();
+ 0)   twowrit-36   | + 13.292 us   |          }
+ 0)   twowrit-36   | + 22.500 us   |        }
+ 0)   twowrit-36   |               |        shmem_write_begin() {
+ 0)   twowrit-36   |               |          shmem_get_folio_gfp() {
+ 0)   twowrit-36   |               |            filemap_get_entry() {
+ 0)   twowrit-36   |   3.959 us    |              __rcu_read_lock();
+ 0)   twowrit-36   |   4.042 us    |              __rcu_read_unlock();
+ 0)   twowrit-36   | + 23.583 us   |            }
+ 0)   twowrit-36   |               |            shmem_allowable_huge_orders() {
+ 0)   twowrit-36   |   4.333 us    |              shmem_huge_global_enabled.isra.0();
+ 0)   twowrit-36   | + 14.000 us   |            }
+ 0)   twowrit-36   |               |            shmem_alloc_and_add_folio.isra.0() {
+ 0)   twowrit-36   |               |              __folio_alloc_noprof() {
+ 0)   twowrit-36   |               |                __alloc_frozen_pages_noprof() {
+ 0)   twowrit-36   |   8.792 us    |                  get_page_from_freelist();
+ 0)   twowrit-36   | + 19.416 us   |                }
+ 0)   twowrit-36   | + 28.750 us   |              }
+ 0)   twowrit-36   | + 10.500 us   |              shmem_add_to_page_cache();
+ 0)   twowrit-36   |               |              shmem_inode_acct_blocks() {
+ 0)   twowrit-36   |               |                cap_vm_enough_memory() {
+ 0)   twowrit-36   |   4.375 us    |                  cap_capable();
+ 0)   twowrit-36   | + 13.667 us   |                }
+ 0)   twowrit-36   |   4.834 us    |                __vm_enough_memory();
+ 0)   twowrit-36   |   4.458 us    |                inode_add_bytes();
+ 0)   twowrit-36   | + 44.917 us   |              }
+ 0)   twowrit-36   |   4.292 us    |              shmem_recalc_inode();
+ 0)   twowrit-36   |               |              folio_add_lru() {
+ 0)   twowrit-36   |   4.542 us    |                __folio_batch_add_and_move();
+ 0)   twowrit-36   | + 14.208 us   |              }
+ 0)   twowrit-36   | ! 134.417 us  |            }
+ 0)   twowrit-36   | ! 192.959 us  |          }
+ 0)   twowrit-36   | ! 203.083 us  |        }
+ 0)   twowrit-36   |   4.083 us    |        __copy_user_ll();
+ 0)   twowrit-36   |               |        shmem_write_end() {
+ 0)   twowrit-36   |               |          folio_mark_dirty() {
+ 0)   twowrit-36   |   4.208 us    |            folio_mapping();
+ 0)   twowrit-36   |   4.125 us    |            noop_dirty_folio();
+ 0)   twowrit-36   | + 23.125 us   |          }
+ 0)   twowrit-36   |   4.000 us    |          folio_unlock();
+ 0)   twowrit-36   | + 44.792 us   |        }
+ 0)   twowrit-36   | ! 302.500 us  |      }
+ 0)   twowrit-36   |   4.208 us    |      up_write();
+ 0)   twowrit-36   | ! 535.667 us  |    }
+ 0)   twowrit-36   | ! 549.333 us  |  }
+ 0)   twowrit-36   |               |  vfs_write() {
+ 0)   twowrit-36   |               |    anon_pipe_write() {
+ 0)   twowrit-36   |   4.167 us    |      mutex_lock();
+ 0)   twowrit-36   |               |      __alloc_pages_noprof() {
+ 0)   twowrit-36   |               |        __alloc_frozen_pages_noprof() {
+ 0)   twowrit-36   |   8.500 us    |          get_page_from_freelist();
+ 0)   twowrit-36   | + 18.833 us   |        }
+ 0)   twowrit-36   | + 28.250 us   |      }
+ 0)   twowrit-36   |   4.084 us    |      __copy_user_ll();
+ 0)   twowrit-36   |   4.000 us    |      mutex_unlock();
+ 0)   twowrit-36   |               |      __wake_up_sync_key() {
+ 0)   twowrit-36   |               |        __wake_up_common_lock() {
+ 0)   twowrit-36   |   4.000 us    |          __wake_up_common();
+ 0)   twowrit-36   | + 14.291 us   |        }
+ 0)   twowrit-36   | + 23.625 us   |      }
+ 0)   twowrit-36   |   4.000 us    |      kill_fasync();
+ 0)   twowrit-36   | ! 109.458 us  |    }
+ 0)   twowrit-36   | ! 121.875 us  |  }
+ 0)   twowrit-36   |               |  vfs_write() {
+ 0)   twowrit-36   |   4.125 us    |    __copy_user_ll();
+ 0)   twowrit-36   |   3.917 us    |    mutex_lock();

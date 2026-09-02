@@ -51,7 +51,7 @@ required_applets = [
 # They share `tiny.h`, which is the syscall wrappers and the entry point a C library would have
 # provided. Adding a program means adding one line to `sources` and one file beside it.
 [programs]
-sources = ["touchpage.c", "writebyte.c"]
+sources = ["touchpage.c", "writebyte.c", "twowrites.c"]
 image = "debian:trixie-slim"
 compiler = "i686-linux-gnu-gcc"
 packages = ["gcc-i686-linux-gnu"]

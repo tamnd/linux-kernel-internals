@@ -120,6 +120,30 @@ def test_the_multi_cpu_capture_really_does_interleave():
     assert mid_tree, "every CPU change is between whole trees, so nothing is interleaved"
 
 
+def test_the_two_writes_capture_really_does_split():
+    """This is claim S05-06, tested rather than asserted.
+
+    The file is only worth committing if the same `vfs_write` calls two different things. A
+    recapture that came back with both writes going to the same place would still parse, still
+    have two trees in it, and show nothing, so the split itself is what gets checked.
+    """
+    tape = parse_file(TIER0 / "two-writes.txt")
+
+    # Every complete vfs_write with something under it. The last one in the file is the write that
+    # turned the tracer off, and it has no closing brace, which is the shape of every capture.
+    under = [
+        one.children[0].name
+        for one in tape.roots
+        if one.name == "vfs_write" and one.complete and one.children
+    ]
+    assert under == ["shmem_file_write_iter", "anon_pipe_write"]
+
+    # And the two trees really are different underneath rather than the same calls with two names.
+    # Only the pipe has a reader to wake up.
+    assert tape.find("__wake_up_sync_key")
+    assert not tape.find("pipe_write"), "the name in this build is anon_pipe_write"
+
+
 def test_the_write_path_comes_out_as_a_tree():
     tape = parse_file(CORPUS / "write-1byte.txt")
     root = tape.roots[0]

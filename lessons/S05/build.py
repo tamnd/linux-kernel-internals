@@ -20,7 +20,7 @@ lesson.md(f"""# S05: The first ops plug
 
 {lesson.badge}
 
-**Status: draft.** The prose is finished and two of the six claims settle themselves the moment you run the notebook on a Linux machine. The other four are not settled. See "What is not settled yet" at the end, which says what is missing and what will fix it.
+**Status: draft.** The prose is finished. Four of the six claims are verified and the other two settle themselves the moment you run the notebook on a Linux machine, because they are counts taken off your own kernel. See "Where the evidence came from" at the end for what each one rests on.
 """)
 
 lesson.md("""## Before you start
@@ -103,7 +103,7 @@ That is the whole mechanism. C has no classes and the compiler builds no dispatc
 
 When you write to a file, the VFS reaches into the open file, takes the pointer it finds in `f_op`, follows it to a table, reads the `write_iter` slot, and calls it. It has no idea what it called.
 
-{lesson.image("one-write-three-tables.svg", "One write call at the top leading into vfs_write, and three arrows fanning out from vfs_write to three boxes: ext4_file_operations with ext4_file_write_iter under it, shmem_file_operations with shmem_file_write_iter under it, and pipefifo_fops with pipe_write under it.")}
+{lesson.image("one-write-three-tables.svg", "One write call at the top leading into vfs_write, and three arrows fanning out from vfs_write to three boxes: ext4_file_operations with ext4_file_write_iter under it, shmem_file_operations with shmem_file_write_iter under it, and pipefifo_fops with anon_pipe_write under it.")}
 
 The people who wrote ext4 chose the code. The people who wrote the VFS chose the slot. Neither had to know about the other, and a filesystem written next year plugs in without a line changing above the fork.
 """)
@@ -230,14 +230,7 @@ Everything so far has been names in a symbol table. Now watch two writes take tw
 
 The next cell writes one byte to a regular file and one byte to a pipe, tracing each one, and prints what ran directly underneath `vfs_write`. Same call, same size, same process, and two different function names come back.
 
-If your runtime cannot trace, run this on a Linux machine you control and paste the output in:
-
-```sh
-cd /sys/kernel/tracing
-sudo sh -c 'echo function_graph > current_tracer; echo vfs_write > set_graph_function'
-sudo sh -c 'echo > trace; echo 1 > tracing_on; dd if=/dev/zero of=/tmp/one bs=1 count=1 2>/dev/null; echo 0 > tracing_on'
-sudo cat trace
-```
+If your runtime cannot trace, the cell after it falls back to a capture off the pinned kernel that has both writes in one file. That capture is one window rather than two, and the reason matters: two traces taken a second apart could differ because something else on the machine changed, and nothing in the two files would let anybody rule it out.
 """)
 
 lesson.code(
@@ -271,7 +264,20 @@ else:
     print("nothing captured:", tracefs.explain())
 
 print(f"{len(captures)} captures from {source or 'nowhere yet'}")""",
-    note="S05-06 stays unverified until this runs against the pinned kernel under kxbox.",
+    note="Your own captures if this runtime can take them, and nothing if it cannot.",
+)
+
+lesson.md("""If that came back with nothing, the next cell falls back to the committed capture. It is one trace with two writes in it, so it arrives as one entry rather than three, and everything below works the same either way.
+""")
+
+lesson.code(
+    """if not captures:
+    captures = {"tmpfs and a pipe": colab.corpus_text("traces/tier0/two-writes.txt")}
+    source = "corpora/traces/tier0/two-writes.txt"
+    print("using the committed capture from the pinned kernel")
+
+print(f"{len(captures)} capture(s) from {source}")""",
+    note="The fallback, so a reader with no tracefs anywhere still has a real trace to work on.",
 )
 
 lesson.md("""## Look at it before anything parses it
@@ -296,10 +302,12 @@ lesson.code(
     """tapes = {label: function_graph.parse(raw, source=source) for label, raw in captures.items()}
 
 for label, tape in tapes.items():
-    write = next((f for f in tape.walk() if f.name == "vfs_write"), None)
-    under = [child.name for child in write.children] if write else []
-    print(f"{label:14} {under or 'vfs_write not in this capture'}")""",
-    note="The payoff cell. Three destinations, three different names, one caller above them.",
+    # Every vfs_write in the capture, not just the first. The committed one has both destinations
+    # in a single window, so the two names to compare are two roots of the same tape.
+    for write in [f for f in tape.walk() if f.name == "vfs_write"]:
+        under = [child.name for child in write.children]
+        print(f"{label:18} line {write.line:4}  {under or 'nothing, this one is the tracer'}")""",
+    note="The payoff cell. One caller, and a different name under it for every destination.",
 )
 
 lesson.md("""Now grade yourself. The grader has no stored answer key and there is nowhere for one to hide, because every correct value is computed from the symbol table you read. It refuses to grade you against the handwritten fixture in `corpora/proc/handwritten/`, because grading somebody on a file nobody read off a kernel is the one thing this project promises not to do.
@@ -333,13 +341,17 @@ You know it worked when the name under `vfs_write` changes and everything above 
 Then answer the question the lesson opened with. Nothing in the VFS switches on the file type, and now you can say what does the choosing and when it was chosen.
 """)
 
-lesson.md("""## What is not settled yet
+lesson.md("""## Where the evidence came from
 
-This lesson is a draft, and here is the exact reason.
+Six claims are registered in `claims.toml` beside this file.
 
-Six claims are registered in `claims.toml` beside this file. The two counting claims settle themselves as soon as a reader runs the notebook on a Linux machine, because the number comes off their own kernel. The three source claims each name a citation in `refs.toml`, and none of the three is confirmed, because confirming one means finding its anchor in a real 7.2.2 tree and there is not one here yet.
+Three are source claims. Each one names an anchor in the pinned 7.2.2 tree rather than a line number, and `refcheck` fails the build if an anchor stops resolving. One of the three changed while it was being confirmed, because the documentation it used to cite turned out not to say what the claim said, so the claim now says the narrower thing the code shows and cites the code.
 
-The last claim wants a capture of two writes going two different ways. That needs the pinned kernel booted, which needs `kxbox`, which is written and tested and has never had a kernel to boot. Until then the experiment runs on whatever Linux the reader has, which is honest evidence about their kernel and not about ours.
+Two settle themselves as soon as you run the notebook on a Linux machine, because the number comes off your own kernel rather than off mine. There is nothing for me to verify in advance and nothing you have to take on trust.
+
+The last one wanted a capture and has one: `corpora/traces/tier0/two-writes.txt`, off the pinned kernel under v86. It corrected two names on the way in. The pipe write calls `anon_pipe_write`, not `pipe_write`, which is what it was called for years and what most writing about pipes still says. And there is no `new_sync_write` between `vfs_write` and the iterator, which the earlier drawing had because somebody wrote down the shape the code used to have. Both of those were in this lesson before the capture and both were wrong.
+
+This is still a draft. `meta.toml` wants a `reviewed-by` naming a person who has read it, and nobody has.
 
 There is a handwritten symbol table in `corpora/proc/handwritten/`. It exists so the parser had something to test against, it is marked `evidence = false`, and no claim here points at it. The claim ledger fails the build if one ever tries.
 """)

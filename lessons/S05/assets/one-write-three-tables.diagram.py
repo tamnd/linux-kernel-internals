@@ -4,6 +4,10 @@ The point of the picture is the fork in the middle. Everything above it is ident
 destinations, everything below it is different, and the thing that chose which way to go is a
 pointer that was written into the file when it was opened.
 
+The pipe box said `pipe_write` until a capture off the pinned kernel came back with
+`anon_pipe_write` in it. That was the name for years and it is the name in most of what is written
+about pipes, and this drawing had it because somebody wrote it down from memory.
+
 This is also the still that carries the same point as the `ops-plug` animation. The animation
 opens the struct, follows the pointer and swaps the table underneath, which is what motion is
 good at. This picture has to work on its own for a reader who printed the page, and that is the
@@ -20,7 +24,8 @@ ALT = (
     "box holding ext4_file_operations and under it ext4_file_write_iter. The middle arrow, for a "
     "file on tmpfs, leads to a box holding shmem_file_operations and under it "
     "shmem_file_write_iter. The right arrow, for a pipe, leads to a box holding pipefifo_fops and "
-    "under it pipe_write. A note at the bottom says the VFS chose the slot and the filesystem "
+    "under it anon_pipe_write. A note at the bottom says the VFS chose the slot and the "
+    "filesystem "
     "chose the code, and that nothing above the fork knows which of the three it is talking to."
 )
 
@@ -77,7 +82,7 @@ def scene() -> Scene:
         380,
         280,
         90,
-        "pipefifo_fops\n\npipe_write",
+        "pipefifo_fops\n\nanon_pipe_write",
         style="muted",
         mono=True,
         font_size=13,

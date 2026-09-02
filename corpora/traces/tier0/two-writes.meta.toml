@@ -1,0 +1,50 @@
+schema = 1
+source = "tier0"
+evidence = true
+
+describes = "two one byte writes in one tracer window, one to a file on tmpfs and one to a pipe, so the split under vfs_write is visible in a single capture"
+backs = ["S05-06"]
+
+tracer = "function_graph"
+options = ["funcgraph-proc"]
+
+kernel = "7.2.2"
+arch = "i386"
+profile = "A-full"
+uniprocessor = true
+preempt = true
+captured = "2026-09-02"
+tier = 0
+
+command = "/bin/twowrites --quiet"
+
+setup = [
+  "echo 0 > /sys/kernel/tracing/tracing_on",
+  "echo function_graph > /sys/kernel/tracing/current_tracer",
+  "echo funcgraph-proc > /sys/kernel/tracing/trace_options",
+  "echo vfs_write > /sys/kernel/tracing/set_graph_function",
+  "echo > /sys/kernel/tracing/trace",
+]
+
+# v86 has no real clock. The order of these lines is true and every duration in them is what the
+# emulator felt like reporting, so the 535 microseconds on the tmpfs write and the 109 on the pipe
+# are not a measurement of anything and must not be compared.
+timings_are_real = false
+
+unparsed_lines = 0
+frames = 69
+roots = 4
+max_depth = 8
+cpus = [0]
+
+# Both writes in one window rather than two windows with one write each. Two traces taken a second
+# apart could differ because something else on the machine changed, and nothing in the two files
+# would let anybody rule it out. One window is the only arrangement where "the same code went two
+# ways" is a thing the capture shows rather than a thing the reader is asked to accept.
+notes = [
+  "The first line is a bare mutex_unlock() with nothing above it. It is the tail of the write that turned tracing on, and every trace has that shape at the start.",
+  "The last vfs_write has no closing brace. It is the write that turned tracing off, and recording had stopped by the time it returned.",
+  "The pipe write calls anon_pipe_write, not pipe_write. The lesson and its diagram both said pipe_write, which is what the name was for years, and this capture is what corrected them.",
+  "There is no new_sync_write between vfs_write and shmem_file_write_iter. The handwritten fixture had one, because that is the shape the function used to have, and this build calls the iterator straight from vfs_write.",
+  "Both writes allocate a page and they allocate it in different places. The tmpfs one goes through shmem_get_folio_gfp and shmem_alloc_and_add_folio into __folio_alloc_noprof, the pipe one calls __alloc_pages_noprof itself four levels shallower, and only the pipe one ends with __wake_up_sync_key and kill_fasync, because a pipe has a reader to wake and a file does not.",
+]

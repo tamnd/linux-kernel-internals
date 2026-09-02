@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 600" width="1040" height="600" role="img" aria-label="One write, three tables">
   <title>One write, three tables</title>
-  <desc>At the top, one box labelled your program calling write of fd, one byte. An arrow leads down to a box labelled vfs_write in fs slash read_write dot c, with a line underneath reading it calls file arrow f underscore op arrow write underscore iter. Three arrows fan out from it, each labelled with the file that was opened. The left arrow, for a file on ext4, leads to a box holding ext4_file_operations and under it ext4_file_write_iter. The middle arrow, for a file on tmpfs, leads to a box holding shmem_file_operations and under it shmem_file_write_iter. The right arrow, for a pipe, leads to a box holding pipefifo_fops and under it pipe_write. A note at the bottom says the VFS chose the slot and the filesystem chose the code, and that nothing above the fork knows which of the three it is talking to.</desc>
+  <desc>At the top, one box labelled your program calling write of fd, one byte. An arrow leads down to a box labelled vfs_write in fs slash read_write dot c, with a line underneath reading it calls file arrow f underscore op arrow write underscore iter. Three arrows fan out from it, each labelled with the file that was opened. The left arrow, for a file on ext4, leads to a box holding ext4_file_operations and under it ext4_file_write_iter. The middle arrow, for a file on tmpfs, leads to a box holding shmem_file_operations and under it shmem_file_write_iter. The right arrow, for a pipe, leads to a box holding pipefifo_fops and under it anon_pipe_write. A note at the bottom says the VFS chose the slot and the filesystem chose the code, and that nothing above the fork knows which of the three it is talking to.</desc>
   <defs>
     <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="#495057"/>
@@ -26,7 +26,7 @@
   <rect x="700.0" y="380.0" width="280.0" height="90.0" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
   <text x="840.0" y="408.8" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">pipefifo_fops</text>
   <text x="840.0" y="425.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle"></text>
-  <text x="840.0" y="441.2" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">pipe_write</text>
+  <text x="840.0" y="441.2" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">anon_pipe_write</text>
   <line x1="360.0" y1="238.0" x2="340.0" y2="425.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
   <text x="360.0" y="331.5" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">opened on ext4</text>
   <line x1="530.0" y1="276.0" x2="520.0" y2="380.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>

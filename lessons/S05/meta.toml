@@ -12,7 +12,8 @@ profile = "A-full"
 # Tier 0 is the browser kernel under v86. Uniprocessor, 32 bit, emulated timing.
 tier = 0
 
-# Why this is still a draft. Two of the six claims are observations the reader makes on their own
-# machine and those work today. The three source claims need a kernel tree to confirm against, and
-# the trace claim needs a capture, which needs kxbox to boot.
-blocked_on = "kxbox"
+# Why this is still a draft. It is not the evidence any more. Four of the six claims are verified,
+# and the other two are observations the reader makes on their own machine, which work today and
+# have nothing left for anybody here to do. What is left is `reviewed-by`, which names a person
+# who has read the lesson, and that is not a check a script can pass.
+blocked_on = "review"

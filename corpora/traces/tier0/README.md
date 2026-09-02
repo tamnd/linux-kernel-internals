@@ -39,3 +39,13 @@ The file it writes to is one nothing has written to before, and that is the inte
 The two frames at the edges are the tracer being turned on and off. The first line is a `mutex_unlock()` with nothing above it, the tail of the write that started recording. The last `vfs_write` has no closing brace, because it is the write that stopped recording and recording had stopped by the time it returned. Every trace has that shape at both ends.
 
 What is not in it is worth as much as what is. There is no disk anywhere. The byte went into the page cache and the call returned, and if you were expecting a block layer you can look for it and watch it not be there.
+
+## two-writes.txt
+
+One byte to a file on tmpfs and one byte to a pipe, by `/bin/twowrites`, in one tracer window.
+
+Two writes in one window rather than two windows with one write each, which would have been tidier. The point of the file is that the same `vfs_write` went two different ways, and that is only something a capture shows if both ways are in the same capture. Two traces taken a second apart could differ because something else on the machine changed, and nobody could rule it out from the files.
+
+It corrected two names. The pipe write calls `anon_pipe_write` and not `pipe_write`, which is what it was called for years and what most writing about pipes still says, and S05 and its diagram both had the old name. And there is no `new_sync_write` between `vfs_write` and `shmem_file_write_iter`. The handwritten fixture had one because that is the shape the code used to have.
+
+The two trees are different all the way down and not the same calls under two names. Both allocate a page, and the tmpfs one goes four levels deep to do it while the pipe one calls the allocator itself. Only the pipe one ends with `__wake_up_sync_key` and `kill_fasync`, because a pipe has a reader waiting and a file does not.

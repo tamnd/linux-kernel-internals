@@ -11,7 +11,14 @@ lesson = "S05"
 # claim now says the narrower thing the code actually shows, and cites the code.
 #
 # Two more are settled the moment a reader runs the lesson, because they are counts taken off the
-# reader's own kernel. The last one wants a capture, which wants kxbox to boot.
+# reader's own kernel.
+#
+# S05-06 wanted a capture and now has one. `/bin/twowrites` writes one byte to a file on tmpfs and
+# one byte to a pipe inside a single tracer window, so both trees are in the same file and nobody
+# has to argue about whether two separate captures are comparable. It corrected two names on the
+# way in. The pipe write calls `anon_pipe_write` and not `pipe_write`, and there is no
+# `new_sync_write` between `vfs_write` and the iterator, both of which the lesson had from
+# somebody writing down what the code used to look like.
 #
 # `pending` says what will settle each claim. It is a note to the next person, not a field the
 # ledger reads.
@@ -55,5 +62,5 @@ verified = true
 id = "S05-06"
 text = "Two writes of the same size to two different kinds of file run different kernel functions underneath the same vfs_write, and the names of those functions say which table was plugged in."
 evidence_kind = "trace"
-pending = "a function_graph capture of a write to a regular file and a write to a pipe, taken from the browser once kxbox boots"
-verified = false
+evidence = "corpora/traces/tier0/two-writes.txt"
+verified = true
