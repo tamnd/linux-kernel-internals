@@ -91,9 +91,11 @@ A **diagram** is a `*.diagram.py` file in a lesson's `assets/`, and it is the ri
 
 A **widget** is a class in `kxwidgets/`, and it is the right answer for something a reader wants to look at their own data through. It draws plain HTML with the styling inline, ships no JavaScript, and has to draw itself as text as well, because that text is what a screen reader gets and what a test asserts on.
 
-An **animation** is a storyboard in `kxmanim/storyboards/`, and it is the right answer only for a sequence in time. There are about four of those in the whole book. Before you write one, read the rules in `kxmanim/storyboard.py`, because they are enforced by `just storyboards` and by CI: ninety seconds at most, one idea stated as the title, only the nine primitives, a caption and a piece of alt text on every beat, and a still picture that makes the same point without moving. Write the captions and the alt text first. If the alt text is hard to write, the scene is doing two things and the fix is to cut one of them.
+An **animation** is a storyboard in `kxmanim/storyboards/`, and it is the right answer only for a sequence in time. There are about four of those in the whole book. Before you write one, read the rules in `kxmanim/storyboard.py`, because they are enforced by `just storyboards` and by CI: ninety seconds at most, one idea stated as the title, only the nine shapes from `kxshapes`, a caption and a piece of alt text on every beat, and a still picture that makes the same point without moving. Write the captions and the alt text first. If the alt text is hard to write, the scene is doing two things and the fix is to cut one of them.
 
 All three share one vocabulary, in `kxray/vocabulary.py`. Teal is a filesystem everywhere. The eight layers run top to bottom everywhere. A dashed pointer means no reference is held everywhere. If you need a shape that is not in there, that is a conversation before it is a commit.
+
+Widgets and animations share more than the vocabulary. The nine shapes they are both built out of live in `kxshapes/`, as data rather than as drawing, so a widget of a trace and a video of the same trace agree box for box instead of each working the boxes out on its own. Reach for a shape there before you write layout arithmetic in a renderer. If the shape you want is genuinely not one of the nine, that is the same conversation, because the set is closed and a test asserts the count.
 
 Colour is never the only thing carrying the meaning. Whatever the colour says, the label says too.
 

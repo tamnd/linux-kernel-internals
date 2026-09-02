@@ -33,7 +33,7 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-from kxmanim.primitives import PRIMITIVES
+from kxshapes import PRIMITIVES
 
 # Ninety seconds. Not a round number picked for tidiness: past about a minute and a half a viewer
 # has stopped holding the beginning of the animation in their head, so the end of it is landing

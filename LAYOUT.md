@@ -25,8 +25,9 @@ linux-kernel-internals/
 │   ├── kernel/              #   pin.toml, config fragments, build.sh, results
 │   └── rootfs/              #   a pinned busybox and a thirty line init
 ├── kxdiff/                  # comparing two traces: policy.py says what, levels.py says how strictly
+├── kxshapes/                # the nine shapes, as data, drawn by both renderers below
 ├── kxwidgets/               # SyscallTape, StructMap, OpsExplorer, PredictionGate
-├── kxmanim/                 # the nine primitives, storyboards, the manim adapter
+├── kxmanim/                 # storyboards, the budget, the manim adapter
 │   └── storyboards/         #   one toml per animation, checked in CI
 ├── kxdraw/                  # diagrams as code, out to svg and excalidraw
 ├── lessons/                 # 103 lessons: build.py, its notebook, assets, grader
@@ -54,11 +55,13 @@ That is also why the analysis toolkit is pure Python with no C extensions. It co
 
 `kxray/layout.py` is the arithmetic that turns a tree of frames into rectangles. It is in `kxray` for the same reason. A widget and an animation of the same trace call it and get the same answer, so the wide box is in the same place in both.
 
+`kxshapes/` is the next step up from that. It is the nine shapes every picture in this book is built out of, held as plain data rather than as drawing: a frame card, a layer band, an object box, a pointer thread, an ops plug, a trace cell, a CPU lane, a context badge and a memory slot. A test asserts there are exactly nine, because a closed set is the point. Each shape works out its own rows, its own labels and its own alt text, and neither renderer is allowed to work any of that out again. It is a package of its own rather than a module inside either renderer, and that is the whole reason it exists. If the arithmetic lived in `kxwidgets` then `kxmanim` would have to redo it, and two renderers doing their own arithmetic are two renderers that can disagree, in the worst possible way, which is that both pictures look fine and one of them is wrong.
+
 `kxdiff/` is two files and the claim that comparing two traces is two questions rather than one. `policy.py` answers what the comparison is about, which means what to leave out before comparing anything: interrupts, work whose presence the clock decides, work the kernel had been putting off, and anything belonging to another task. `levels.py` answers how strictly to compare what is left, and it offers five answers because a claim about the path a system call took and a claim about where its time went are different claims and need different checks. The plan had this under `conformance/`. It is at the top level instead because `kxbox/bothways.py` imports it and that runs in the browser under Pyodide, so it has to be in the wheel, and because the first thing it was used for was checking the emulator against a recording rather than grading anybody's answer.
 
 Keeping the two halves apart is worth the extra file. The code started inside `kxbox/bothways.py` doing both at once, and every time the comparison failed for a boring reason the fix landed in the same function as the rules about what a trace means. After about seven of those nobody could tell which lines were the check and which were the excuses. Every name in `policy.py` now carries the run that put it there, because a list of things to ignore is exactly where a check stops being a check.
 
-`kxmanim/` is for the three or four ideas in the whole book that are sequences in time, and it is deliberately awkward to use for anything else. There are nine primitives and a test asserts there are nine. There is a ninety second budget. Every storyboard has to name a still that makes the same point without moving, and the checker fails when that file is not on disk. Captions and alt text go through the same house style rules the lessons go through. Only `kxmanim/scene.py` imports manim, and it imports it lazily, so the rules run in CI in a fraction of a second while the renderer stays a thing you install on purpose with `just setup-animation`.
+`kxmanim/` is for the three or four ideas in the whole book that are sequences in time, and it is deliberately awkward to use for anything else. A beat has to say which of the nine shapes it shows, and a name that is not one of the nine is refused. There is a ninety second budget. Every storyboard has to name a still that makes the same point without moving, and the checker fails when that file is not on disk. Captions and alt text go through the same house style rules the lessons go through. Only `kxmanim/scene.py` imports manim, and it imports it lazily, so the rules run in CI in a fraction of a second while the renderer stays a thing you install on purpose with `just setup-animation`.
 
 `kxbox/kernel/` is the version and the config, and nothing else. `pin.toml` says which kernel, from which URL, with which checksum, and lists the profiles we build. The `config/` fragments say what each profile turns on. `build.sh` downloads, verifies and builds one profile in a container, and `tools/kconfig` checks the whole lot without a toolchain, so a wrong pin fails CI in seconds instead of an hour into a build.
 
@@ -92,7 +95,7 @@ A new lesson goes in `lessons/<ID>/`, where the identifier comes from the curric
 
 A new diagram goes in that lesson's `assets/` as a file named `*.diagram.py`. The `.svg` and `.excalidraw` beside it are output, written by `just diagrams` and checked in CI, so editing them by hand gets reverted by the next build. Every diagram source has to define an `ALT` string, and the build fails without one.
 
-A new widget goes in `kxwidgets/`, takes a model out of `kxray.models` and nothing else, and has to draw itself as text as well as as HTML. The text version is what a screen reader gets and what a test asserts on, so a widget without one is not finished. Add it to the preview page in `kxwidgets/__main__.py` in the same pull request, because a visual thing nobody looks at goes wrong quietly.
+A new widget goes in `kxwidgets/`, takes a model out of `kxray.models` or a shape out of `kxshapes` and nothing else, and has to draw itself as text as well as as HTML. The text version is what a screen reader gets and what a test asserts on, so a widget without one is not finished. Add it to the preview page in `kxwidgets/__main__.py` in the same pull request, because a visual thing nobody looks at goes wrong quietly.
 
 A new animation goes in `kxmanim/storyboards/` as a `.toml` file, and it starts at `status = "draft"`, which is a status that refuses to render. Write the beats, the captions and the alt text first and the drawing second. If writing the alt text is hard, the scene is trying to say two things at once and the fix is two scenes or one fewer. The still it names has to exist before the check passes, because most readers of this book will never press play.
 

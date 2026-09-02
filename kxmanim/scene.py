@@ -19,7 +19,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from kxmanim.primitives import (
+from kxmanim.storyboard import Storyboard
+from kxshapes import (
     ContextBadge,
     FrameCard,
     LayerDescent,
@@ -28,7 +29,6 @@ from kxmanim.primitives import (
     PointerThread,
     TraceCell,
 )
-from kxmanim.storyboard import Storyboard
 
 # Which of the nine can actually be drawn as video today. The last one is arithmetic with no
 # renderer behind it yet, which is a smaller gap than it sounds and an honest one to state.
