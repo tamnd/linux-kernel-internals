@@ -7,7 +7,7 @@ schema = 1
 # the recording filed under that name and hands it back. Both give you a `kxray.models.Tape`.
 #
 # Adding a recipe means capturing it on a real Tier 0 session and committing the capture with its
-# `.meta.toml`. It does not mean writing one. Both recipes here are captures now. The handwritten
+# `.meta.toml`. It does not mean writing one. All three recipes here are captures. The handwritten
 # files they used to point at are still in `traces/handwritten/`, still marked `evidence = false`,
 # and still doing the job they were written for, which is giving the parser something to test
 # against on a machine with no kernel built.
@@ -31,6 +31,20 @@ describes = "one byte written to a file nothing had written to before, from the 
 command = "/bin/writebyte --quiet"
 functions = ["vfs_write"]
 trace = "traces/tier0/write-1byte.txt"
+status = 0
+stdout = ""
+
+[[recipes]]
+name = "two-writes"
+profile = "teaching"
+describes = "one byte to a file on tmpfs and one byte to a pipe, in one tracer window, so the split under vfs_write is in a single capture"
+# One window with two writes in it, not two windows with one write each. Two traces taken a second
+# apart could differ because something else on the machine changed, and nothing in the two files
+# would let anybody rule that out. This arrangement is the only one where "the same code went two
+# ways" is something the capture shows rather than something the reader is asked to accept.
+command = "/bin/twowrites --quiet"
+functions = ["vfs_write"]
+trace = "traces/tier0/two-writes.txt"
 status = 0
 stdout = ""
 

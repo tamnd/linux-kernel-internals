@@ -29,6 +29,9 @@
 #define SYS_OPEN 5
 #define SYS_CLOSE 6
 #define SYS_UNLINK 10
+/* On 32-bit x86 this is the one that takes a pointer to two ints and returns zero. The variant
+ * that hands both descriptors back in registers is an Alpha and MIPS thing and is not this. */
+#define SYS_PIPE 42
 #define SYS_MMAP 90
 #define SYS_MUNMAP 91
 
