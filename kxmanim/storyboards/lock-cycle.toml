@@ -3,17 +3,16 @@ idea = "Lockdep draws a graph rather than waiting for a hang, and refuses the ed
 still = "lessons/C09/assets/the-cycle.svg"
 status = "draft"
 
-# The three source claims this rests on are verified against the pinned tree. The splat itself is
-# claim C09-02, which settles when somebody builds the two thread module and loads it, so the
-# report in the last beat is the shape of one rather than a copy of one that a machine printed.
-inputs = ["lessons/C09/refs.toml"]
-evidence = false
-blocked_on = """A real splat out of dmesg, which is claim C09-02 and wants the two thread module
-built and loaded. The graph and the rule are from the source and are verified. The wording of the
-report in the last beat is not, and it should be replaced with a captured one."""
+# The report in the last three beats is a real one now. `corpora/oops/tier0/lockdep-ab-ba.txt` is
+# what the pinned kernel printed when the two thread module was loaded into the D-lockdep profile,
+# and every name, number and column in those beats is read off it rather than out of the source.
+# That is also where beat six comes from: the report draws two CPUs on a machine with one, which
+# nobody had written down until there was a capture to notice it in.
+inputs = ["corpora/oops/tier0/lockdep-ab-ba.txt"]
+evidence = true
 
 [[beat]]
-seconds = 12
+seconds = 10
 caption = "Two threads, two mutexes, and a bug almost every run will not show you."
 alt = "Two frame cards side by side, one for each thread, each in process context with its badge showing, and a line of text saying both of them finished and neither one ever blocked."
 shows = ["frame-card", "context-badge"]
@@ -37,10 +36,16 @@ alt = "A second pointer thread starts from the second lock box back towards the 
 shows = ["object-box", "pointer-thread"]
 
 [[beat]]
-seconds = 14
-caption = "The report arrives now, on a run where nothing waited and nothing hung."
-alt = "The numbered chain of a lockdep report appears beside the graph, highest number first, with the entry numbered zero marked as the lock being taken right now and the top entry as the one already held."
-shows = ["object-box", "frame-card"]
+seconds = 12
+caption = "Here is the report that came out, on a run where nothing waited."
+alt = "Trace cells hold the numbered chain from the captured report beside the graph, arrow one for lock_b above arrow zero for lock_a, with the entry numbered zero marked as the one being taken right now and the line underneath reading that both threads finished and nothing waited for anything."
+shows = ["trace-cell", "object-box"]
+
+[[beat]]
+seconds = 12
+caption = "It drew two CPUs. This machine has one, and nothing in that block happened."
+alt = "Two CPU lanes appear under the report, headed CPU0 and CPU1, holding the four steps of the scenario block the kernel printed, with both lanes greyed and a note saying the machine that produced this report has a single processor."
+shows = ["cpu-lane", "trace-cell"]
 
 [[beat]]
 seconds = 12
