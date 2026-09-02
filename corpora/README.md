@@ -14,7 +14,7 @@ corpora/
 ├── btf/                 # vmlinux BTF blobs for the pinned kernels, and one small handwritten one
 ├── proc/                # /proc and /sys snapshots, and three handwritten files
 ├── experiments/         # measurements rather than recordings, so far all Tier 1
-├── oops/                # crash and lockdep text used by the debugging lessons
+├── oops/                # crash and lockdep text used by the debugging lessons, tier0 and handwritten
 ├── litmus/              # herd7 and klitmus7 output for the memory model lessons
 └── tier0/               # recipes.toml, the list of what a Tier 0 session can replay
 ```
@@ -35,11 +35,21 @@ A capture says what the kernel did. An experiment says what it cost, which needs
 
 `tier0/recipes.toml` is what makes the offline fallback work. Each entry has a name, the command that produced it, and which capture answers it. A lesson asks for a recording by name, the emulator runs the command when it is there, and the recording answers when it is not.
 
-A recipe is added by capturing something on a real Tier 0 session and committing it. Not by writing one. Both recipes are captures now, taken off the pinned kernel booted under v86 and filed in `traces/tier0/`.
+A recipe is added by capturing something on a real Tier 0 session and committing it. Not by writing one. All three recipes are captures now, taken off the pinned kernel booted under v86 and filed in `traces/tier0/`.
 
 Taking them corrected three things the recipes had asserted from reading the source. `page-fault` named `exc_page_fault` as a function to filter on, and ftrace will not attach to that one at all, because it is `noinstr`. It named `do_anonymous_page`, which the compiler inlined out of this build. And `write-1byte` said its command was `dd if=/dev/zero of=/tmp/one bs=1 count=1`, which produces nine writes rather than one, because the shell writes its prompt and dd writes its summary and all of those are `vfs_write` too. None of the three was a careless guess and all three were wrong, which is the argument for the whole arrangement.
 
-The fix for the third one was a program in the rootfs. `writebyte` opens its file, turns the tracer on, writes one byte, and turns it off, so the only thing in the window is the thing you asked for. It is the same trick `touchpage` uses to get one page fault instead of thirty, and the two share `tiny.h` for the syscall wrappers.
+The fix for the third one was a program in the rootfs. `writebyte` opens its file, turns the tracer on, writes one byte, and turns it off, so the only thing in the window is the thing you asked for. It is the same trick `touchpage` uses to get one page fault instead of thirty, and `twowrites` uses to put a write to a file and a write to a pipe in one window. All three share `tiny.h` for the syscall wrappers.
+
+Capturing has now corrected something in five separate places, which is enough of a pattern to stop calling it bad luck. Two names in S05 were wrong: the pipe write is `anon_pipe_write` and there is no `new_sync_write` under `vfs_write` in this build, and both had been written down from reading the source.
+
+## Not everything Tier 0 is A-full
+
+Most captures here come off the `A-full` profile, which is the kernel the book is written against. `corpora/oops/tier0/` and the two `lockdep-stats` files in `corpora/proc/tier0/` come off `D-lockdep` instead, which is the same source and the same compiler with `CONFIG_PROVE_LOCKING` turned on.
+
+That is not a second tier. It is the same emulator, the same rootfs and the same pinned version, and the metadata says which profile every file came from, so nothing is ambiguous. A lesson about the lock checker needs a kernel with the lock checker in it, and building a second profile is cheaper and more honest than pretending `A-full` has one.
+
+Those three files also came off a single boot, on purpose. The report and the two readings of `/proc/lockdep_stats` are one sequence with an `insmod` in the middle of it, because the claim is about what changed and in which order. Three separate runs would be three facts standing next to each other.
 
 ## What every artefact records
 

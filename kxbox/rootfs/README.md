@@ -16,6 +16,12 @@ The compiled programs need the container, because they are 32-bit x86 and the ma
 
 The output is `build/initrd.gz` and it is not committed.
 
+## Modules
+
+The image also carries any `.ko` it finds beside a lesson, which today means `abba.ko` from `lessons/C09/assets`, put in at `/lib/modules` where `insmod` can reach it.
+
+Nothing here builds one. A module needs the kernel tree, which needs the container and the volume, so `kxbox/kernel/module.sh` builds it and this copies it. That also makes it optional in a way the programs below are not: a module is compiled against one profile and refused by every other, because `vermagic` carries the preemption model along with the version, so an image that insisted on having one would only build for somebody who had run the kernel build. An image with no module boots exactly the same, and the lesson that wants one falls back to the committed capture.
+
 ## The three programs
 
 They exist for one reason each and it is the same reason. No busybox applet does one thing and stops, so every trace taken by running an applet has the interesting call somewhere in the middle of thirty others, and a beginner should not have to be told which one is theirs.

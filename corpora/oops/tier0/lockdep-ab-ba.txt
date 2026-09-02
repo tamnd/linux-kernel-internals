@@ -1,0 +1,82 @@
+[    3.606812] abba: loading out-of-tree module taints kernel.
+[    3.665899] abba: first thread holds both, in the order a then b
+[    3.670267] 
+[    3.670825] ======================================================
+[    3.672328] WARNING: possible circular locking dependency detected
+[    3.673927] 7.2.2 #2 Tainted: G           O       
+[    3.674698] ------------------------------------------------------
+[    3.675805] abba_second/40 is trying to acquire lock:
+[    3.677146] c7825118 (lock_a){+.+.}-{4:4}, at: abba_second_thread+0x2a/0x60 [abba]
+[    3.678772] 
+[    3.678772] but task is already holding lock:
+[    3.679948] c78250b8 (lock_b){+.+.}-{4:4}, at: abba_second_thread+0x1e/0x60 [abba]
+[    3.682677] 
+[    3.682677] which lock already depends on the new lock.
+[    3.682677] 
+[    3.685350] 
+[    3.685350] the existing dependency chain (in reverse order) is:
+[    3.687718] 
+[    3.687718] -> #1 (lock_b){+.+.}-{4:4}:
+[    3.689599]        __mutex_lock+0x87/0xd30
+[    3.690997]        mutex_lock_nested+0x1a/0x20
+[    3.692633]        abba_first_thread+0x20/0x50 [abba]
+[    3.694074]        kthread+0xe8/0x130
+[    3.694763]        ret_from_fork+0x20d/0x270
+[    3.695995]        ret_from_fork_asm+0x12/0x20
+[    3.696603]        restore_all_switch_stack+0x0/0x81
+[    3.697255] 
+[    3.697255] -> #0 (lock_a){+.+.}-{4:4}:
+[    3.699063]        __lock_acquire+0x165d/0x2740
+[    3.700589]        lock_acquire+0x8c/0x230
+[    3.701954]        __mutex_lock+0x87/0xd30
+[    3.702622]        mutex_lock_nested+0x1a/0x20
+[    3.704343]        abba_second_thread+0x2a/0x60 [abba]
+[    3.706685]        kthread+0xe8/0x130
+[    3.707580]        ret_from_fork+0x20d/0x270
+[    3.708229]        ret_from_fork_asm+0x12/0x20
+[    3.708850]        restore_all_switch_stack+0x0/0x81
+[    3.709550] 
+[    3.709550] other info that might help us debug this:
+[    3.709550] 
+[    3.710643]  Possible unsafe locking scenario:
+[    3.710643] 
+[    3.711482]        CPU0                    CPU1
+[    3.712182]        ----                    ----
+[    3.713018]   lock(lock_b);
+[    3.713483]                                lock(lock_a);
+[    3.714279]                                lock(lock_b);
+[    3.715126]   lock(lock_a);
+[    3.715604] 
+[    3.715604]  *** DEADLOCK ***
+[    3.715604] 
+[    3.716502] 1 lock held by abba_second/40:
+[    3.717156]  #0: c78250b8 (lock_b){+.+.}-{4:4}, at: abba_second_thread+0x1e/0x60 [abba]
+[    3.718928] 
+[    3.718928] stack backtrace:
+[    3.719719] CPU: 0 UID: 0 PID: 40 Comm: abba_second Tainted: G           O        7.2.2 #2 PREEMPT 
+[    3.721294] Tainted: [O]=OOT_MODULE
+[    3.721953] Call Trace:
+[    3.722398]  dump_stack_lvl+0x34/0x60
+[    3.723048]  dump_stack+0xd/0x10
+[    3.723676]  print_circular_bug.cold+0x157/0x194
+[    3.725084]  check_noncircular+0x106/0x120
+[    3.726362]  __lock_acquire+0x165d/0x2740
+[    3.727127]  lock_acquire+0x8c/0x230
+[    3.727781]  ? abba_second_thread+0x2a/0x60 [abba]
+[    3.728699]  __mutex_lock+0x87/0xd30
+[    3.729608]  ? abba_second_thread+0x2a/0x60 [abba]
+[    3.730480]  ? trace_hardirqs_on+0x1c/0xc0
+[    3.731222]  ? _raw_spin_unlock_irq+0x22/0x40
+[    3.732739]  ? __wait_for_common+0x16e/0x1a0
+[    3.734487]  mutex_lock_nested+0x1a/0x20
+[    3.735699]  ? abba_second_thread+0x2a/0x60 [abba]
+[    3.736654]  abba_second_thread+0x2a/0x60 [abba]
+[    3.737544]  kthread+0xe8/0x130
+[    3.738223]  ? 0xc7823000
+[    3.738785]  ? kthread_affine_node+0xa0/0xa0
+[    3.740092]  ret_from_fork+0x20d/0x270
+[    3.740880]  ? kthread_affine_node+0xa0/0xa0
+[    3.741749]  ret_from_fork_asm+0x12/0x20
+[    3.742588]  entry_INT80_32+0xef/0xef
+[    3.745013] abba: second thread holds both, in the order b then a
+[    3.748213] abba: both threads finished, nothing waited for anything

@@ -1,0 +1,52 @@
+ lock-classes:                          391 [max: 8192]
+ dynamic-keys:                           44
+ direct dependencies:                  2268 [max: 32768]
+ indirect dependencies:                4141
+ all direct dependencies:             19132
+ dependency chains:                    1949 [max: 65536]
+ dependency chain hlocks used:         5937 [max: 327680]
+ dependency chain hlocks lost:            0
+ in-hardirq chains:                      24
+ in-softirq chains:                      40
+ in-process chains:                    1885
+ stack-trace entries:                 31181 [max: 524288]
+ number of stack traces:               1560
+ number of stack hash chains:          1462
+ combined max dependencies:         1933150
+ hardirq-safe locks:                     25
+ hardirq-unsafe locks:                  248
+ softirq-safe locks:                     32
+ softirq-unsafe locks:                  241
+ irq-safe locks:                         43
+ irq-unsafe locks:                      248
+ hardirq-read-safe locks:                 1
+ hardirq-read-unsafe locks:              21
+ softirq-read-safe locks:                 1
+ softirq-read-unsafe locks:              21
+ irq-read-safe locks:                     1
+ irq-read-unsafe locks:                  21
+ uncategorized locks:                    90
+ unused locks:                            1
+ max locking depth:                      10
+ max bfs queue depth:                    52
+ max lock class index:                  390
+ chain lookup misses:                  2060
+ chain lookup hits:                  282409
+ cyclic checks:                        1775
+ redundant checks:                        0
+ redundant links:                         0
+ find-mask forwards checks:             189
+ find-mask backwards checks:            535
+ hardirq on events:                  147071
+ hardirq off events:                 147070
+ redundant hardirq ons:                   0
+ redundant hardirq offs:                  1
+ softirq on events:                     515
+ softirq off events:                    515
+ redundant softirq ons:                   0
+ redundant softirq offs:                  0
+ debug_locks:                             1
+
+ zapped classes:                          2
+ zapped lock chains:                    111
+ large chain blocks:                      1

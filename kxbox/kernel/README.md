@@ -37,6 +37,28 @@ It is the pristine tarball rather than a copy of the built tree, and that differ
 
 It takes a couple of minutes and about 1.6 GB, and `build/` is ignored by git, so `rm -rf kxbox/kernel/build/tree` is how you get the space back.
 
+## Building a module
+
+C09 needs a module in the box, so there is a script for it.
+
+```sh
+./kxbox/kernel/module.sh D-lockdep lessons/C09/assets
+```
+
+The second argument is a directory with a `.c` file and a `Makefile` in it, and what comes out is a `.ko` beside them. `./kxbox/rootfs/build.sh` picks up any it finds and puts it in the image under `/lib/modules`.
+
+It takes a profile name rather than assuming one, and that is not a convenience. A module carries a `vermagic` string built into it, and that string has the preemption model and a few other switches in it as well as the version, so a module built against `A-full` is refused by `D-lockdep` and the other way round. There is no one module that works in every profile.
+
+The script reconfigures the tree in the container for the profile you asked for before it builds anything, because the tree keeps whatever config was built in it last. It also runs `make modules` first, which is what writes `Module.symvers`. Without that file every out of tree module builds with a page of undefined symbol warnings and then fails to load, which is a bad way to find out.
+
+## Booting a profile that is not A-full
+
+```sh
+KXBOX_PROFILE=D-lockdep node kxbox/web/headless.js sh 'cat /proc/lockdep_stats'
+```
+
+`A-full` is the default and is what the smoke test and the measurements use. The others exist to be compared against it, and two of them can only be told apart by running them: `D-lockdep` is the same source and the same compiler, and the difference is not visible in the image size or in anything short of a boot.
+
 ## The config
 
 `config/` holds Kconfig fragments, not a `.config`. A committed `.config` would be stale after one release and wrong in a way nobody could see, so the fragments get merged over `tinyconfig` by the kernel's own `merge_config.sh`, which is the only thing that understands the dependencies between these symbols.

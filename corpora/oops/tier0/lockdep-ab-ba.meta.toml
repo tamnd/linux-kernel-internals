@@ -1,0 +1,49 @@
+schema = 1
+source = "tier0"
+evidence = true
+
+describes = "a real circular locking dependency report, printed on a run where nothing blocked and nothing waited, taken off the pinned kernel with lockdep in it"
+backs = ["C09-02"]
+
+kernel = "7.2.2"
+arch = "i386"
+profile = "D-lockdep"
+uniprocessor = true
+preempt = true
+captured = "2026-09-02"
+tier = 0
+
+command = "insmod /lib/modules/abba.ko"
+
+setup = [
+  "./kxbox/kernel/build.sh D-lockdep",
+  "./kxbox/kernel/module.sh D-lockdep lessons/C09/assets",
+  "./kxbox/rootfs/build.sh",
+  "KXBOX_PROFILE=D-lockdep node kxbox/web/headless.js sh 'dmesg -c > /dev/null; insmod /lib/modules/abba.ko; dmesg'",
+]
+
+# v86 has no real clock, so the timestamps in the left column are ordered correctly and measure
+# nothing. The report took about 140 milliseconds of emulated time from the load to the last line
+# and that number is not a fact about lockdep.
+timings_are_real = false
+
+# What the parser has to get right, and what the tests compare against. The handwritten fixture in
+# `corpora/oops/handwritten/` has the same fields with made up values, which is how it was checked
+# before there was a kernel to take a real one from.
+task = "abba_second"
+pid = 40
+holding = "lock_b"
+acquiring = "lock_a"
+cycle = ["lock_a", "lock_b", "lock_a"]
+chain_length = 2
+scenario_cpus = 2
+recorded_in = ["abba_second_thread+0x2a/0x60 [abba]", "abba_first_thread+0x20/0x50 [abba]"]
+
+notes = [
+  "The last line of the capture is the module saying both threads finished and nothing waited for anything, and it is printed after the report rather than before it. That ordering is the whole of claim C09-02: the run completed, no thread ever blocked, and the report came out anyway.",
+  "The scenario block prints CPU0 and CPU1 on a machine with one CPU. Lockdep is not describing what happened, it is describing the interleaving that would deadlock if there were two processors and the timing lined up. Neither of those is true here and the report is still correct.",
+  "insmod returned zero. A report is not a load failure, the module is in and stays in, and rmmod takes it back out normally.",
+  "The chain is printed highest number first, -> #1 for lock_b and -> #0 for lock_a, and #0 is the one being taken right now. That is claim C09-05, which was verified against the source, and this is the same thing seen from the other end.",
+  "The locks are named lock_a and lock_b, which are the variable names in the module, and the addresses c7825118 and c78250b8 are printed beside them but are not what the report is about. That is claim C09-03: the checker works in classes, and a class is a line of source.",
+  "The handwritten fixture said pid 1481 and offsets ending 0x74 and 0x58. The real ones are pid 40 and offsets 0x2a and 0x20. Nothing in the lesson depended on either, but it is worth writing down that the invented numbers were not the real numbers, because that is the usual reason a fixture stops being a good stand in.",
+]

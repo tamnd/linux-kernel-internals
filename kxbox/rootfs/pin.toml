@@ -61,3 +61,18 @@ packages = ["gcc-i686-linux-gnu"]
 # reserves for itself.
 flags = ["-static", "-nostdlib", "-fno-pic", "-fno-stack-protector", "-Os", "-Wall", "-Wextra", "-Werror"]
 
+# Kernel modules the image carries, if somebody has built them.
+#
+# These are optional in a way the programs above are not. A module is compiled against one profile
+# of one kernel and refused by every other, because `vermagic` is a string built into it that
+# carries the preemption model and a few other switches along with the version. So there is no one
+# module that works in all of A-full, D-lockdep and whatever comes next, and an image that insisted
+# on having one would be an image that only boots on a machine where somebody ran the kernel build.
+#
+# `kxbox/kernel/module.sh D-lockdep lessons/C09/assets` builds the one that is here now. This picks
+# up whatever `.ko` files it finds and puts them where `insmod` can reach them. An image with none
+# boots exactly the same, and the lesson that wants one falls back to the committed capture.
+[modules]
+look_in = ["lessons/C09/assets"]
+into = "lib/modules"
+
