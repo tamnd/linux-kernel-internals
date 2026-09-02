@@ -1,0 +1,37 @@
+schema = 1
+
+# Citations into the pinned kernel tree.
+#
+# None of these are confirmed, and that is the honest state rather than an oversight. Confirming
+# one means running `python3 -m tools.refcheck --tree <a real linux tree> --confirm`, which finds
+# the anchor, writes down the line it is on and flips the flag. There is no kernel tree on the
+# machine this was written on.
+#
+# The anchor is a piece of text to find, never a line number.
+
+[[references]]
+id = "C09-R1"
+path = "kernel/locking/lockdep.c"
+anchor = "check_noncircular"
+kernel = "7.2.2"
+confirmed = false
+line = 0
+note = "The search itself. Before a new edge is added the checker walks the graph looking for a path back, and a path back is a cycle."
+
+[[references]]
+id = "C09-R2"
+path = "Documentation/locking/lockdep-design.rst"
+anchor = "The basic object the validator operates upon"
+kernel = "7.2.2"
+confirmed = false
+line = 0
+note = "The design document, and the place that says the checker's unit is the class rather than the instance. This is the paragraph to read before arguing with a report."
+
+[[references]]
+id = "C09-R3"
+path = "kernel/locking/lockdep.c"
+anchor = "the existing dependency chain (in reverse order) is"
+kernel = "7.2.2"
+confirmed = false
+line = 0
+note = "Where the report is printed, which is also where the order of the numbered entries is decided. The printing is what makes #0 the lock being acquired."

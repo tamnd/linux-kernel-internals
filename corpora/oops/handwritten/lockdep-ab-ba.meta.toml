@@ -1,0 +1,22 @@
+source = "handwritten"
+evidence = false
+reason = "Written by hand in the format the kernel prints, so the splat parser had something to parse before anybody had a kernel to take a real report off. No machine produced this. No lesson may cite it."
+
+describes = "a circular locking dependency report for a two lock cycle, taken while holding lock_b and acquiring lock_a"
+kernel = "none"
+arch = "none"
+
+# The module it pretends to come from is the one C09 asks the reader to build: two kernel threads,
+# two mutexes, taken in opposite orders, with the second thread starting only after the first has
+# finished. Nothing ever blocks, so there is no hang to observe, and lockdep reports the cycle
+# anyway. That is the whole point of the lesson and it is why this fixture looks the way it does.
+
+# What the parser has to get right, and what the tests compare against.
+task = "abba_second"
+pid = 1481
+holding = "lock_b"
+acquiring = "lock_a"
+cycle = ["lock_a", "lock_b", "lock_a"]
+chain_length = 2
+scenario_cpus = 2
+recorded_in = ["abba_second_thread+0x74/0xd0 [abba]", "abba_first_thread+0x58/0xd0 [abba]"]

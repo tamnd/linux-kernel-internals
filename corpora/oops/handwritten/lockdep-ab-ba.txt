@@ -1,0 +1,65 @@
+[  142.001233] ======================================================
+[  142.001235] WARNING: possible circular locking dependency detected
+[  142.001236] 7.2.2 #1 Tainted: G           O
+[  142.001237] ------------------------------------------------------
+[  142.001238] abba_second/1481 is trying to acquire lock:
+[  142.001240] c1a4e0a0 (lock_a){+.+.}-{4:4}, at: abba_second_thread+0x74/0xd0 [abba]
+[  142.001246]
+[  142.001247] but task is already holding lock:
+[  142.001248] c1a4e060 (lock_b){+.+.}-{4:4}, at: abba_second_thread+0x3c/0xd0 [abba]
+[  142.001253]
+[  142.001254] which lock already depends on the new lock.
+[  142.001255]
+[  142.001256]
+[  142.001257] the existing dependency chain (in reverse order) is:
+[  142.001258]
+[  142.001259] -> #1 (lock_b){+.+.}-{4:4}:
+[  142.001262]        __lock_acquire+0x4a1/0x1a30
+[  142.001264]        lock_acquire+0x9c/0x230
+[  142.001266]        __mutex_lock+0x8e/0x920
+[  142.001268]        mutex_lock_nested+0x1b/0x20
+[  142.001270]        abba_first_thread+0x58/0xd0 [abba]
+[  142.001273]        kthread+0xe8/0x120
+[  142.001275]        ret_from_fork+0x2c/0x50
+[  142.001277]
+[  142.001278] -> #0 (lock_a){+.+.}-{4:4}:
+[  142.001281]        check_prev_add+0xf4/0x11a0
+[  142.001283]        validate_chain+0x6b2/0x7d0
+[  142.001285]        __lock_acquire+0x4a1/0x1a30
+[  142.001287]        lock_acquire+0x9c/0x230
+[  142.001289]        __mutex_lock+0x8e/0x920
+[  142.001291]        mutex_lock_nested+0x1b/0x20
+[  142.001293]        abba_second_thread+0x74/0xd0 [abba]
+[  142.001296]        kthread+0xe8/0x120
+[  142.001298]        ret_from_fork+0x2c/0x50
+[  142.001300]
+[  142.001301] other info that might help us debug this:
+[  142.001302]
+[  142.001303]  Possible unsafe locking scenario:
+[  142.001304]
+[  142.001305]        CPU0                    CPU1
+[  142.001306]        ----                    ----
+[  142.001307]   lock(lock_a);
+[  142.001309]                                lock(lock_b);
+[  142.001311]                                lock(lock_a);
+[  142.001313]   lock(lock_b);
+[  142.001315]
+[  142.001316]  *** DEADLOCK ***
+[  142.001317]
+[  142.001318] 1 lock held by abba_second/1481:
+[  142.001319]  #0: c1a4e060 (lock_b){+.+.}-{4:4}, at: abba_second_thread+0x3c/0xd0 [abba]
+[  142.001323]
+[  142.001324] stack backtrace:
+[  142.001325] CPU: 0 PID: 1481 Comm: abba_second Tainted: G           O       7.2.2 #1
+[  142.001327] Call Trace:
+[  142.001328]  dump_stack_lvl+0x44/0x60
+[  142.001330]  check_noncircular+0x12e/0x150
+[  142.001332]  check_prev_add+0xf4/0x11a0
+[  142.001334]  validate_chain+0x6b2/0x7d0
+[  142.001336]  __lock_acquire+0x4a1/0x1a30
+[  142.001338]  lock_acquire+0x9c/0x230
+[  142.001340]  __mutex_lock+0x8e/0x920
+[  142.001342]  mutex_lock_nested+0x1b/0x20
+[  142.001344]  abba_second_thread+0x74/0xd0 [abba]
+[  142.001346]  kthread+0xe8/0x120
+[  142.001348]  ret_from_fork+0x2c/0x50

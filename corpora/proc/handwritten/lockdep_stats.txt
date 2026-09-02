@@ -1,0 +1,35 @@
+ lock-classes:                         1183 [max: 8192]
+ direct dependencies:                  9714 [max: 32768]
+ indirect dependencies:               47182
+ all direct dependencies:            221904
+ dependency chains:                   11326 [max: 65536]
+ dependency chain hlocks used:        47015 [max: 327680]
+ dependency chain hlocks lost:            0
+ in-hardirq chains:                      71
+ in-softirq chains:                     319
+ in-process chains:                   10936
+ stack-trace entries:                113402 [max: 524288]
+ number of stack traces:               6841
+ number of stack hash chains:          3172
+ combined max dependencies:        94318776
+ hardirq-safe locks:                     74
+ hardirq-unsafe locks:                  812
+ softirq-safe locks:                    131
+ softirq-unsafe locks:                  704
+ irq-safe locks:                        149
+ irq-unsafe locks:                      812
+ hardirq-read-safe locks:                 2
+ hardirq-read-unsafe locks:             167
+ softirq-read-safe locks:                 8
+ softirq-read-unsafe locks:             163
+ irq-read-safe locks:                     8
+ irq-read-unsafe locks:                 167
+ uncategorized locks:                   217
+ unused locks:                            0
+ max locking depth:                      15
+ max bfs queue depth:                   241
+ debug_locks:                             0
+
+ zapped classes:                         12
+ zapped lock chains:                     44
+ large chain blocks:                      1

@@ -63,4 +63,4 @@ The first three lessons are the M0 pilot, and they exist to find out whether the
 
 - `Z02`, your first trace. Written and runnable in Colab, and a draft until there is a real capture behind it.
 - `S05`, the first ops plug. Written and runnable in Colab, and a draft until three citations are confirmed against a kernel tree and there is a real capture behind the last claim.
-- `C09`, lockdep. Not started.
+- `C09`, lockdep. Written and runnable in Colab, and a draft until three citations are confirmed against a kernel tree and somebody has built the module and read their own report.

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 560" width="1000" height="560" role="img" aria-label="The cycle">
+  <title>The cycle</title>
+  <desc>A graph with two boxes. On the left a box labelled lock_a, with the address c1a4e0a0 and the words one lock class under it, and on the right the same for lock_b at c1a4e060. A solid arrow runs from lock_a to lock_b, labelled edge one, recorded when the first thread held lock_a and took lock_b. A dashed arrow runs back from lock_b to lock_a, labelled edge two, about to be recorded because the second thread holds lock_b and is taking lock_a. A note by the dashed arrow says it has not been added and that this is the moment lockdep says no. Underneath, three notes say what an edge means, that a loop means there is an order in which two of these block forever, and that nothing here is blocked because both threads finished.</desc>
+  <defs>
+    <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#495057"/>
+    </marker>
+  </defs>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="40.0" y="44.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="20.0" fill="#1e1e1e" text-anchor="start" dominant-baseline="middle">Two locks, two edges, one loop</text>
+  <text x="40.0" y="70.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">Lockdep works on a graph of lock classes rather than on a picture of stuck threads.</text>
+  <rect x="120.0" y="180.0" width="240.0" height="110.0" rx="8" fill="#d0ebff" stroke="#1971c2" stroke-width="2"/>
+  <text x="240.0" y="205.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="16.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle">lock_a</text>
+  <text x="240.0" y="225.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="16.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle"></text>
+  <text x="240.0" y="245.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="16.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle">c1a4e0a0</text>
+  <text x="240.0" y="265.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="16.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle">one lock class</text>
+  <rect x="620.0" y="180.0" width="240.0" height="110.0" rx="8" fill="#d0ebff" stroke="#1971c2" stroke-width="2"/>
+  <text x="740.0" y="205.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="16.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle">lock_b</text>
+  <text x="740.0" y="225.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="16.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle"></text>
+  <text x="740.0" y="245.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="16.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle">c1a4e060</text>
+  <text x="740.0" y="265.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="16.0" fill="#1971c2" text-anchor="middle" dominant-baseline="middle">one lock class</text>
+  <line x1="360.0" y1="235.0" x2="620.0" y2="235.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <text x="490.0" y="223.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="middle" dominant-baseline="middle">1. lock_a was held when lock_b was taken</text>
+  <line x1="740.0" y1="300.0" x2="240.0" y2="300.0" stroke="#495057" stroke-width="2" stroke-dasharray="8 6" marker-end="url(#head)"/>
+  <text x="490.0" y="288.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="middle" dominant-baseline="middle">2. lock_b is held and lock_a is being taken</text>
+  <text x="120.0" y="330.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">The dashed edge has not been added. This is the moment lockdep says no.</text>
+  <text x="40.0" y="400.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="14.0" fill="#1e1e1e" text-anchor="start" dominant-baseline="middle">An edge means one lock was held while the other was taken.</text>
+  <text x="40.0" y="424.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="14.0" fill="#1e1e1e" text-anchor="start" dominant-baseline="middle">A loop means there is an order in which two of these block forever.</text>
+  <text x="40.0" y="448.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="14.0" fill="#1e1e1e" text-anchor="start" dominant-baseline="middle">Nothing is blocked here. No thread waited on anything. Both threads finished.</text>
+  <text x="40.0" y="480.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">The bug is in the code either way, and the graph is what says so.</text>
+</svg>

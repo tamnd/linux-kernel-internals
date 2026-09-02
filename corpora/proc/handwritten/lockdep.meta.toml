@@ -1,0 +1,17 @@
+source = "handwritten"
+evidence = false
+reason = "Eight lines written by hand in the documented format, so the lock class parser had something to parse. Not a snapshot of any machine. No lesson may cite it."
+
+describes = "the shape of /proc/lockdep, one line per lock class, with the forward and backward dependency counts"
+kernel = "none"
+arch = "none"
+
+# The two subclasses of the same inode mutex are in here on purpose. They are one line of source
+# and two lock classes, which is the thing about lockdep that catches people: it reasons about
+# classes rather than about locks, so a report names a line of code and not an object.
+
+# What the parser has to get right, and what the tests compare against.
+classes = 8
+subclassed = "&sb->s_type->i_mutex_key#3"
+busiest = "&sb->s_type->i_mutex_key"
+most_depended_on = "&obj_hash[i].lock"

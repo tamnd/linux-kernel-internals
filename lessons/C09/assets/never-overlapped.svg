@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 560" width="1140" height="560" role="img" aria-label="Nothing overlapped">
+  <title>Nothing overlapped</title>
+  <desc>A timeline running left to right, with an arrow across the top labelled time, and two rows under it. The top row is the first thread: it takes lock_a, then takes lock_b, then releases both and exits. The bottom row is the second thread, and it starts only after the top row has finished, with a labelled gap between them saying the first thread has already exited. The second thread takes lock_b, then reaches for lock_a, and at that point a marker on the timeline says lockdep reports a cycle. A note underneath says the two rows never overlap, so no thread ever waited for another one, and that the report is about the order the locks were taken in rather than about anything that happened at the same time.</desc>
+  <defs>
+    <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#495057"/>
+    </marker>
+  </defs>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="40.0" y="44.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="20.0" fill="#1e1e1e" text-anchor="start" dominant-baseline="middle">Nothing overlapped, and it is still a bug</text>
+  <text x="40.0" y="70.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">A deadlock needs the timing. A lock ordering bug does not.</text>
+  <line x1="120.0" y1="108.0" x2="1100.0" y2="108.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <text x="610.0" y="96.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.0" fill="#5c5f66" text-anchor="middle" dominant-baseline="middle">time</text>
+  <text x="40.0" y="150.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="14.0" fill="#1e1e1e" text-anchor="start" dominant-baseline="middle">abba_first</text>
+  <text x="40.0" y="300.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="14.0" fill="#1e1e1e" text-anchor="start" dominant-baseline="middle">abba_second</text>
+  <rect x="150.0" y="130.0" width="170.0" height="56.0" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+  <text x="235.0" y="158.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">lock(lock_a)</text>
+  <rect x="334.0" y="130.0" width="170.0" height="56.0" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+  <text x="419.0" y="158.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">lock(lock_b)</text>
+  <rect x="518.0" y="130.0" width="190.0" height="56.0" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+  <text x="613.0" y="158.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">unlock both, exit</text>
+  <rect x="702.0" y="280.0" width="170.0" height="56.0" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+  <text x="787.0" y="308.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12.0" fill="#868e96" text-anchor="middle" dominant-baseline="middle">lock(lock_b)</text>
+  <rect x="886.0" y="280.0" width="190.0" height="56.0" rx="8" fill="#ffe3e3" stroke="#e03131" stroke-width="2"/>
+  <text x="981.0" y="308.0" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12.0" fill="#e03131" text-anchor="middle" dominant-baseline="middle">lock(lock_a)</text>
+  <text x="528.0" y="210.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="12.0" fill="#5c5f66" text-anchor="start" dominant-baseline="middle">the first thread is gone before the second starts</text>
+  <rect x="682.0" y="400.0" width="420.0" height="66.0" rx="8" fill="#ffe3e3" stroke="#e03131" stroke-width="2"/>
+  <text x="892.0" y="433.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="16.0" fill="#e03131" text-anchor="middle" dominant-baseline="middle">lockdep prints the splat here</text>
+  <line x1="981.0" y1="336.0" x2="892.0" y2="400.0" stroke="#495057" stroke-width="2" marker-end="url(#head)"/>
+  <text x="40.0" y="496.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="14.0" fill="#1e1e1e" text-anchor="start" dominant-baseline="middle">The two rows do not overlap, so nothing ever waited for anything.</text>
+  <text x="40.0" y="520.0" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="14.0" fill="#1e1e1e" text-anchor="start" dominant-baseline="middle">The report is about the order the locks were taken in, not about when.</text>
+</svg>
