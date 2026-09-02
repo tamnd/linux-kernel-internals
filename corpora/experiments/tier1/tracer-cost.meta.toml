@@ -1,0 +1,52 @@
+source = "tier1"
+evidence = true
+
+describes = "the same one byte write timed with the tracer off, with function_graph filtered to vfs_write, and with function_graph tracing everything"
+
+kernel = "6.8.0-117-generic"
+distribution = "Ubuntu 24.04"
+arch = "aarch64"
+uniprocessor = false
+cpu_count = 6
+captured = "2026-09-02"
+tier = 1
+
+# How to take it again. This is Tier 1 work and it has to be. Tier 0 has no real clock, so timing
+# anything under v86 measures the emulator, and the one thing this experiment needs is a clock.
+#
+# The program opens a file on tmpfs once, writes one byte 200000 times, and divides the elapsed
+# CLOCK_MONOTONIC by the count. A thousand writes run first and are not counted, so the file, the
+# page and the code path are all warm before the clock starts. The process is pinned to one CPU
+# with taskset so the number is not an average over cores of different temperatures.
+command = "200000 one byte writes to /dev/shm, timed with clock_gettime, five runs in each of three tracer states"
+setup = [
+    "mount -t tracefs nodev /sys/kernel/tracing",
+    "echo 0 > /sys/kernel/tracing/tracing_on",
+    "echo nop > /sys/kernel/tracing/current_tracer",
+    "echo > /sys/kernel/tracing/set_graph_function",
+]
+
+# Three things worth knowing.
+#
+# The gap is not small. A write costs about a quarter of a microsecond untraced and about six and a
+# half microseconds with function_graph watching it, which is roughly twenty five times. This is
+# not a tax you can ignore while measuring something else, and it is the reason a lesson that
+# measures how long something takes turns the tracer off first.
+#
+# The filter barely helps here, and that surprised nobody who thought about it afterwards. The
+# workload is nothing but `vfs_write`, so filtering to `vfs_write` filters nothing out. On a
+# machine doing other work at the same time the filter is the difference between a usable trace and
+# a buffer that overruns in milliseconds, which is what ../../proc/tier0/ring-overrun.txt shows.
+#
+# The machine is a virtual machine on a laptop and the numbers move between runs. A second run of
+# exactly this script on the same machine gave 278 nanoseconds untraced and 14334 traced, so the
+# ratio is somewhere in the tens rather than a figure worth quoting to two digits. The claim it
+# backs is that tracing costs real time, and every run of this says so loudly.
+timings_are_real = true
+
+# Medians of the five runs in the committed output.
+runs_per_state = 5
+writes_per_run = 200000
+nanoseconds_tracer_off = 257
+nanoseconds_function_graph_filtered = 6619
+nanoseconds_function_graph_unfiltered = 7702

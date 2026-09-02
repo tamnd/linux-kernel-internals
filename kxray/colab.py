@@ -4,10 +4,13 @@
 
     grader = colab.lesson_module("Z02", "grader")
     text = colab.lesson_text("Z02", "claims.toml")
+    trace = colab.corpus_text("traces/tier1/multi-cpu-write.txt")
 
 A notebook opened from a Colab badge arrives on its own. The package comes from pip, but a
 lesson's grader and its claims live next to the lesson rather than inside the package, on
-purpose, because they are part of the lesson and get edited with it.
+purpose, because they are part of the lesson and get edited with it. The captures in `corpora/`
+are outside the package for the same reason and are wanted for the same reason: a lesson about a
+trace nobody can take on their own machine has to be able to show the one somebody did take.
 
 So this looks in a checkout first and falls back to downloading from the repository. On your
 laptop you get the file you are editing. In Colab you get the one on the default branch, and the
@@ -49,20 +52,25 @@ def repo_root() -> Path | None:
     return None
 
 
+def repo_url(relative: str) -> str:
+    """The raw URL for a path in the repository, given relative to its root."""
+    return f"{RAW}/{REPO}/{BRANCH}/{relative}"
+
+
 def lesson_url(slug: str, name: str) -> str:
-    return f"{RAW}/{REPO}/{BRANCH}/lessons/{slug}/{name}"
+    return repo_url(f"lessons/{slug}/{name}")
 
 
-def lesson_file(slug: str, name: str, *, quiet: bool = False) -> Path:
-    """The path to one file from a lesson, downloading it if there is no checkout."""
+def repo_file(relative: str, *, quiet: bool = False) -> Path:
+    """The path to one file from the repository, downloading it if there is no checkout."""
     root = repo_root()
     if root is not None:
-        local = root / "lessons" / slug / name
+        local = root / relative
         if local.exists():
             return local
 
-    url = lesson_url(slug, name)
-    target = CACHE / slug / name
+    url = repo_url(relative)
+    target = CACHE / relative
     target.parent.mkdir(parents=True, exist_ok=True)
     if not target.exists():
         if not quiet:
@@ -72,8 +80,30 @@ def lesson_file(slug: str, name: str, *, quiet: bool = False) -> Path:
     return target
 
 
+def lesson_file(slug: str, name: str, *, quiet: bool = False) -> Path:
+    """The path to one file from a lesson, downloading it if there is no checkout."""
+    return repo_file(f"lessons/{slug}/{name}", quiet=quiet)
+
+
 def lesson_text(slug: str, name: str) -> str:
     return lesson_file(slug, name).read_text(encoding="utf-8")
+
+
+def corpus_file(relative: str, *, quiet: bool = False) -> Path:
+    """The path to one committed artefact, given relative to `corpora/`.
+
+        colab.corpus_file("traces/tier0/write-1byte.txt")
+
+    Same arrangement as a lesson's own files and for the same reason. A reader on Tier 0 has one
+    CPU and no clock, so there are things they cannot capture no matter how willing they are, and
+    the honest answer is to hand them the capture somebody else took along with the metadata
+    saying whose machine it came off.
+    """
+    return repo_file(f"corpora/{relative}", quiet=quiet)
+
+
+def corpus_text(relative: str, *, quiet: bool = False) -> str:
+    return corpus_file(relative, quiet=quiet).read_text(encoding="utf-8")
 
 
 def lesson_module(slug: str, name: str) -> ModuleType:

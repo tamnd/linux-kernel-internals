@@ -39,6 +39,9 @@ class Frame:
     duration_us: float | None = None
     marker: str | None = None
     task: str | None = None
+    # The loadable module the function came from, when ftrace printed one. Built in functions have
+    # no module and this stays None, which is every function in a Tier 0 trace.
+    module: str | None = None
     complete: bool = True
     children: list[Frame] = field(default_factory=list)
     parent: Frame | None = field(default=None, repr=False, compare=False)

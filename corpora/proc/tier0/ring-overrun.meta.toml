@@ -1,0 +1,55 @@
+source = "tier0"
+evidence = true
+
+describes = "per_cpu/cpu0/stats after deliberately overflowing a small ring buffer, so the count of lost events is large and the count of kept events is small"
+path = "/sys/kernel/tracing/per_cpu/cpu0/stats"
+
+kernel = "7.2.2"
+arch = "i386"
+profile = "A-full"
+uniprocessor = true
+preempt = true
+captured = "2026-09-02"
+tier = 0
+
+# How to take it again. The buffer is shrunk first so that ordinary work overflows it in a
+# fraction of a second, and then the tracer is left unfiltered, which is what makes the overflow
+# fast. `ls -l /proc` and one busybox process are enough.
+command = "ls -l /proc > /dev/null; busybox true"
+setup = [
+    "echo 0 > /sys/kernel/tracing/tracing_on",
+    "echo nop > /sys/kernel/tracing/current_tracer",
+    "echo 8 > /sys/kernel/tracing/buffer_size_kb",
+    "echo function_graph > /sys/kernel/tracing/current_tracer",
+    "echo > /sys/kernel/tracing/trace",
+    "echo 1 > /sys/kernel/tracing/tracing_on",
+]
+
+# Three things worth knowing.
+#
+# The buffer was asked for as 8 kilobytes and reads back as 11. The kernel rounds the request up to
+# whole pages, so `buffer_size_kb` is a request and not a setting, and the number recorded below is
+# what the kernel said rather than what was asked for. Anyone reproducing this should expect their
+# own rounding rather than this one.
+#
+# `entries` and `overrun` are the pair the claim rests on. 273 events are still in the buffer and
+# 44002 have been thrown away to make room for them, which is a ratio of about 160 to 1 for less
+# than eight thousandths of a second of tracing. Nothing in the trace file says this happened. The
+# file simply starts part way through, and looks like a complete trace of a shorter period.
+#
+# `oldest event ts` and `now ts` are seven milliseconds apart. That is how much of the machine's
+# history the buffer was holding at the moment it was read.
+#
+# The timestamps are emulated, the same as every Tier 0 capture, so the seven milliseconds is a
+# number about v86. The counts are not timings and are true.
+timings_are_real = false
+
+# What the tests compare against.
+entries = 273
+overrun = 44002
+commit_overrun = 0
+bytes = 8264
+dropped_events = 0
+buffer_size_kb_asked = 8
+buffer_size_kb_actual = 11
+trace_file_lines = 204

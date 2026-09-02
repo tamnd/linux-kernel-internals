@@ -17,9 +17,11 @@ from kxray.trace import parse, parse_file
 TRACES = Path(__file__).resolve().parents[1] / "corpora" / "traces"
 CORPUS = TRACES / "handwritten"
 TIER0 = TRACES / "tier0"
+TIER1 = TRACES / "tier1"
 ARTEFACTS = sorted(CORPUS.glob("*.txt"))
 CAPTURES = sorted(TIER0.glob("*.txt"))
-EVERY = ARTEFACTS + CAPTURES
+TIER1_CAPTURES = sorted(TIER1.glob("*.txt"))
+EVERY = ARTEFACTS + CAPTURES + TIER1_CAPTURES
 
 
 def header(*rows: str) -> str:
@@ -29,6 +31,7 @@ def header(*rows: str) -> str:
 def test_the_corpus_is_not_empty():
     assert ARTEFACTS, f"no trace artefacts found under {CORPUS}"
     assert CAPTURES, f"no captures found under {TIER0}"
+    assert TIER1_CAPTURES, f"no captures found under {TIER1}"
 
 
 @pytest.mark.parametrize("artefact", EVERY, ids=lambda p: f"{p.parent.name}/{p.stem}")
@@ -70,6 +73,51 @@ def test_a_capture_says_which_machine_it_came_off(artefact):
     assert meta["setup"], "no setup, so nobody can take this again"
     # Tier 0 is an emulator with no real clock, and a duration off it means nothing.
     assert meta["timings_are_real"] is False
+
+
+@pytest.mark.parametrize("artefact", TIER1_CAPTURES, ids=lambda p: p.stem)
+def test_a_tier_1_capture_says_which_real_machine_it_came_off(artefact):
+    """Tier 1 captures come off whatever machine somebody had, so the metadata carries more.
+
+    A Tier 0 capture can say `profile = "A-full"` and everybody knows which kernel that is, because
+    this repository built it. There is no such shorthand for a real machine, so the version, the
+    distribution, the architecture and the CPU count are all written out.
+    """
+    meta = tomllib.loads(artefact.with_suffix(".meta.toml").read_text())
+    assert meta["source"] == "tier1"
+    assert meta["evidence"] is True
+    for key in ("kernel", "distribution", "arch", "cpu_count", "captured", "command", "describes"):
+        assert meta.get(key), f"{artefact.name} has no {key}"
+    assert meta["setup"], "no setup, so nobody can take this again"
+    # A real machine has a real clock, which is most of the reason to go to Tier 1 at all.
+    assert meta["timings_are_real"] is True
+
+
+def test_the_multi_cpu_capture_really_does_interleave():
+    """This is claim Z02-03, tested rather than asserted.
+
+    The file is only worth committing if two lines next to each other can come from two different
+    call stacks. If a future recapture comes out neatly sorted by CPU it still parses, still has
+    six CPUs in it, and shows nothing, so the interleaving itself is what gets checked.
+    """
+    tape = parse_file(TIER1 / "multi-cpu-write.txt")
+
+    assert tape.cpus == [0, 1, 2, 3, 4, 5]
+
+    # Frames in the order the lines appear in the file, which is the order a reader meets them.
+    ordered = sorted(tape.walk(), key=lambda f: f.line)
+    changes = sum(1 for a, b in zip(ordered, ordered[1:], strict=False) if a.cpu != b.cpu)
+    assert changes > 20, f"only {changes} CPU changes, this capture shows nothing"
+
+    # And the switches happen part way through a call rather than only between whole trees. A
+    # nested frame is one that has a parent, so a change between two nested frames on different
+    # CPUs is the case that breaks anybody reading indentation as if it belonged to the file.
+    mid_tree = [
+        (a, b)
+        for a, b in zip(ordered, ordered[1:], strict=False)
+        if a.cpu != b.cpu and a.parent is not None and b.parent is not None
+    ]
+    assert mid_tree, "every CPU change is between whole trees, so nothing is interleaved"
 
 
 def test_the_write_path_comes_out_as_a_tree():
@@ -192,6 +240,31 @@ def test_funcgraph_args_does_not_break_the_name():
     )
     tape = parse(text)
     assert [f.name for f in tape.walk()] == ["vfs_write", "security_file_permission"]
+
+
+def test_a_function_from_a_loadable_module_keeps_its_name_and_records_the_module():
+    """ftrace prints `name [module]()` for anything that came from a loadable module.
+
+    Nothing in a Tier 0 trace has one, because the pinned kernel has everything compiled in, so
+    this went unnoticed until the first capture on a real machine. It cost 48 dropped lines out of
+    288, and the drop was in the middle of a call tree, which is the shape of a bug that makes a
+    lesson quietly wrong rather than obviously broken.
+    """
+    text = header(
+        " 0)               |  vfs_write() {",
+        " 0)               |    ovl_write_iter [overlay]() {",
+        " 0)   0.250 us    |      ovl_copyattr [overlay]();",
+        " 0)   4.125 us    |    } /* ovl_write_iter [overlay] */",
+        " 0) + 16.157 us   |  }",
+    )
+    tape = parse(text)
+
+    assert tape.unparsed == []
+    names = [f.name for f in tape.walk()]
+    assert names == ["vfs_write", "ovl_write_iter", "ovl_copyattr"]
+    assert [f.module for f in tape.walk()] == [None, "overlay", "overlay"]
+    # The closing brace names the module too, and that is not a mismatch.
+    assert tape.roots[0].children[0].duration_us == 4.125
 
 
 def test_a_line_nobody_understands_does_not_stop_the_parse():
