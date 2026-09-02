@@ -1,0 +1,40 @@
+schema = 1
+source = "tier0"
+evidence = true
+
+describes = "/proc/lockdep_stats read moments after the first lockdep report of the boot, with debug_locks now zero"
+backs = ["C09-04"]
+
+kernel = "7.2.2"
+arch = "i386"
+profile = "D-lockdep"
+uniprocessor = true
+preempt = true
+captured = "2026-09-02"
+tier = 0
+
+command = "cat /proc/lockdep_stats"
+
+setup = [
+  "./kxbox/kernel/build.sh D-lockdep",
+  "./kxbox/kernel/module.sh D-lockdep lessons/C09/assets",
+  "./kxbox/rootfs/build.sh",
+  "KXBOX_PROFILE=D-lockdep node kxbox/web/headless.js sh 'cat /proc/lockdep_stats; insmod /lib/modules/abba.ko; cat /proc/lockdep_stats'",
+]
+
+# Same boot as `lockdep-stats-before.txt`, read after `insmod /lib/modules/abba.ko`. One boot with
+# two reads in it, for the same reason S05 puts two writes in one tracer window: a before from one
+# boot and an after from another would differ in fifteen places for reasons unrelated to the thing
+# being shown, and nothing in the two files would let a reader rule that out.
+pair = "lockdep-stats-before.txt"
+
+debug_locks = 0
+lock_classes = 401
+direct_dependencies = 2324
+dependency_chains = 2011
+
+notes = [
+  "debug_locks went from 1 to 0 and that is the claim. From this moment the checker is off for the rest of the boot. It is not off for this module or for these two locks, it is off, and a second bug loaded after this one is not reported at all.",
+  "Everything else went up rather than down. 391 lock classes to 401, 2268 direct dependencies to 2324. Loading a module registers its lock classes and the work it did before the report is still recorded, so the graph is bigger than it was and simply is not being consulted any more.",
+  "There is no line in this file that says a report happened. debug_locks being zero is the only trace of it, which is why the lesson asks the reader to look here rather than trusting a quiet dmesg.",
+]

@@ -1,0 +1,37 @@
+schema = 1
+source = "tier0"
+evidence = true
+
+describes = "/proc/lockdep_stats read on a boot that has not had a lockdep report yet, so debug_locks is still one"
+backs = ["C09-04"]
+
+kernel = "7.2.2"
+arch = "i386"
+profile = "D-lockdep"
+uniprocessor = true
+preempt = true
+captured = "2026-09-02"
+tier = 0
+
+command = "cat /proc/lockdep_stats"
+
+setup = [
+  "./kxbox/kernel/build.sh D-lockdep",
+  "KXBOX_PROFILE=D-lockdep node kxbox/web/headless.js sh 'cat /proc/lockdep_stats'",
+]
+
+# Read in the same boot as `lockdep-stats-after.txt`, before the module that causes the report was
+# loaded. Two boots would not do. Every number in here except debug_locks depends on what the
+# kernel happened to do on the way up, so a before from one boot and an after from another would
+# differ in fifteen places for reasons that have nothing to do with the report.
+pair = "lockdep-stats-after.txt"
+
+debug_locks = 1
+lock_classes = 391
+direct_dependencies = 2268
+dependency_chains = 1949
+
+notes = [
+  "debug_locks is the last numbered line before the blank one. One means the checker is on and every lock taken from here is checked.",
+  "The kernel reached this state on its own. Nothing in the box had done anything unusual: 391 lock classes and 1949 dependency chains is what a boot to a shell costs.",
+]

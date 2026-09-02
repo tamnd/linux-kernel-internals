@@ -20,7 +20,7 @@ lesson.md(f"""# C09: The lock that deadlocks tomorrow
 
 {lesson.badge}
 
-**Status: draft.** The prose is finished and one of the five claims settles the moment you read your own `/proc/lockdep_stats` on a kernel built with `CONFIG_PROVE_LOCKING`. The other four are not settled. See "What is not settled yet" at the end, which says what is missing and what will fix it.
+**Status: draft.** All five claims are verified. Three resolve against the pinned 7.2.2 source, and the other two came off a boot of that kernel with the module in this lesson loaded into it, which is where the report and the two readings of `/proc/lockdep_stats` in the cells below come from. It stays a draft until somebody has read it end to end and put their name on it. See "Where the evidence came from" at the end.
 """)
 
 lesson.md("""## Before you start
@@ -185,7 +185,9 @@ lesson.md(f"""## Build it and load it
 
 {lesson.claim("C09-02")}.
 
-You need a Linux machine you can build modules on and a kernel built with `CONFIG_PROVE_LOCKING`. Check that first, because on a kernel without it this module loads, does nothing visible, and teaches you the wrong thing.
+This one is in the repository already. `corpora/oops/tier0/lockdep-ab-ba.txt` is the report this module printed on the pinned kernel, and the cells below fall back to it when you are somewhere that cannot load a module, which includes Colab. Read it either way. Making one yourself is better and it is not a prerequisite for the rest of the lesson.
+
+To make your own you need a Linux machine you can build modules on and a kernel built with `CONFIG_PROVE_LOCKING`. Check that first, because on a kernel without it this module loads, does nothing visible, and teaches you the wrong thing.
 
 ```sh
 zcat /proc/config.gz | grep PROVE_LOCKING     # or look in /boot/config-$(uname -r)
@@ -222,10 +224,18 @@ lesson.code(
     """MINE = \"\"\"\"\"\"  # paste the report your own machine printed between the quotes
 
 raw = MINE if MINE.strip() else PASTED
+where = "pasted above"
+
+if not raw.strip() and found:
+    raw, where = text, "dmesg on this machine"
+
 if not raw.strip():
-    print("nothing pasted yet, so there is nothing to read")
-else:
-    print("\\n".join(raw.splitlines()[:24]))""",
+    raw = colab.corpus_text("oops/tier0/lockdep-ab-ba.txt")
+    where = "corpora/oops/tier0/lockdep-ab-ba.txt, off the pinned kernel"
+
+print(f"reading a report from {where}")
+print()
+print("\\n".join(raw.splitlines()[:24]))""",
     note="Raw first, always. A reader who never sees the raw text is trusting the parser blind.",
 )
 
@@ -236,20 +246,27 @@ lesson.code(
     """mine = None
 if raw.strip():
     try:
-        mine = lockdep.parse_splat(raw, source="my own machine")
+        mine = lockdep.parse_splat(raw, source=where)
         print(mine.summary())
         print()
-        print(mine.scenario or "no scenario block in this paste")
+        print(mine.scenario or "no scenario block in this report")
     except (lockdep.Truncated, lockdep.NotASplat) as refused:
         print("the parser refused:", refused)""",
     note="The payoff cell. Cycle, both stacks, and the picture the kernel drew, from one paste.",
 )
+
+lesson.md("""Look at the scenario block that cell printed. It has two columns, CPU0 and CPU1, and the machine that produced this report has one processor. Nothing in that block happened.
+
+That is not a bug. Lockdep is not describing a run, it is describing the interleaving that would deadlock given two processors and the wrong timing, and it prints that whether or not either is available.
+""")
 
 lesson.md(f"""## The checker turns itself off
 
 There is a second half to this, and it is the reason a lockdep report is worth acting on the day it appears rather than the week after. {lesson.claim("C09-04")}.
 
 One report per boot. After that the graph stops being updated and nothing is checked, so a second ordering bug in the same boot is silent, and a clean log from that point on is not evidence of anything. This is also why a machine that has been up for a month and has one old splat in its log is a machine with no lock checking on it.
+
+The next cell reads your own file if you have one. Under it are the two readings that back the claim, taken a moment apart on one boot with the `insmod` between them. One boot and not two: every number in that file except `debug_locks` depends on what the kernel did on the way up, so two boots would differ in fifteen places for reasons unrelated to the report.
 """)
 
 lesson.code(
@@ -259,8 +276,26 @@ stats = lockdep.read_stats()
 if stats is not None:
     for name, used in sorted(stats.near_limits(0.5)):
         print(f"{name} is {used:.0%} full")""",
-    note="C09-04 settles here, on the reader's own machine, with no stored number to compare to.",
+    note="Your own /proc/lockdep_stats, or a note saying this kernel has no such file.",
 )
+
+lesson.code(
+    """before = lockdep.parse_stats(colab.corpus_text("proc/tier0/lockdep-stats-before.txt"))
+after = lockdep.parse_stats(colab.corpus_text("proc/tier0/lockdep-stats-after.txt"))
+
+print(f"{'':22} before   after")
+for field in ("debug_locks", "lock_classes", "direct_dependencies", "dependency_chains"):
+    print(f"{field:22} {before.values[field]:6}  {after.values[field]:6}")
+
+print()
+print("lockdep is off:", before.off, "->", after.off)""",
+    note="C09-04. One boot, two readings, the insmod in between, and only debug_locks went down.",
+)
+
+lesson.md("""Everything except `debug_locks` went up. Loading a module registers its lock classes, and the work lockdep did before it gave up is still recorded, so the graph is larger than it was. Nothing consults it any more.
+
+There is no line in that file saying a report happened. `debug_locks` going to zero is the only trace of it, which is why this is the thing to look at rather than a quiet log.
+""")
 
 lesson.md("""Now grade yourself. The grader has no stored answer key and there is nowhere for one to hide, because the lock names, the task name and the addresses all come off the report your machine printed. It refuses to grade you against the handwritten fixtures under `corpora/`, because grading somebody on a report nobody's kernel produced is the one thing this project promises not to do.
 """)
@@ -293,15 +328,19 @@ You know it worked when the report disappears in step one and nothing else about
 Then answer the question the lesson opened with. A module that cannot hang got reported for deadlocking, and now you can say what the kernel looked at instead of the hang.
 """)
 
-lesson.md("""## What is not settled yet
+lesson.md("""## Where the evidence came from
 
-This lesson is a draft, and here is the exact reason.
+Five claims are registered in `claims.toml` beside this file and all five are verified.
 
-Five claims are registered in `claims.toml` beside this file. The one about the checker switching itself off settles as soon as a reader reads their own `/proc/lockdep_stats`, because the number comes off their kernel. The three source claims each name a citation in `refs.toml`, and none of the three is confirmed, because confirming one means finding its anchor in a real 7.2.2 tree and there is not one here yet.
+Three of them resolve against the pinned 7.2.2 source. Each names an anchor in `refs.toml`, and `refcheck` will not let a claim say verified against a citation nobody has found in a real tree.
 
-The claim that a report can arrive with nothing blocked wants somebody to build the module and load it. That is a Tier 1 step today, on a machine the reader already has. Doing it on Tier 0, against the kernel this project pins, needs `kxbox` to boot, and it has never had a kernel to boot.
+The other two came off one boot. The kernel is the `D-lockdep` profile, which is the same source and the same compiler as the one the rest of this book uses with `CONFIG_PROVE_LOCKING` turned on. `abba.ko` was built against that profile and loaded into it, and three files came out: the report in `corpora/oops/tier0/`, and the two readings of `/proc/lockdep_stats` in `corpora/proc/tier0/`, taken either side of the `insmod`.
 
-There are three handwritten fixtures behind the parser: a report in `corpora/oops/handwritten/`, and the two `/proc` files in `corpora/proc/handwritten/`. They exist so the parser had something to parse, they are marked `evidence = false`, and no claim here points at any of them. The claim ledger fails the build if one ever tries, and the grader refuses them outright.
+One boot rather than three runs, deliberately. The last line of the report is the module saying both threads finished and nothing waited, printed after the report rather than before it, and that ordering is the claim. Split across runs it would be two facts instead of one.
+
+There are still three handwritten fixtures behind the parser: a report in `corpora/oops/handwritten/`, and the two `/proc` files in `corpora/proc/handwritten/`. They exist so the parser had something to parse before there was a kernel to take a real one off, they are marked `evidence = false`, and no claim points at any of them. The claim ledger fails the build if one ever tries, and the grader refuses them outright. The handwritten report guessed pid 1481 and some stack offsets. The real ones are pid 40 and different offsets, which changed nothing in the lesson and is worth knowing anyway.
+
+What is left is a `reviewed-by` naming a person who has read this end to end. That is the only reason it still says draft.
 """)
 
 raise SystemExit(lesson.save())

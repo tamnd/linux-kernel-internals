@@ -223,3 +223,56 @@ def test_a_machine_without_lockdep_says_why():
 
 def test_reading_statistics_that_are_not_there_gives_nothing_rather_than_raising():
     assert lockdep.read_stats(Path("/definitely/not/here")) is None
+
+
+# The real capture
+#
+# Everything above this line runs against fixtures written by hand, which is what let the parser
+# exist before there was a kernel to take a report off. These run against the report the pinned
+# kernel actually printed, and they are here to catch the thing that keeps happening in this
+# project, which is that a file written from reading the source disagrees with the machine.
+
+REAL_SPLAT = ROOT / "corpora" / "oops" / "tier0" / "lockdep-ab-ba.txt"
+BEFORE = ROOT / "corpora" / "proc" / "tier0" / "lockdep-stats-before.txt"
+AFTER = ROOT / "corpora" / "proc" / "tier0" / "lockdep-stats-after.txt"
+
+
+def test_the_real_report_parses_and_says_what_its_metadata_says():
+    got = lockdep.parse_splat(REAL_SPLAT.read_text(), str(REAL_SPLAT))
+    want = expected(REAL_SPLAT)
+    assert got.task == want["task"]
+    assert got.pid == want["pid"]
+    assert got.holding.name == want["holding"]
+    assert got.acquiring.name == want["acquiring"]
+    assert list(got.cycle) == want["cycle"]
+
+
+def test_the_run_that_produced_the_report_never_waited_for_anything():
+    """C09-02. The module says so, on the line after the report rather than before it."""
+    lines = REAL_SPLAT.read_text().splitlines()
+    banner = next(i for i, one in enumerate(lines) if "circular locking dependency" in one)
+    done = next(i for i, one in enumerate(lines) if "nothing waited for anything" in one)
+    assert done > banner
+
+
+def test_the_report_draws_two_cpus_on_a_machine_that_has_one():
+    """Lockdep prints the interleaving that would deadlock, not the one that happened."""
+    got = lockdep.parse_splat(REAL_SPLAT.read_text(), str(REAL_SPLAT))
+    assert expected(REAL_SPLAT)["uniprocessor"] is True
+    assert list(got.scenario.columns) == ["CPU0", "CPU1"]
+
+
+def test_the_checker_was_on_before_the_report_and_off_after_it():
+    """C09-04. Two readings, one boot, the insmod in between."""
+    before = lockdep.parse_stats(BEFORE.read_text(), str(BEFORE))
+    after = lockdep.parse_stats(AFTER.read_text(), str(AFTER))
+    assert before.debug_locks == 1 and not before.off
+    assert after.debug_locks == 0 and after.off
+
+
+def test_switching_the_checker_off_did_not_shrink_the_graph():
+    """Everything except debug_locks went up. The graph is bigger and nobody consults it."""
+    before = lockdep.parse_stats(BEFORE.read_text(), str(BEFORE))
+    after = lockdep.parse_stats(AFTER.read_text(), str(AFTER))
+    for field in ("lock_classes", "direct_dependencies", "dependency_chains"):
+        assert after.values[field] > before.values[field], field

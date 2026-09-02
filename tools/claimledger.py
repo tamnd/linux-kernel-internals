@@ -38,14 +38,18 @@ LESSONS = "lessons"
 EVIDENCE_KINDS = {
     "trace": "a capture committed under corpora/",
     "proc": "a /proc or /sys snapshot committed under corpora/",
+    "oops": "a report the kernel printed to dmesg, committed under corpora/",
     "source": "a citation into the pinned kernel tree",
     "litmus": "a litmus test and its herd7 output",
     "experiment": "something the reader runs and sees for themselves",
     "unobservable": "nobody can watch this happen, and we say so out loud",
 }
 
-# Kinds whose evidence is a file in the repository.
-FILE_KINDS = {"trace", "proc", "litmus"}
+# Kinds whose evidence is a file in the repository. Being on this list is what makes the ledger go
+# and look: the path has to exist, it has to have a `.meta.toml` beside it, and that metadata has
+# to say `evidence = true`. A kind not on this list is a claim about something with no file to
+# point at, and the ledger takes the lesson's word for it.
+FILE_KINDS = {"trace", "proc", "oops", "litmus"}
 
 UNOBSERVABLE_LIMIT = 2
 

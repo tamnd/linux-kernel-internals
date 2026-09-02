@@ -5,12 +5,15 @@ lesson = "C09"
 # which `./kxbox/kernel/tree.sh` unpacks, and refcheck refuses to let a claim say verified against
 # a citation nobody has resolved.
 #
-# The other two settle on a machine rather than in a tree. One wants the reader to read their own
-# /proc/lockdep_stats, which works on any kernel built with CONFIG_PROVE_LOCKING. The other wants
-# the reader to build the two thread module and load it, which on Tier 0 wants kxbox to boot.
+# The other two are settled now too, both off one boot of the D-lockdep profile with the abba
+# module loaded into it. C09-02 wanted a report on a run where nothing waited, and the capture has
+# the module saying so on the line after the report. C09-04 wanted debug_locks before a report and
+# after one, and the two readings of /proc/lockdep_stats are from the same boot, a moment apart,
+# with the insmod between them.
 #
-# `pending` says what will settle each claim. It is a note to the next person, not a field the
-# ledger reads.
+# C09-04 points at the after reading rather than the before one, because the claim is about what
+# happens to debug_locks and the interesting value is the zero. The before is beside it, and its
+# metadata names it, so neither is readable without the other.
 
 [[claims]]
 id = "C09-01"
@@ -22,9 +25,9 @@ verified = true
 [[claims]]
 id = "C09-02"
 text = "A report can arrive on a run where no thread ever blocked and nothing ever waited, because a cycle in the lock graph is a property of the code and a hang is a property of the timing."
-evidence_kind = "experiment"
-pending = "the reader builds the two thread module, loads it, and reads the splat out of their own dmesg on a machine that never hung"
-verified = false
+evidence_kind = "oops"
+evidence = "corpora/oops/tier0/lockdep-ab-ba.txt"
+verified = true
 
 [[claims]]
 id = "C09-03"
@@ -37,8 +40,8 @@ verified = true
 id = "C09-04"
 text = "Lockdep switches itself off after its first report of the boot, and from that moment it checks nothing at all, which is readable in the debug_locks line of /proc/lockdep_stats."
 evidence_kind = "proc"
-pending = "the reader reads debug_locks on their own machine, before a report and after one"
-verified = false
+evidence = "corpora/proc/tier0/lockdep-stats-after.txt"
+verified = true
 
 [[claims]]
 id = "C09-05"

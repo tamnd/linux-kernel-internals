@@ -36,6 +36,15 @@ print(" ".join(value) if isinstance(value, list) else value)
 PY
 }
 
+read_modules() {
+    python3 - "$PIN" "$1" <<'PY'
+import sys, tomllib
+pin = tomllib.load(open(sys.argv[1], "rb"))["modules"]
+value = pin[sys.argv[2]]
+print(" ".join(value) if isinstance(value, list) else value)
+PY
+}
+
 VERSION=$(read_pin version)
 URL=$(read_pin url)
 SHA=$(read_pin sha256)
@@ -105,6 +114,25 @@ if command -v docker >/dev/null 2>&1; then
 else
     echo "no docker, so none of $SOURCES in this image"
     echo "  without them: a page fault trace is thirty faults and a write trace is nine writes"
+fi
+
+# Any module somebody has built, copied in as it is. Nothing here compiles one, because a module
+# needs the kernel tree and the kernel tree needs the container and the volume, which is what
+# `kxbox/kernel/module.sh` is for. This just carries whatever is already on disk.
+MODULES_INTO=$(read_modules into)
+mkdir -p "$STAGE/$MODULES_INTO"
+found=0
+for where in $(read_modules look_in); do
+    for one in "$HERE/../../$where"/*.ko; do
+        [ -f "$one" ] || continue
+        cp "$one" "$STAGE/$MODULES_INTO/"
+        echo "module: $(basename "$one"), $(wc -c < "$one") bytes, from $where"
+        found=$((found + 1))
+    done
+done
+if [ "$found" -eq 0 ]; then
+    echo "no modules built, so none in this image"
+    echo "  without them: C09 cannot make its own splat and falls back to the committed one"
 fi
 
 # One symlink, because /init has a shebang and a shebang needs an interpreter that already exists.

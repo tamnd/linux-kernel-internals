@@ -28,11 +28,18 @@ import { READY, serialFor, waitForBoot } from "./page.js";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "../..");
 
+// A-full unless something says otherwise. The other profiles exist to be compared against it, and
+// two of them can only be told apart by booting them: D-lockdep is the same source and the same
+// compiler and differs only in that it checks lock ordering, which is not visible in the image
+// size or in anything short of running it. `KXBOX_PROFILE=D-lockdep node kxbox/web/headless.js sh
+// 'cat /proc/lockdep_stats'` is the whole interface.
+export const PROFILE = process.env.KXBOX_PROFILE || "A-full";
+
 export const IMAGES = {
   wasm: resolve(HERE, "vendor/v86/v86.wasm"),
   bios: resolve(HERE, "vendor/v86/seabios.bin"),
   vgabios: resolve(HERE, "vendor/v86/vgabios.bin"),
-  bzimage: resolve(ROOT, "kxbox/kernel/build/A-full/bzImage"),
+  bzimage: resolve(ROOT, `kxbox/kernel/build/${PROFILE}/bzImage`),
   initrd: resolve(ROOT, "kxbox/rootfs/build/initrd.gz"),
 };
 

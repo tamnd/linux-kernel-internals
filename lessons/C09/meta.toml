@@ -13,8 +13,8 @@ profile = "A-full"
 # the machine on which a timing bug never reproduces and lockdep still finds the ordering.
 tier = 0
 
-# Why this is still a draft. One claim settles on any Linux machine built with CONFIG_PROVE_LOCKING
-# and it works today. Three want a kernel tree to confirm a citation against. The one that needs
-# the reader to load a module and read their own splat needs a kernel they can build against,
-# which on Tier 0 needs kxbox to boot.
-blocked_on = "kxbox"
+# Why this is still a draft. Nothing technical is missing any more. All five claims are verified:
+# three against the pinned tree, and two off one boot of the D-lockdep profile with abba.ko loaded
+# into it, which produced the report in corpora/oops/tier0/ and the two readings of lockdep_stats
+# in corpora/proc/tier0/. What is left is a person.
+blocked_on = "review"
