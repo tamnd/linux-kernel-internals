@@ -1,6 +1,10 @@
-"""Serve this directory with the two headers the bridge needs.
+"""Serve Tier 0 with the two headers the bridge needs.
 
     python3 kxbox/web/serve.py
+
+It serves the whole `kxbox` directory rather than just `web`, because the page has to reach the
+kernel image and the initramfs and those are built into `kernel/build` and `rootfs/build`. The
+page itself is at `/web/`, which the startup message prints.
 
 The Python side of the bridge blocks on `Atomics.wait` against a `SharedArrayBuffer`, and a
 browser only hands out a working `SharedArrayBuffer` to a page that is cross origin isolated.
@@ -19,6 +23,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+ROOT = HERE.parent
 
 # What cross origin isolation costs: the page may not be opened by a different origin, and every
 # subresource has to opt in to being embedded. Both are enforced by the browser, not by us.
@@ -50,18 +55,38 @@ class Isolated(SimpleHTTPRequestHandler):
             super().log_message(fmt, *args)
 
 
-def serve(directory: Path = HERE, port: int = 8123) -> None:
+# What the page fetches, and the command that makes each one. A missing image gives a boot that
+# fails somewhere inside the emulator, which is a long way from the thing that is actually wrong.
+NEEDED = {
+    "web/vendor/v86/libv86.mjs": "python3 -m tools.vendor",
+    "rootfs/build/initrd.gz": "sh kxbox/rootfs/build.sh",
+    "kernel/build/A-full/bzImage": "sh kxbox/kernel/build.sh A-full",
+}
+
+
+def missing(root: Path = ROOT) -> list[str]:
+    return [
+        f"{what} is not there, run: {how}"
+        for what, how in NEEDED.items()
+        if not (root / what).exists()
+    ]
+
+
+def serve(directory: Path = ROOT, port: int = 8123) -> None:
     handler = partial(Isolated, directory=str(directory))
     with ThreadingHTTPServer(("127.0.0.1", port), handler) as server:
-        print(f"kxbox: serving {directory} on http://127.0.0.1:{server.server_address[1]}/")
+        where = f"http://127.0.0.1:{server.server_address[1]}/web/"
+        print(f"kxbox: serving {directory} on {where}")
         print("kxbox: cross origin isolated, so the worker can block on the emulator")
+        for line in missing(directory):
+            print(f"kxbox: {line}")
         server.serve_forever()
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="serve.py", description="Serve Tier 0 with COOP and COEP.")
     ap.add_argument("--port", type=int, default=8123)
-    ap.add_argument("--directory", type=Path, default=HERE)
+    ap.add_argument("--directory", type=Path, default=ROOT)
     args = ap.parse_args(argv)
     try:
         serve(args.directory, args.port)

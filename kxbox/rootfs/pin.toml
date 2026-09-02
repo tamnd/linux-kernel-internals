@@ -1,0 +1,38 @@
+schema = 1
+
+# The userland that comes up inside Tier 0, pinned the same way the kernel is.
+#
+# One statically linked busybox and nothing else. Static because a dynamic binary drags a C library
+# into the image and the image is the thing a browser pays for twice, and because a rootfs with one
+# file in it has one thing that can be wrong with it.
+#
+# This is an upstream prebuilt binary rather than one this project compiled. That is a deliberate
+# trade and it is worth saying out loud: it saves a second cross toolchain and a second build, and
+# it means the shell in the box is somebody else's build. The checksum below is what pins it. If
+# this ever needs to become a real build, it lives here and nothing above it changes.
+
+[busybox]
+version = "1.35.0"
+arch = "i686"
+libc = "musl"
+url = "https://busybox.net/downloads/binaries/1.35.0-i686-linux-musl/busybox"
+sha256 = "27e409705b29937b9a6105038d9c2e3eb8dc3e2c8d606d22872dbde7f47c000f"
+size_bytes = 1061344
+recorded = "2026-09-02"
+
+# The applets the bridge cannot work without. `build.sh` asks the binary for its list and stops if
+# one of these is missing, because finding out from a shell that will not echo is much worse.
+required_applets = [
+    "sh",
+    "cat",
+    "printf",
+    "base64",
+    "mount",
+    "mkdir",
+    "ls",
+    "dmesg",
+    "insmod",
+    "rmmod",
+    "sleep",
+    "sync",
+]

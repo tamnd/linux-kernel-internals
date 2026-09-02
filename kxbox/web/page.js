@@ -1,10 +1,9 @@
 // The page. Boots the emulator, starts the Python worker, and carries messages between them.
 //
-// Nothing in this file has been run, because there is no built kernel and v86 is not vendored yet.
-// It is the shortest thing that could work, written down so that the first person with a kernel
-// image has something to run rather than something to design. Everything here that could be
-// tested without an emulator has been moved into channel.js, guest.js and host.js, which is why
-// this file is mostly wiring.
+// Everything here that could be tested without an emulator has been moved into channel.js,
+// guest.js and host.js, which is why this file is mostly wiring. What is left is the wiring, and
+// `serialFor` and `waitForBoot` are shared with headless.js so that a boot under node and a boot
+// in a tab go through the same code and can disagree about the machine rather than about us.
 
 import { makeChannel } from "./channel.js";
 import { Answerer } from "./channel.js";
@@ -15,12 +14,14 @@ import { Guest, Host } from "./host.js";
 // this is a fact we control.
 export const READY = "__kx:READY";
 
+// Absolute from the root `serve.py` hands out, which is `kxbox`, not `kxbox/web`. The images are
+// where the two build scripts put them, so there is nothing to copy before opening the page.
 export const DEFAULTS = {
-  wasm: "vendor/v86/v86.wasm",
-  bios: "vendor/v86/seabios.bin",
-  vgabios: "vendor/v86/vgabios.bin",
-  bzimage: "kernel/bzImage",
-  initrd: "rootfs/initrd.gz",
+  wasm: "/web/vendor/v86/v86.wasm",
+  bios: "/web/vendor/v86/seabios.bin",
+  vgabios: "/web/vendor/v86/vgabios.bin",
+  bzimage: "/kernel/build/A-full/bzImage",
+  initrd: "/rootfs/build/initrd.gz",
   cmdline: "console=ttyS0 quiet nokaslr",
 };
 
@@ -60,7 +61,8 @@ export function waitForBoot(serial, seconds = 60) {
 export async function start(options = {}) {
   const settings = { ...DEFAULTS, ...options };
 
-  const emulator = new window.V86({
+  const { V86 } = await import("./vendor/v86/libv86.mjs");
+  const emulator = new V86({
     wasm_path: settings.wasm,
     bios: { url: settings.bios },
     vga_bios: { url: settings.vgabios },

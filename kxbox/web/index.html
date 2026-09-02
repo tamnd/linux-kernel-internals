@@ -32,11 +32,10 @@
   </head>
   <body>
     <h1>Tier 0: a Linux kernel in this tab</h1>
-    <p id="state">Nothing has been built yet, so this page has nothing to boot. See kxbox/web/README.md.</p>
+    <p id="state">Starting.</p>
     <div id="console" aria-live="polite" aria-label="Guest console output"></div>
 
-    <!-- The emulator itself. Not vendored yet, so this page does not work today. -->
-    <script src="vendor/v86/libv86.js"></script>
+    <!-- The emulator is imported by page.js, from the copy tools/vendor.py fetched. -->
     <script type="module">
       import { start } from "./page.js";
 
@@ -46,8 +45,6 @@
       if (!crossOriginIsolated) {
         state.textContent =
           "This page is not cross origin isolated, so the worker cannot block on the emulator. Serve it with kxbox/web/serve.py.";
-      } else if (typeof window.V86 === "undefined") {
-        state.textContent = "v86 is not vendored yet, so there is no emulator to boot.";
       } else {
         state.textContent = "Booting.";
         start()
@@ -60,7 +57,9 @@
             });
           })
           .catch((error) => {
-            state.textContent = `Did not boot: ${error.message}`;
+            // Almost always one of three things: v86 not fetched, the kernel not built, or the
+            // rootfs not built. serve.py prints which one when it starts, so say to look there.
+            state.textContent = `Did not boot: ${error.message}. Check what serve.py printed when it started.`;
           });
       }
     </script>

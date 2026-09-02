@@ -36,6 +36,7 @@ DEFAULT_PIN = Path("kxbox/kernel/pin.toml")
 # symbol here, name the lesson or the checker. If you cannot, it belongs in a fragment and not in
 # this list.
 REQUIRED = {
+    "CONFIG_PRINTK": "dmesg, and so every kernel message any lesson reads",
     "CONFIG_FTRACE": "the tracing infrastructure, and so every trace in the book",
     "CONFIG_FUNCTION_TRACER": "the function tracer that function_graph is built on",
     "CONFIG_FUNCTION_GRAPH_TRACER": "Z02, and every trace rendered as a tape",

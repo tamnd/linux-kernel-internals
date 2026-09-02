@@ -4,11 +4,11 @@ Every trace in this book, every field offset, every line number in a citation an
 
 Linux 7.2.2, released 2026-08-28, built for 32-bit x86 with one processor, because that is the machine v86 gives us. The version, the tarball URL and the sha256 are in `pin.toml`, read from the signed sums file on kernel.org on 2026-09-01. `build.sh` checks the tarball against that checksum and stops if it does not match, because a tarball that does not match the pin is not our kernel.
 
-## Nothing here has been built yet
+## This kernel has been built and it boots
 
-That is the honest state of this directory, and it is worth saying at the top rather than in a footnote.
+`A-full` builds in about three and a half minutes and boots to a shell in a few seconds under node, with `/proc`, `/sys`, tracefs, `function_graph`, `dmesg`, module loading and fifty thousand kallsyms symbols all working. The numbers are in `RESULTS.md`.
 
-What exists is the recipe, the requirement list and the checker. What does not exist is an image, a boot, or a single measurement. The first build is what turns any of this from a plan into a fact, and until then the most likely thing to be wrong is the processor family line in `v86.config`, because it decides which instructions the compiler may emit and v86 does not implement all of them. A boot failure there looks like an instant reboot with no output at all.
+The thing that was expected to break did not. The processor family line in `v86.config` was the worry, because it decides which instructions the compiler may emit and v86 does not implement all of them, and a failure there looks like an instant reboot with no output at all. What actually broke was the config: `tinyconfig` turns off `CONFIG_PRINTK` along with everything else behind `EXPERT`, so the first build produced a kernel with no `dmesg` at all, and the function graph tracer was silently dropped because on 32-bit x86 it depends on the kernel not being built for size. Neither of those is a boot failure. Both are a kernel that boots fine and cannot teach anything, which is exactly what the post build config check is for.
 
 ## Building one
 
@@ -17,6 +17,10 @@ What exists is the recipe, the requirement list and the checker. What does not e
 ```
 
 It downloads the tarball, checks it, and builds inside a `debian:trixie-slim` container with gcc, binutils and pahole pinned by version in `pin.toml`. The container is the whole reason this is reproducible: a kernel built with a different pahole has different BTF, and BTF is what the blueprints are generated from.
+
+The source tree lives in a docker volume rather than in the working directory. Unpacking ninety thousand files onto a mounted host directory is slow enough to be worth avoiding, and nothing outside the container ever needs to read them.
+
+On an x86 host it builds natively. On anything else it installs `gcc-i686-linux-gnu` and cross compiles, because a 32-bit x86 kernel cannot be built by an aarch64 compiler no matter what `ARCH` says. That is a real deviation from what the pin means even though the compiler version matches, so it is recorded in `toolchain.toml` next to the image rather than left in somebody's shell history.
 
 The output lands in `kxbox/kernel/build/<profile>/` and is not committed. The recipe is in the repository, the artefacts are not.
 
@@ -55,4 +59,6 @@ If all four fail, Tier 0 becomes fully recorded. Every experiment turns into a r
 
 ## Where the numbers go
 
-`RESULTS.md`, next to this file. One row per profile per measurement, with the machine it was measured on, because thirty seconds on a developer's laptop and thirty seconds on a five year old Chromebook are different claims. It is empty today and it says so.
+`RESULTS.md`, next to this file. One row per profile per measurement, with the machine it was measured on, because thirty seconds on a developer's laptop and thirty seconds on a five year old Chromebook are different claims.
+
+The build table has real numbers in it now. The boot table has one row from a headless run and no rows from a browser, and the difference is the whole point of keeping them in separate tables.

@@ -46,7 +46,9 @@ Each command is wrapped in three markers carrying the id of the call. Everything
 
 There is one shell, so there is one command at a time and requests queue. Every command has a deadline, because a guest that has wedged looks exactly like a guest that is being slow, and a cell that never returns tells the reader nothing about which of the two happened.
 
-A file is written by staging base64 and decoding it into the target with a single redirect. Base64 because the text is sometimes a list of function names with newlines in it and shell quoting is the wrong thing to debug from inside a browser. A single redirect because writing to `current_tracer` twice is two writes, and the kernel reads each one separately.
+A file is written by staging base64, decoding it into a scratch file, and copying that into the target with `cat`. Base64 because the text is sometimes a list of function names with newlines in it and shell quoting is the wrong thing to debug from inside a browser. The target is written by one command because writing to `current_tracer` twice is two writes, and the kernel reads each one separately.
+
+The scratch file in the middle looks like one step too many and it is not. Decoding straight into a tracer file silently does nothing. Busybox base64 writes its output with `writev`, the tracer's write handler answers `EINVAL` to that, and base64 exits 0 anyway, so the tracer keeps its old value and every check says the write worked. That was traced inside the box with the syscall events on, which is why it is written down here as a fact rather than a suspicion. `cat` writes with an ordinary `write`, and one call is what the file wants.
 
 ## Errors
 
@@ -58,8 +60,10 @@ There is no `trace` call in the protocol, on purpose. Tracing is four writes, a 
 
 ## The state of it
 
-No kernel has been booted. The kernel is not built, v86 is not vendored, and there is no rootfs, so the page in `kxbox/web/index.html` has nothing to start.
+All four calls have been run against a real kernel. v86 is vendored, the pinned 7.2.2 image is built, the rootfs is built, and `node kxbox/web/headless.js smoke` boots the box and exercises `sh`, `read`, `write` and the tracing path end to end. `RESULTS.md` in `kernel/` has the numbers.
 
-Both halves of the protocol are written and both are tested without an emulator. The Python half is driven through a stand in that implements the four calls. The JavaScript half is driven through a guest that answers like a shell and is not a kernel, and the blocking call is driven across two real threads, because that part is either true or not and reading it does not settle it.
+Running it is what found the `writev` bug above, and a second one where every read came back with an extra newline on the end. Both were in code that had passing tests. In both cases the thing that was wrong was the test double, which had been written to match what the protocol was supposed to do rather than what a shell actually does. The doubles now match the real guest and the tests fail if they drift again.
 
-What none of that tells you is whether v86 boots this kernel, which is the question the milestone is actually about.
+Both halves are still tested without an emulator, because that is what runs in CI on every push. The Python half is driven through a stand in that implements the four calls. The JavaScript half is driven through a guest that answers like a shell, and the blocking call is driven across two real threads.
+
+What is still open is the browser. A headless boot under node settles whether the kernel boots at all. It does not settle how long a reader waits in a tab, which is what the kill criterion asks about.

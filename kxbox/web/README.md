@@ -24,13 +24,19 @@ A request goes to the page as a message, which is queued before the worker goes 
 
 `page.js`, `worker.js` and `index.html` are the wiring. `serve.py` serves this directory with the two headers a blocking worker needs, which `python3 -m http.server` does not send.
 
+`headless.js` boots the same kernel under node instead of on a page. There is no worker and no shared buffer in it, because nothing is blocking on that side and it is allowed to await. Everything below that, which is the part that talks to the kernel, is the same code the page runs.
+
+`vendor.toml` pins v86 by commit and by sha256 of every file taken from it. `python3 -m tools.vendor` fetches them and `--check` says whether what is on disk is what the pin asked for. The vendored files are not committed.
+
 ## The state of it
 
-No kernel has been booted. v86 is not vendored, the kernel image is not built, and there is no rootfs, so the page has nothing to start and says so when you open it.
+It boots. `node kxbox/web/headless.js smoke` starts the pinned kernel, waits for the ready marker, and runs nine checks, each one named after something a lesson stops working without.
 
-Everything that could be checked without an emulator is checked. `just web` runs it. Forty tests, and the useful ones are the parsing of a serial stream that contains the prompt and the echo of the command, a write arriving in pieces and ending up as one file, two commands not interleaving on the one shell, and a blocking call across two real threads with the answer deliberately late.
+Running it found two bugs that the tests had been passing over. A write to any tracefs file did nothing and reported success, and every read came back with one extra newline. Both bugs were in code with tests, and in both cases the test double was the thing that was wrong: it had been written to match the protocol as designed rather than what a busybox shell on a serial line actually does. The doubles now match the real guest, and there are tests that fail if they drift apart again.
 
-Node's worker threads are not a browser. What they share with one is `Atomics.wait`, `SharedArrayBuffer` and `postMessage`, which is the part of this that is ours.
+Everything that can be checked without an emulator still is, because that is what runs in CI. `just web` runs it. Forty one tests, and the useful ones are the parsing of a serial stream that contains the prompt and the echo of the command, a write arriving in pieces and ending up as one file, two commands not interleaving on the one shell, and a blocking call across two real threads with the answer deliberately late.
+
+Node's worker threads are not a browser, and node running v86 is not a tab. What they share with one is `Atomics.wait`, `SharedArrayBuffer` and `postMessage`, which is the part of this that is ours. How long a reader waits for a boot in an actual browser is still unmeasured.
 
 ## What the guest needs
 

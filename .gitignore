@@ -19,6 +19,10 @@ site/docs/lessons/
 site/docs/blueprints/
 .cache/
 
+# v86, fetched by tools.vendor and checked against kxbox/web/vendor.toml. Four megabytes of
+# somebody else's build, pinned rather than committed.
+kxbox/web/vendor/
+
 # Kernel build artefacts. The recipe is in the repo, the output is not.
 kxbox/kernel/build/
 kxbox/kernel/*.bzImage
