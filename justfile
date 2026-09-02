@@ -42,8 +42,16 @@ claim-kinds:
 refs:
     python3 -m tools.refcheck
 
-# Resolve every kernel citation against a real tree, and write the line numbers back.
-refs-confirm tree:
+# Unpack the pinned kernel source, which is what a citation resolves against.
+tree:
+    ./kxbox/kernel/tree.sh
+
+# Resolve every kernel citation against the unpacked tree, without writing anything.
+refs-resolve tree="kxbox/kernel/build/tree/linux-7.2.2":
+    python3 -m tools.refcheck --tree {{tree}}
+
+# The same, but write the line numbers back and flip the confirmed flags.
+refs-confirm tree="kxbox/kernel/build/tree/linux-7.2.2":
     python3 -m tools.refcheck --tree {{tree}} --confirm
 
 # Print the paths this repository writes about that do not exist yet.

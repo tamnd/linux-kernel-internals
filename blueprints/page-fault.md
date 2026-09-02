@@ -15,7 +15,9 @@ artefacts: [traces/handwritten/page-fault]
 
 # The page fault path
 
-**Status is `partial`, and this is what that means here.** No kernel has been built for this project yet, so the three generated sections were generated from nothing and say so in their own text, and not one of the twenty eight citations in `page-fault.refs.toml` has been resolved against a real tree. Every sentence below is written to be checkable rather than to be trusted: it names a file and a piece of text to find in that file, and `refcheck` will resolve all of them the first time somebody points it at a kernel. Until that happens this is a map of where to look, and a reader who needs a number should get it from the kernel rather than from here.
+**Status is `partial`, and this is what that means here.** All twenty eight citations in `page-fault.refs.toml` now resolve against the pinned 7.2.2 source, so every sentence below that names a file and a piece of text has had that text found. What is still missing is the three generated sections, which were generated with no BTF to read and say so in their own text. They need the built kernel's own type information, and filling them in is what moves this to `complete`.
+
+Confirming the citations was worth doing for a reason beyond the tick. Twenty one of the thirty six citations in this repository failed on the first run. Three named a file the code had moved out of, and `lock_vma_under_rcu` and `lock_mm_and_find_vma` are the two worth knowing about, because they are in `mm/mmap_lock.c` now and nearly every write up still puts them in `mm/memory.c`. The rest were anchors short enough to match in more than one place. A reader who finds something here that does not match their tree should say so, because that is the failure this whole arrangement is built to make loud.
 
 The picture below is the whole mechanism in one frame. The steps in section 3 are the same chain in words.
 

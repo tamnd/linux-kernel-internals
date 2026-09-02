@@ -2,36 +2,38 @@ schema = 1
 
 # Citations into the pinned kernel tree.
 #
-# None of these are confirmed, and that is the honest state rather than an oversight. Confirming
-# one means running `python3 -m tools.refcheck --tree <a real linux tree> --confirm`, which finds
-# the anchor, writes down the line it is on and flips the flag. There is no kernel tree on the
-# machine this was written on.
+# These are confirmed against the pinned tree. Unpack it with `./kxbox/kernel/tree.sh` and run
+# `python3 -m tools.refcheck --tree kxbox/kernel/build/tree/linux-7.2.2 --confirm`, which finds
+# the anchor, writes down the line it is on and flips the flag. Only a confirmed citation can back
+# a claim marked verified, and refcheck is what enforces that.
 #
-# The anchor is a piece of text to find, never a line number.
+# The anchor is a piece of text to find, never a line number. A line number is right on the day it
+# is typed and wrong after the next patch, and the wrongness is silent, because a stale line number
+# still points at a line. An anchor that matches twice is rejected for the same reason.
 
 [[references]]
 id = "S05-R1"
 path = "fs/read_write.c"
-anchor = "file->f_op->write_iter"
+anchor = "else if (file->f_op->write_iter)"
 kernel = "7.2.2"
-confirmed = false
-line = 0
-note = "The dispatch itself. vfs_write does not know how to write to anything, it reads a pointer out of the file and calls whatever is there."
+confirmed = true
+line = 686
+note = "The dispatch itself, inside vfs_write. vfs_write does not know how to write to anything, it reads a pointer out of the file and calls whatever is there. The anchor carries the else and the branch, because the bare expression appears nine times in this file."
 
 [[references]]
 id = "S05-R2"
 path = "fs/open.c"
 anchor = "fops_get(inode->i_fop)"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 918
 note = "Where the pointer comes from. Opening a file copies the ops pointer out of the inode into the file, which is the moment the implementation gets chosen."
 
 [[references]]
 id = "S05-R3"
-path = "Documentation/filesystems/vfs.rst"
-anchor = "This describes how the VFS can manipulate an open file"
+path = "fs/read_write.c"
+anchor = "if (file->f_op->write)"
 kernel = "7.2.2"
-confirmed = false
-line = 0
-note = "The description of file_operations, and the place that says which members a filesystem has to fill in and which it may leave empty."
+confirmed = true
+line = 684
+note = "The check before the call. vfs_write tries the write slot, then the write_iter slot, and returns EINVAL when both are empty, which is what makes a missing operation an error rather than a jump through a null pointer. This used to cite the file_operations section of Documentation/filesystems/vfs.rst. That section lists the members and describes each one, but it never says which of them may be left out, so it did not hold up the claim that rests on it. Confirming the citation is what made that obvious."

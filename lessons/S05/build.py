@@ -202,9 +202,9 @@ That constraint shapes the whole design. A filesystem that wants per file state 
 
 lesson.md(f"""## Most of it is empty
 
-Open a real table and count what is filled. {lesson.claim("S05-05")}.
+Open a real table and count what is filled. A `struct file_operations` has more than thirty slots, a filesystem fills eight or ten, and the rest are null.
 
-A `struct file_operations` has more than thirty slots. A filesystem fills eight or ten. The rest are null, and the caller checks before it calls, so asking a pipe to `mmap` comes back as an error rather than as a jump to address zero.
+That is not sloppiness, it is the arrangement working. {lesson.claim("S05-05")}. Asking a pipe to `mmap` comes back as an error rather than as a jump to address zero, so a filesystem that does not want to implement something implements nothing at all.
 
 The cell below draws a real table if your kernel ships BTF at `/sys/kernel/btf/vmlinux`, which most kernels since 2020 do. What it draws is the shape of the type, with every slot empty, because BTF describes types and what sits in a slot is a fact about a running kernel.
 """)

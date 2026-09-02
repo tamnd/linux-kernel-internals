@@ -6,27 +6,32 @@ schema = 1
 # writing its id in square brackets, and `refcheck` fails the build on a marker with no entry here
 # and on an entry nothing points at.
 #
-# None of them are confirmed. That is the whole state of this file and it is not an oversight.
-# Confirming one means running:
+# These are confirmed against the pinned tree. Confirming one means running:
 #
-#     python3 -m tools.refcheck --tree <a real linux tree> --confirm
+#     ./kxbox/kernel/tree.sh
+#     python3 -m tools.refcheck --tree kxbox/kernel/build/tree/linux-7.2.2 --confirm
 #
-# which finds the anchor, writes down the line it landed on and flips the flag. There is no kernel
-# tree on the machine this was written on, so nobody has done that for a single one of these. Until
-# somebody does, every one of them is a place to look rather than a fact that has been checked, and
-# the blueprint says so at the top rather than leaving a reader to work it out.
+# which finds the anchor, writes down the line it landed on and flips the flag. The tree that gets
+# unpacked is the pristine tarball from kernel.org, checked against the same sha256 the build
+# checks, so a citation here resolves against the same source everybody else gets rather than
+# against something a build left behind.
 #
 # The anchor is a piece of text to find, never a line number. A line number is right on the day it
 # is typed and wrong after the next patch, and the wrongness is silent, because a stale line number
-# still points at a line.
+# still points at a line. The line numbers below are output rather than input, and running the
+# command again after a version bump is what finds the ones that moved.
+#
+# An anchor that matches more than one line is rejected. That rule did most of the work here. The
+# first run had twenty one problems in it, and nearly all of them were a bare function name that
+# also appears at its call site or in a forward declaration.
 
 [[references]]
 id = "page-fault-R1"
 path = "arch/x86/mm/fault.c"
 anchor = "DEFINE_IDTENTRY_RAW_ERRORCODE(exc_page_fault)"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 1492
 note = "The architecture entry point. Everything in this blueprint starts here on x86-64, and the macro is what wires it to vector 14 in the interrupt descriptor table."
 
 [[references]]
@@ -34,53 +39,53 @@ id = "page-fault-R2"
 path = "arch/x86/include/asm/trap_pf.h"
 anchor = "enum x86_pf_error_code"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 20
 note = "The bits the hardware puts in the error code. Present, write, user, reserved, instruction fetch, protection key and SGX. Everything the handler decides in its first few branches comes out of this word."
 
 [[references]]
 id = "page-fault-R3"
 path = "arch/x86/mm/fault.c"
-anchor = "fault_in_kernel_space"
+anchor = "bool fault_in_kernel_space(unsigned long address)"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 1124
 note = "The split between a kernel address and a user address, which is the first fork in the road and the one that decides whether any of the rest of this applies."
 
 [[references]]
 id = "page-fault-R4"
 path = "arch/x86/mm/fault.c"
-anchor = "do_user_addr_fault"
+anchor = "do_user_addr_fault(struct pt_regs *regs,"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 1216
 note = "The user address path. Finds the VMA, checks permissions against it, and calls into the architecture independent code."
 
 [[references]]
 id = "page-fault-R5"
-path = "mm/memory.c"
-anchor = "lock_vma_under_rcu"
+path = "mm/mmap_lock.c"
+anchor = "struct vm_area_struct *lock_vma_under_rcu(struct mm_struct *mm,"
 kernel = "7.2.2"
-confirmed = false
-line = 0
-note = "The per VMA lock lookup, tried before the mmap lock. This is the fast path that lets faults on different VMAs in the same process run at the same time."
+confirmed = true
+line = 296
+note = "The per VMA lock lookup, tried before the mmap lock. This is the fast path that lets faults on different VMAs in the same process run at the same time. It lives in mm/mmap_lock.c, not in mm/memory.c where most write ups still put it."
 
 [[references]]
 id = "page-fault-R6"
-path = "mm/memory.c"
-anchor = "lock_mm_and_find_vma"
+path = "mm/mmap_lock.c"
+anchor = "need to extend the vma, which helps the VM layer a lot."
 kernel = "7.2.2"
-confirmed = false
-line = 0
-note = "The slow path, taking the mmap lock for read and looking the VMA up in the tree. Also where a stack that needs growing gets grown."
+confirmed = true
+line = 494
+note = "The slow path, taking the mmap lock for read and looking the VMA up in the tree. Also where a stack that needs growing gets grown. The anchor is the last line of the comment above lock_mm_and_find_vma rather than the function itself, because this file defines the function twice, once for CONFIG_MMU and once for the architectures without it, and the two first lines are word for word the same."
 
 [[references]]
 id = "page-fault-R7"
 path = "include/linux/mm_types.h"
 anchor = "struct vm_area_struct {"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 920
 note = "One mapped range in one address space. Start, end, flags, the file it is backed by if any, and the operations table."
 
 [[references]]
@@ -88,8 +93,8 @@ id = "page-fault-R8"
 path = "include/linux/mm_types.h"
 anchor = "struct mm_struct {"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 1160
 note = "The address space itself. Holds the page table root, the VMA tree, the mmap lock and the fault counters this blueprint says move."
 
 [[references]]
@@ -97,17 +102,17 @@ id = "page-fault-R9"
 path = "include/linux/mm.h"
 anchor = "struct vm_fault {"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 730
 note = "The working state of one fault, passed down every level of the handler. The address, the flags, the VMA, and whichever page table entry the walk has reached."
 
 [[references]]
 id = "page-fault-R10"
 path = "include/linux/mm_types.h"
-anchor = "FAULT_FLAG_ALLOW_RETRY"
+anchor = "@FAULT_FLAG_ALLOW_RETRY: Allow to retry the fault if blocked."
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 1760
 note = "The flag that lets the handler drop the mmap lock and start over rather than sleeping while holding it. The retry protocol in section 3 is built on this one bit."
 
 [[references]]
@@ -115,71 +120,71 @@ id = "page-fault-R11"
 path = "mm/memory.c"
 anchor = "vm_fault_t handle_mm_fault"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 6651
 note = "The architecture independent entry point. Every architecture funnels into this, which is why the blueprint splits at exactly this line."
 
 [[references]]
 id = "page-fault-R12"
 path = "mm/memory.c"
-anchor = "__handle_mm_fault"
+anchor = "static vm_fault_t __handle_mm_fault(struct vm_area_struct *vma,"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 6417
 note = "The page table walk. Allocates each level that is missing on the way down, from the top level entry to the pmd."
 
 [[references]]
 id = "page-fault-R13"
 path = "mm/memory.c"
-anchor = "handle_pte_fault"
+anchor = "static vm_fault_t handle_pte_fault(struct vm_fault *vmf)"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 6335
 note = "The dispatch. Looks at the pte and picks anonymous, file backed, swap, numa or write protect from what it finds."
 
 [[references]]
 id = "page-fault-R14"
 path = "mm/memory.c"
-anchor = "do_anonymous_page"
+anchor = "Use the zero-page for reads"
 kernel = "7.2.2"
-confirmed = false
-line = 0
-note = "A fault on a mapping with nothing behind it. Allocates a folio, or maps the shared zero page when the access is a read."
+confirmed = true
+line = 5307
+note = "A fault on a mapping with nothing behind it. Allocates a folio, or maps the shared zero page when the access is a read. The anchor is the comment on the zero page branch inside do_anonymous_page, because the forward declaration near the top of the file is character for character the same as the definition and an anchor cannot tell them apart."
 
 [[references]]
 id = "page-fault-R15"
 path = "mm/memory.c"
-anchor = "do_swap_page"
+anchor = "vm_fault_t do_swap_page(struct vm_fault *vmf)"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 4747
 note = "A fault on a page that was swapped out. This is the path that turns into a major fault and the one that sleeps on real hardware."
 
 [[references]]
 id = "page-fault-R16"
 path = "mm/memory.c"
-anchor = "do_cow_fault"
+anchor = "static vm_fault_t do_cow_fault(struct vm_fault *vmf)"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 5872
 note = "A write to a private file backed mapping. Reads the original, copies it, and maps the copy, which is where a private mapping stops sharing with the file."
 
 [[references]]
 id = "page-fault-R17"
 path = "mm/memory.c"
-anchor = "finish_fault"
+anchor = "vm_fault_t finish_fault(struct vm_fault *vmf)"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 5617
 note = "Where a file backed fault installs its pte, under the pte lock, after checking nothing changed while the lock was dropped."
 
 [[references]]
 id = "page-fault-R18"
 path = "mm/filemap.c"
-anchor = "vm_fault_t filemap_fault"
+anchor = "vm_fault_t filemap_fault(struct vm_fault *vmf)"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 3546
 note = "The default fault operation for a file backed mapping. Looks in the page cache, and starts readahead or a read when the folio is not there."
 
 [[references]]
@@ -187,26 +192,26 @@ id = "page-fault-R19"
 path = "include/linux/mm.h"
 anchor = "struct vm_operations_struct {"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 783
 note = "The operations a mapping can override. The fault slot is the one that matters here, and a mapping that leaves it empty is anonymous by definition."
 
 [[references]]
 id = "page-fault-R20"
 path = "include/linux/mm_types.h"
-anchor = "VM_FAULT_RETRY"
+anchor = "enum vm_fault_reason {"
 kernel = "7.2.2"
-confirmed = false
-line = 0
-note = "The return value that means nothing was fixed and the caller has to fault again. The whole set of vm_fault_t values is declared here."
+confirmed = true
+line = 1681
+note = "The whole set of vm_fault_t values, including VM_FAULT_RETRY, which means nothing was fixed and the caller has to fault again. The anchor is the head of the enum rather than the one value, because the values are laid out with tabs and an anchor with a tab in it is a thing nobody can retype."
 
 [[references]]
 id = "page-fault-R21"
 path = "arch/x86/mm/fault.c"
 anchor = "unable to handle page fault for address"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 545
 note = "The oops header for a fault in kernel mode that no fixup handles. This is the string a person searches for at three in the morning, which is why it is in the blueprint by its exact text."
 
 [[references]]
@@ -214,60 +219,60 @@ id = "page-fault-R22"
 path = "mm/memory.c"
 anchor = "BUG: Bad page map in process"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 599
 note = "What print_bad_pte reports when a pte points at something that is not a valid page. A corrupt page table found from inside the fault path prints this rather than crashing at the access."
 
 [[references]]
 id = "page-fault-R23"
 path = "arch/x86/mm/fault.c"
-anchor = "kernelmode_fixup_or_oops"
+anchor = "kernelmode_fixup_or_oops(struct pt_regs *regs, unsigned long error_code,"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 728
 note = "The exception table lookup. A fault inside copy_from_user is expected and gets fixed up here, and one anywhere else becomes the oops above."
 
 [[references]]
 id = "page-fault-R24"
-path = "arch/x86/include/asm/trace/exceptions.h"
-anchor = "page_fault_user"
+path = "include/trace/events/exceptions.h"
+anchor = "DEFINE_EVENT(exceptions, page_fault_user,"
 kernel = "7.2.2"
-confirmed = false
-line = 0
-note = "The tracepoints the architecture entry point fires, one for a user fault and one for a kernel fault. Section 5 lists these as the first thing an observer sees."
+confirmed = true
+line = 33
+note = "The tracepoints the architecture entry point fires, one for a user fault and one for a kernel fault. Section 5 lists these as the first thing an observer sees. This used to be written down as arch/x86/include/asm/trace/exceptions.h, which is where it lived for years and is not where it lives now. Confirming the citations is what caught that."
 
 [[references]]
 id = "page-fault-R25"
 path = "mm/huge_memory.c"
-anchor = "do_huge_pmd_anonymous_page"
+anchor = "vm_fault_t do_huge_pmd_anonymous_page(struct vm_fault *vmf)"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 1519
 note = "The transparent huge page path, taken from the pmd level before the walk ever reaches a pte. A build without huge pages never gets here."
 
 [[references]]
 id = "page-fault-R26"
 path = "mm/oom_kill.c"
-anchor = "out_of_memory"
+anchor = "bool out_of_memory(struct oom_control *oc)"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 1103
 note = "Where a fault that could not allocate memory ends up, by way of VM_FAULT_OOM and pagefault_out_of_memory. The fault does not return an error to userspace, something gets killed instead."
 
 [[references]]
 id = "page-fault-R27"
 path = "Documentation/filesystems/proc.rst"
-anchor = "number of minor faults"
+anchor = "min_flt       number of minor faults"
 kernel = "7.2.2"
-confirmed = false
-line = 0
-note = "The minor and major fault counters as userspace sees them, in the documented layout of /proc/PID/stat. Section 5 says these move and this is where their meaning is written down."
+confirmed = true
+line = 335
+note = "The minor and major fault counters as userspace sees them, in the documented layout of /proc/PID/stat. Section 5 says these move and this is where their meaning is written down. The spacing in the anchor is load bearing, because the line below is cmin_flt with the same words after it."
 
 [[references]]
 id = "page-fault-R28"
 path = "arch/x86/mm/fault.c"
 anchor = "PERF_COUNT_SW_PAGE_FAULTS"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 1290
 note = "The perf software events the entry point emits, including the split between minor and major that lands in the counters above."

@@ -22,9 +22,14 @@ text was, and the next check finds it again wherever it has moved to. A citation
 found is a failure with the file and the anchor in it, which is the moment to go and read the
 code rather than six months later.
 
-There is no kernel tree on this machine, so `--tree` has never been run against the pinned kernel
-and no citation in this repository is confirmed. That is why an unconfirmed citation cannot verify
-a claim, and why the checker says how many are waiting.
+`./kxbox/kernel/tree.sh` unpacks the pinned source, and `--tree` against it is what turns an
+unconfirmed citation into a confirmed one. An unconfirmed citation still cannot verify a claim, and
+the checker says how many are waiting so that nobody has to go looking.
+
+The first real run of `--tree` had twenty one problems in it, out of thirty six citations. Three
+were files that had moved, and the rest were anchors that matched in more than one place, usually
+a function name that also appears at a call site or in a forward declaration. Both kinds are the
+reason this tool exists, and neither would have been caught by reading.
 """
 
 from __future__ import annotations
@@ -414,7 +419,10 @@ def resolve(reference: Reference, tree: Path) -> tuple[int | None, str]:
 
 
 def find_documents(root: Path) -> list[Path]:
-    skip = {".git", "__pycache__", "node_modules", "vendor"}
+    # `build` is on this list because `./kxbox/kernel/tree.sh` unpacks ninety thousand files of
+    # Linux into `kxbox/kernel/build/tree`, and several thousand of them are markdown. None of it
+    # is ours, none of it is checkable by these rules, and walking it takes long enough to notice.
+    skip = {".git", "__pycache__", "node_modules", "vendor", "build"}
     found = []
     for path in sorted(root.rglob("*.md")):
         if any(part in skip for part in path.parts):
