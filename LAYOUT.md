@@ -24,6 +24,7 @@ linux-kernel-internals/
 │   ├── web/vendor/v86/      #   pinned upstream by commit and sha256, BSD-2-Clause, not committed
 │   ├── kernel/              #   pin.toml, config fragments, build.sh, results
 │   └── rootfs/              #   a pinned busybox and a thirty line init
+├── kxdiff/                  # comparing two traces: policy.py says what, levels.py says how strictly
 ├── kxwidgets/               # SyscallTape, StructMap, OpsExplorer, PredictionGate
 ├── kxmanim/                 # the nine primitives, storyboards, the manim adapter
 │   └── storyboards/         #   one toml per animation, checked in CI
@@ -32,7 +33,7 @@ linux-kernel-internals/
 ├── blueprints/              # the normative specifications: one .md, one .refs.toml, assets/
 ├── corpora/                 # pinned traces, BTF dumps, /proc snapshots, oopses
 ├── capstones/               # three tracks, harnesses and scorecards
-├── conformance/             # kxdiff, graders, KUnit and kselftest drivers
+├── conformance/             # graders, KUnit and kselftest drivers
 ├── site/                    # the published book: head.yml, docs/, and the staged copies
 ├── containers/              # the Tier 1 image, devcontainer, CI image
 ├── tools/                   # lintprose, claimledger, refcheck, bpc, kconfig, nbbuild, sitebuild
@@ -52,6 +53,10 @@ That is also why the analysis toolkit is pure Python with no C extensions. It co
 `kxray/vocabulary.py` is the one list of what a shape means. Which colour a subsystem is, which order the eight layers go in, which glyph each of the six execution contexts gets, and what a solid line versus a dashed line promises about a pointer. It sits in `kxray` rather than in a renderer because a colour bound to `fs/` is a fact about the kernel, and because a diagram, a widget and an animation of the same thing have to agree or the reader concludes that one of the three is lying. Colour is never the only channel: everything in that file carries a name as well, and a renderer prints it.
 
 `kxray/layout.py` is the arithmetic that turns a tree of frames into rectangles. It is in `kxray` for the same reason. A widget and an animation of the same trace call it and get the same answer, so the wide box is in the same place in both.
+
+`kxdiff/` is two files and the claim that comparing two traces is two questions rather than one. `policy.py` answers what the comparison is about, which means what to leave out before comparing anything: interrupts, work whose presence the clock decides, work the kernel had been putting off, and anything belonging to another task. `levels.py` answers how strictly to compare what is left, and it offers five answers because a claim about the path a system call took and a claim about where its time went are different claims and need different checks. The plan had this under `conformance/`. It is at the top level instead because `kxbox/bothways.py` imports it and that runs in the browser under Pyodide, so it has to be in the wheel, and because the first thing it was used for was checking the emulator against a recording rather than grading anybody's answer.
+
+Keeping the two halves apart is worth the extra file. The code started inside `kxbox/bothways.py` doing both at once, and every time the comparison failed for a boring reason the fix landed in the same function as the rules about what a trace means. After about seven of those nobody could tell which lines were the check and which were the excuses. Every name in `policy.py` now carries the run that put it there, because a list of things to ignore is exactly where a check stops being a check.
 
 `kxmanim/` is for the three or four ideas in the whole book that are sequences in time, and it is deliberately awkward to use for anything else. There are nine primitives and a test asserts there are nine. There is a ninety second budget. Every storyboard has to name a still that makes the same point without moving, and the checker fails when that file is not on disk. Captions and alt text go through the same house style rules the lessons go through. Only `kxmanim/scene.py` imports manim, and it imports it lazily, so the rules run in CI in a fraction of a second while the renderer stays a thing you install on purpose with `just setup-animation`.
 
