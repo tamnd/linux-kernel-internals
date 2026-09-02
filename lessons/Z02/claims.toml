@@ -1,16 +1,24 @@
 schema = 1
 lesson = "Z02"
 
-# The two source claims are verified. Their citations resolve against the pinned 7.2.2 tree, which
-# `./kxbox/kernel/tree.sh` unpacks, and refcheck refuses to let a claim say verified against a
-# citation nobody has resolved.
+# All six are settled.
 #
-# The other four are not settled. Two need a real capture and there is no way to make one until a
-# lesson can drive kxbox from the browser. One needs more than one CPU, which Tier 0 does not have
-# and cannot be made to have.
+# The two source claims resolve against the pinned 7.2.2 tree, which `./kxbox/kernel/tree.sh`
+# unpacks, and refcheck refuses to let a claim say verified against a citation nobody has resolved.
 #
-# `pending` says what will settle each claim. It is a note to the next person, not a field the
-# ledger reads.
+# The other four each needed something to be built first, and this is what each one took.
+#
+# Z02-05 needed a capture of one write and nothing else, which meant a program in the image that
+# turns the tracer on around a single `write` and turns it off again. `dd` cannot do that and no
+# shell one liner can either.
+#
+# Z02-04 needed a ring buffer small enough to overflow on purpose, which is one write to
+# `buffer_size_kb` and then any ordinary work at all.
+#
+# Z02-03 and Z02-06 could not be settled on Tier 0 at any price. One needs more than one CPU and
+# v86 is a uniprocessor emulator. The other needs a clock and v86 does not have one. Both are
+# captures off a real Linux machine, filed under `tier1` with metadata saying exactly which
+# machine, and both are about behaviour that does not depend on the architecture.
 
 [[claims]]
 id = "Z02-01"
@@ -30,26 +38,36 @@ verified = true
 id = "Z02-03"
 text = "The trace file holds the output of every CPU in one stream, so indentation belongs to a CPU and not to the file, and two lines next to each other can come from two different call stacks."
 evidence_kind = "trace"
-pending = "a capture on a machine with more than one CPU, which Tier 0 cannot produce because v86 is uniprocessor"
-verified = false
+evidence = "corpora/traces/tier1/multi-cpu-write.txt"
+verified = true
+# Six CPUs, six writers, released together. The CPU column changes 33 times in 305 lines, and at
+# lines 187 to 206 two CPUs alternate almost line by line while both are part way through their
+# own call. Read that stretch as one stack and it is nonsense.
 
 [[claims]]
 id = "Z02-04"
 text = "The buffer behind the trace file is a ring, so a trace that runs for long enough loses its oldest lines, and the count of what was lost is in the per CPU stats file rather than in the trace."
 evidence_kind = "proc"
-pending = "a snapshot of per_cpu/cpu0/stats with a non zero overrun, taken by filling the buffer on purpose"
-verified = false
+evidence = "corpora/proc/tier0/ring-overrun.txt"
+verified = true
+# 273 events kept, 44002 thrown away, in seven milliseconds of tracing an `ls`. The trace file says
+# nothing about it. It just starts part way through and looks complete.
 
 [[claims]]
 id = "Z02-05"
 text = "Writing one byte to a file enters the kernel at the write system call and reaches the filesystem through vfs_write, and the work underneath that is where the time goes."
 evidence_kind = "trace"
-pending = "a function_graph capture of a one byte write, taken from the browser once kxbox boots"
-verified = false
+evidence = "corpora/traces/tier0/write-1byte.txt"
+verified = true
+# One write, on the pinned kernel, with nothing else in the window. The file is one nothing had
+# written to yet, so the trace shows the page being allocated as well as the byte being copied.
 
 [[claims]]
 id = "Z02-06"
 text = "Tracing every function costs the traced work real time, so the same write measured with the tracer on takes longer than with it off."
 evidence_kind = "experiment"
-pending = "the reader runs it both ways and compares, so this is verified once the notebook runs against a live kernel"
-verified = false
+evidence = "corpora/experiments/tier1/tracer-cost.txt"
+verified = true
+# About 257 nanoseconds a write untraced and about 6619 with function_graph on, which is roughly
+# twenty five times. Measured on a real machine, because Tier 0 has no clock to measure with. The
+# reader can run the same thing on their own machine and should get their own numbers.

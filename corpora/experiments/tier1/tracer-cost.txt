@@ -1,0 +1,22 @@
+nanoseconds per one byte write to tmpfs, 200000 writes per run, five runs
+
+tracer off, current_tracer is nop
+290
+268
+239
+257
+256
+
+function_graph on, set_graph_function is vfs_write
+8155
+6093
+6188
+6619
+6746
+
+function_graph on, no filter, every function in the kernel
+8020
+7964
+7702
+7492
+7321

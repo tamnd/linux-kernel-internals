@@ -17,6 +17,10 @@ profile = "A-full"
 # Tier 0 is the browser kernel under v86. Uniprocessor, 32 bit, emulated timing.
 tier = 0
 
-# Why this is still a draft. The lesson is written, the claims are registered, and none of them
-# are verified because there is no way to capture a real trace until kxbox boots.
-blocked_on = "kxbox"
+# Why this is still a draft. The lesson is written and all six of its claims are verified: four
+# against captures in `corpora/` and two against anchors in the pinned tree. What is left is a
+# person reading it end to end, which is not a check a script can pass.
+#
+# Two of those claims are backed by Tier 1 captures rather than Tier 0 ones, because Tier 0 has one
+# CPU and no clock and neither of those is fixable. The captures say which machine they came off.
+blocked_on = "review"

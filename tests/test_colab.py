@@ -108,3 +108,38 @@ def test_in_colab_is_false_in_a_test_run():
 @pytest.mark.parametrize("name", ["grader.py", "claims.toml"])
 def test_the_real_z02_files_are_where_the_loader_looks(name):
     assert colab.lesson_file("Z02", name).exists()
+
+
+@pytest.mark.parametrize(
+    "relative",
+    [
+        "traces/tier0/write-1byte.txt",
+        "traces/tier1/multi-cpu-write.txt",
+        "proc/tier0/ring-overrun.txt",
+        "experiments/tier1/tracer-cost.txt",
+    ],
+)
+def test_the_captures_a_lesson_loads_are_where_the_loader_looks(relative):
+    """Every artefact a notebook asks for by name, checked to be there.
+
+    A lesson running in Colab downloads these one at a time from the default branch, so a file
+    that gets moved or renamed does not fail here, it fails in somebody's browser halfway through
+    a lesson with a 404. This is the check that catches it at the right end.
+    """
+    assert colab.corpus_file(relative).exists()
+
+
+def test_a_missing_capture_is_fetched_from_the_repository(tmp_path, monkeypatch):
+    root = checkout(tmp_path)
+    monkeypatch.chdir(root)
+    monkeypatch.setattr(colab, "CACHE", tmp_path / "cache")
+    monkeypatch.setattr(colab.urllib.request, "urlopen", _serve(b" 0)  |  vfs_write() {\n"))
+
+    assert colab.corpus_text("traces/tier0/nothing-here.txt").startswith(" 0)")
+
+
+def test_the_corpus_url_is_the_default_branch_of_the_public_repository():
+    url = colab.repo_url("corpora/traces/tier1/multi-cpu-write.txt")
+    assert url.endswith(
+        "/tamnd/linux-kernel-internals/main/corpora/traces/tier1/multi-cpu-write.txt"
+    )

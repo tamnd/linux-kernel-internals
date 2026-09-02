@@ -1,0 +1,305 @@
+# tracer: function_graph
+#
+# CPU  TASK/PID         DURATION                  FUNCTION CALLS
+# |     |    |           |   |                     |   |   |   |
+ 4)    sh-83082    |   1.084 us    |  mutex_unlock();
+ 1)  lima-gu-1171  |   1.000 us    |  dynamic_cond_resched();
+ 5)    dd-83138    |               |  vfs_write() {
+ 5)    dd-83138    |               |    rw_verify_area() {
+ 5)    dd-83138    |   0.417 us    |      security_file_permission();
+ 5)    dd-83138    |   0.750 us    |    }
+ 5)    dd-83138    |   0.125 us    |    dynamic_might_resched();
+ 5)    dd-83138    |               |    shmem_file_write_iter() {
+ 5)    dd-83138    |   0.083 us    |      down_write();
+ 5)    dd-83138    |   0.208 us    |      generic_write_checks();
+ 5)    dd-83138    |   1.333 us    |      file_remove_privs();
+ 5)    dd-83138    |   0.208 us    |      file_update_time();
+ 5)    dd-83138    |   6.333 us    |      generic_perform_write();
+ 5)    dd-83138    |   0.083 us    |      up_write();
+ 5)    dd-83138    |   8.875 us    |    }
+ 5)    dd-83138    | + 10.875 us   |  }
+ 5)    dd-83138    |               |  vfs_write() {
+ 5)    dd-83138    |               |    rw_verify_area() {
+ 5)    dd-83138    |   0.250 us    |      security_file_permission();
+ 5)    dd-83138    |   0.417 us    |    }
+ 5)    dd-83138    |   0.083 us    |    dynamic_might_resched();
+ 5)    dd-83138    |               |    shmem_file_write_iter() {
+ 5)    dd-83138    |   0.125 us    |      down_write();
+ 5)    dd-83138    |   0.125 us    |      generic_write_checks();
+ 5)    dd-83138    |   0.125 us    |      file_remove_privs();
+ 5)    dd-83138    |   0.167 us    |      file_update_time();
+ 5)    dd-83138    |   0.834 us    |      generic_perform_write();
+ 5)    dd-83138    |   0.083 us    |      up_write();
+ 5)    dd-83138    |   1.917 us    |    }
+ 5)    dd-83138    |   2.708 us    |  }
+ 5)    dd-83138    |               |  vfs_write() {
+ 5)    dd-83138    |               |    rw_verify_area() {
+ 5)    dd-83138    |   0.250 us    |      security_file_permission();
+ 5)    dd-83138    |   0.459 us    |    }
+ 5)    dd-83138    |   0.083 us    |    write_null();
+ 5)    dd-83138    |   0.958 us    |  }
+ 5)    dd-83138    |               |  vfs_write() {
+ 5)    dd-83138    |               |    rw_verify_area() {
+ 5)    dd-83138    |   0.208 us    |      security_file_permission();
+ 5)    dd-83138    |   0.375 us    |    }
+ 5)    dd-83138    |   0.083 us    |    write_null();
+ 5)    dd-83138    |   0.667 us    |  }
+ 5)    dd-83138    |               |  vfs_write() {
+ 5)    dd-83138    |               |    rw_verify_area() {
+ 5)    dd-83138    |   0.208 us    |      security_file_permission();
+ 5)    dd-83138    |   0.333 us    |    }
+ 5)    dd-83138    |   0.084 us    |    write_null();
+ 5)    dd-83138    |   0.667 us    |  }
+ 0)    dd-83133    |               |  vfs_write() {
+ 0)    dd-83133    |               |    rw_verify_area() {
+ 0)    dd-83133    |   0.667 us    |      security_file_permission();
+ 0)    dd-83133    |   1.292 us    |    }
+ 0)    dd-83133    |   0.125 us    |    dynamic_might_resched();
+ 0)    dd-83133    |               |    shmem_file_write_iter() {
+ 0)    dd-83133    |   0.209 us    |      down_write();
+ 0)    dd-83133    |   0.333 us    |      generic_write_checks();
+ 0)    dd-83133    |   1.750 us    |      file_remove_privs();
+ 0)    dd-83133    |   0.375 us    |      file_update_time();
+ 0)    dd-83133    |   8.667 us    |      generic_perform_write();
+ 3)    dd-83136    |               |  vfs_write() {
+ 3)    dd-83136    |               |    rw_verify_area() {
+ 3)    dd-83136    |   0.500 us    |      security_file_permission();
+ 3)    dd-83136    |   0.875 us    |    }
+ 3)    dd-83136    |   0.167 us    |    dynamic_might_resched();
+ 3)    dd-83136    |               |    shmem_file_write_iter() {
+ 3)    dd-83136    |   0.208 us    |      down_write();
+ 3)    dd-83136    |   0.250 us    |      generic_write_checks();
+ 3)    dd-83136    |   1.125 us    |      file_remove_privs();
+ 0)    dd-83133    |   0.125 us    |      up_write();
+ 0)    dd-83133    | + 12.500 us   |    }
+ 0)    dd-83133    | + 16.167 us   |  }
+ 3)    dd-83136    |   0.333 us    |      file_update_time();
+ 3)    dd-83136    |   7.000 us    |      generic_perform_write();
+ 0)    dd-83133    |               |  vfs_write() {
+ 0)    dd-83133    |               |    rw_verify_area() {
+ 0)    dd-83133    |   0.417 us    |      security_file_permission();
+ 0)    dd-83133    |   0.709 us    |    }
+ 0)    dd-83133    |   0.125 us    |    dynamic_might_resched();
+ 0)    dd-83133    |               |    shmem_file_write_iter() {
+ 0)    dd-83133    |   0.208 us    |      down_write();
+ 0)    dd-83133    |   0.208 us    |      generic_write_checks();
+ 0)    dd-83133    |   0.208 us    |      file_remove_privs();
+ 0)    dd-83133    |   0.334 us    |      file_update_time();
+ 0)    dd-83133    |   1.541 us    |      generic_perform_write();
+ 0)    dd-83133    |   0.125 us    |      up_write();
+ 0)    dd-83133    |   3.500 us    |    }
+ 0)    dd-83133    |   4.916 us    |  }
+ 3)    dd-83136    |   0.166 us    |      up_write();
+ 3)    dd-83136    | + 10.125 us   |    }
+ 3)    dd-83136    | + 12.459 us   |  }
+ 3)    dd-83136    |               |  vfs_write() {
+ 3)    dd-83136    |               |    rw_verify_area() {
+ 3)    dd-83136    |   0.375 us    |      security_file_permission();
+ 3)    dd-83136    |   0.667 us    |    }
+ 3)    dd-83136    |   0.167 us    |    dynamic_might_resched();
+ 3)    dd-83136    |               |    shmem_file_write_iter() {
+ 3)    dd-83136    |   0.209 us    |      down_write();
+ 3)    dd-83136    |   0.250 us    |      generic_write_checks();
+ 3)    dd-83136    |   0.209 us    |      file_remove_privs();
+ 3)    dd-83136    |   0.333 us    |      file_update_time();
+ 3)    dd-83136    |   1.500 us    |      generic_perform_write();
+ 2)    dd-83135    |               |  vfs_write() {
+ 2)    dd-83135    |               |    rw_verify_area() {
+ 2)    dd-83135    |   0.542 us    |      security_file_permission();
+ 3)    dd-83136    |   0.125 us    |      up_write();
+ 3)    dd-83136    |   3.417 us    |    }
+ 3)    dd-83136    |   4.833 us    |  }
+ 2)    dd-83135    |   1.042 us    |    }
+ 2)    dd-83135    |   0.166 us    |    dynamic_might_resched();
+ 2)    dd-83135    |               |    shmem_file_write_iter() {
+ 2)    dd-83135    |   0.250 us    |      down_write();
+ 2)    dd-83135    |   0.291 us    |      generic_write_checks();
+ 2)    dd-83135    |   1.167 us    |      file_remove_privs();
+ 2)    dd-83135    |   0.375 us    |      file_update_time();
+ 2)    dd-83135    |   8.083 us    |      generic_perform_write();
+ 2)    dd-83135    |   0.166 us    |      up_write();
+ 2)    dd-83135    | + 11.416 us   |    }
+ 2)    dd-83135    | + 14.000 us   |  }
+ 2)    dd-83135    |               |  vfs_write() {
+ 2)    dd-83135    |               |    rw_verify_area() {
+ 2)    dd-83135    |   0.417 us    |      security_file_permission();
+ 2)    dd-83135    |   0.667 us    |    }
+ 2)    dd-83135    |   0.167 us    |    dynamic_might_resched();
+ 2)    dd-83135    |               |    shmem_file_write_iter() {
+ 2)    dd-83135    |   0.209 us    |      down_write();
+ 2)    dd-83135    |   0.250 us    |      generic_write_checks();
+ 2)    dd-83135    |   0.208 us    |      file_remove_privs();
+ 2)    dd-83135    |   0.458 us    |      file_update_time();
+ 2)    dd-83135    |   1.625 us    |      generic_perform_write();
+ 2)    dd-83135    |   0.125 us    |      up_write();
+ 2)    dd-83135    |   3.791 us    |    }
+ 2)    dd-83135    |   5.208 us    |  }
+ 0)    dd-83133    |               |  vfs_write() {
+ 0)    dd-83133    |               |    rw_verify_area() {
+ 0)    dd-83133    |   0.750 us    |      security_file_permission();
+ 0)    dd-83133    |   1.042 us    |    }
+ 0)    dd-83133    |   0.166 us    |    write_null();
+ 0)    dd-83133    |   2.084 us    |  }
+ 3)    dd-83136    |               |  vfs_write() {
+ 3)    dd-83136    |               |    rw_verify_area() {
+ 3)    dd-83136    |   0.708 us    |      security_file_permission();
+ 3)    dd-83136    |   1.000 us    |    }
+ 3)    dd-83136    |   0.125 us    |    write_null();
+ 3)    dd-83136    |   1.959 us    |  }
+ 0)    dd-83133    |               |  vfs_write() {
+ 0)    dd-83133    |               |    rw_verify_area() {
+ 0)    dd-83133    |   0.375 us    |      security_file_permission();
+ 0)    dd-83133    |   0.667 us    |    }
+ 0)    dd-83133    |   0.125 us    |    write_null();
+ 0)    dd-83133    |   1.167 us    |  }
+ 0)    dd-83133    |               |  vfs_write() {
+ 0)    dd-83133    |               |    rw_verify_area() {
+ 0)    dd-83133    |   0.416 us    |      security_file_permission();
+ 0)    dd-83133    |   0.625 us    |    }
+ 0)    dd-83133    |   0.125 us    |    write_null();
+ 0)    dd-83133    |   1.208 us    |  }
+ 3)    dd-83136    |               |  vfs_write() {
+ 3)    dd-83136    |               |    rw_verify_area() {
+ 3)    dd-83136    |   0.416 us    |      security_file_permission();
+ 3)    dd-83136    |   0.666 us    |    }
+ 3)    dd-83136    |   0.125 us    |    write_null();
+ 3)    dd-83136    |   1.250 us    |  }
+ 3)    dd-83136    |               |  vfs_write() {
+ 3)    dd-83136    |               |    rw_verify_area() {
+ 3)    dd-83136    |   0.334 us    |      security_file_permission();
+ 3)    dd-83136    |   0.584 us    |    }
+ 3)    dd-83136    |   0.166 us    |    write_null();
+ 3)    dd-83136    |   1.166 us    |  }
+ 2)    dd-83135    |               |  vfs_write() {
+ 2)    dd-83135    |               |    rw_verify_area() {
+ 2)    dd-83135    |   0.375 us    |      security_file_permission();
+ 2)    dd-83135    |   0.666 us    |    }
+ 2)    dd-83135    |   0.125 us    |    write_null();
+ 2)    dd-83135    |   1.333 us    |  }
+ ------------------------------------------
+ 4)    sh-83082    =>    dd-83137   
+ ------------------------------------------
+
+ 4)    dd-83137    |               |  vfs_write() {
+ 4)    dd-83137    |               |    rw_verify_area() {
+ 4)    dd-83137    |   0.458 us    |      security_file_permission();
+ 4)    dd-83137    |   0.792 us    |    }
+ 2)    dd-83135    |               |  vfs_write() {
+ 4)    dd-83137    |   0.166 us    |    dynamic_might_resched();
+ 2)    dd-83135    |               |    rw_verify_area() {
+ 2)    dd-83135    |   0.417 us    |      security_file_permission();
+ 4)    dd-83137    |               |    shmem_file_write_iter() {
+ 4)    dd-83137    |   0.209 us    |      down_write();
+ 2)    dd-83135    |   0.667 us    |    }
+ 2)    dd-83135    |   0.166 us    |    write_null();
+ 4)    dd-83137    |   0.291 us    |      generic_write_checks();
+ 2)    dd-83135    |   1.250 us    |  }
+ 4)    dd-83137    |   1.167 us    |      file_remove_privs();
+ 2)    dd-83135    |               |  vfs_write() {
+ 2)    dd-83135    |               |    rw_verify_area() {
+ 2)    dd-83135    |   0.375 us    |      security_file_permission();
+ 4)    dd-83137    |   0.375 us    |      file_update_time();
+ 2)    dd-83135    |   0.625 us    |    }
+ 2)    dd-83135    |   0.125 us    |    write_null();
+ 4)    dd-83137    |   7.250 us    |      generic_perform_write();
+ 2)    dd-83135    |   1.167 us    |  }
+ 4)    dd-83137    |   0.125 us    |      up_write();
+ 4)    dd-83137    | + 10.333 us   |    }
+ 4)    dd-83137    | + 12.709 us   |  }
+ 4)    dd-83137    |               |  vfs_write() {
+ 4)    dd-83137    |               |    rw_verify_area() {
+ 4)    dd-83137    |   0.416 us    |      security_file_permission();
+ 4)    dd-83137    |   0.666 us    |    }
+ 4)    dd-83137    |   0.125 us    |    dynamic_might_resched();
+ 4)    dd-83137    |               |    shmem_file_write_iter() {
+ 4)    dd-83137    |   0.209 us    |      down_write();
+ 4)    dd-83137    |   0.209 us    |      generic_write_checks();
+ 4)    dd-83137    |   0.208 us    |      file_remove_privs();
+ 4)    dd-83137    |   0.334 us    |      file_update_time();
+ 4)    dd-83137    |   1.500 us    |      generic_perform_write();
+ 4)    dd-83137    |   0.125 us    |      up_write();
+ 4)    dd-83137    |   3.500 us    |    }
+ 4)    dd-83137    |   4.959 us    |  }
+ 4)    dd-83137    |               |  vfs_write() {
+ 4)    dd-83137    |               |    rw_verify_area() {
+ 4)    dd-83137    |   0.458 us    |      security_file_permission();
+ 4)    dd-83137    |   0.708 us    |    }
+ 4)    dd-83137    |   0.166 us    |    write_null();
+ 4)    dd-83137    |   1.458 us    |  }
+ 4)    dd-83137    |               |  vfs_write() {
+ 4)    dd-83137    |               |    rw_verify_area() {
+ 4)    dd-83137    |   0.417 us    |      security_file_permission();
+ 4)    dd-83137    |   0.708 us    |    }
+ 4)    dd-83137    |   0.125 us    |    write_null();
+ 4)    dd-83137    |   1.250 us    |  }
+ 4)    dd-83137    |               |  vfs_write() {
+ 4)    dd-83137    |               |    rw_verify_area() {
+ 4)    dd-83137    |   0.375 us    |      security_file_permission();
+ 4)    dd-83137    |   0.667 us    |    }
+ 4)    dd-83137    |   0.125 us    |    write_null();
+ 4)    dd-83137    |   1.167 us    |  }
+ ------------------------------------------
+ 1)  lima-gu-1171  =>    dd-83134   
+ ------------------------------------------
+
+ 1)    dd-83134    |               |  vfs_write() {
+ 1)    dd-83134    |               |    rw_verify_area() {
+ 1)    dd-83134    |   0.500 us    |      security_file_permission();
+ 1)    dd-83134    |   0.917 us    |    }
+ 1)    dd-83134    |   0.083 us    |    dynamic_might_resched();
+ 1)    dd-83134    |               |    shmem_file_write_iter() {
+ 1)    dd-83134    |   0.208 us    |      down_write();
+ 1)    dd-83134    |   0.166 us    |      generic_write_checks();
+ 1)    dd-83134    |   1.208 us    |      file_remove_privs();
+ 1)    dd-83134    |   0.209 us    |      file_update_time();
+ 1)    dd-83134    | + 11.042 us   |      generic_perform_write();
+ 1)    dd-83134    |   0.125 us    |      up_write();
+ 1)    dd-83134    | + 13.708 us   |    }
+ 1)    dd-83134    | + 16.333 us   |  }
+ 1)    dd-83134    |               |  vfs_write() {
+ 1)    dd-83134    |               |    rw_verify_area() {
+ 1)    dd-83134    |   0.208 us    |      security_file_permission();
+ 1)    dd-83134    |   0.375 us    |    }
+ 1)    dd-83134    |   0.083 us    |    dynamic_might_resched();
+ 1)    dd-83134    |               |    shmem_file_write_iter() {
+ 1)    dd-83134    |   0.125 us    |      down_write();
+ 1)    dd-83134    |   0.167 us    |      generic_write_checks();
+ 1)    dd-83134    |   0.125 us    |      file_remove_privs();
+ 1)    dd-83134    |   0.208 us    |      file_update_time();
+ 1)    dd-83134    |   0.833 us    |      generic_perform_write();
+ 1)    dd-83134    |   0.084 us    |      up_write();
+ 1)    dd-83134    |   2.083 us    |    }
+ 1)    dd-83134    |   2.833 us    |  }
+ 1)    dd-83134    |               |  vfs_write() {
+ 1)    dd-83134    |               |    rw_verify_area() {
+ 1)    dd-83134    |   0.250 us    |      security_file_permission();
+ 1)    dd-83134    |   0.417 us    |    }
+ 1)    dd-83134    |   0.083 us    |    write_null();
+ 1)    dd-83134    |   0.792 us    |  }
+ 1)    dd-83134    |               |  vfs_write() {
+ 1)    dd-83134    |               |    rw_verify_area() {
+ 1)    dd-83134    |   0.250 us    |      security_file_permission();
+ 1)    dd-83134    |   0.375 us    |    }
+ 1)    dd-83134    |   0.084 us    |    write_null();
+ 1)    dd-83134    |   0.750 us    |  }
+ 1)    dd-83134    |               |  vfs_write() {
+ 1)    dd-83134    |               |    rw_verify_area() {
+ 1)    dd-83134    |   0.209 us    |      security_file_permission();
+ 1)    dd-83134    |   0.375 us    |    }
+ 1)    dd-83134    |   0.084 us    |    write_null();
+ 1)    dd-83134    |   0.708 us    |  }
+ ------------------------------------------
+ 4)    dd-83137    =>    sh-83082   
+ ------------------------------------------
+
+ 4)    sh-83082    |               |  vfs_write() {
+ 4)    sh-83082    |               |    rw_verify_area() {
+ 4)    sh-83082    |   0.250 us    |      security_file_permission();
+ 4)    sh-83082    |   0.542 us    |    }
+ 4)    sh-83082    |   0.083 us    |    dynamic_might_resched();
+ 4)    sh-83082    |               |    __check_object_size() {
+ 4)    sh-83082    |   0.167 us    |      __check_object_size.part.0();
+ 4)    sh-83082    |   0.375 us    |    }
+ 4)    sh-83082    |               |    mutex_lock() {
+ 4)    sh-83082    |   0.084 us    |      dynamic_might_resched();
+ 4)    sh-83082    |   0.250 us    |    }

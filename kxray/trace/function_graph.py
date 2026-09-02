@@ -52,11 +52,16 @@ TASK_RE = re.compile(r"^\S+-\d+$")
 # The duration column. The leading character is a slowness marker when there is one.
 DURATION_RE = re.compile(r"^(?P<marker>[+!#*@$])?\s*(?P<value>\d+(?:\.\d+)?)\s*us$")
 
+# A function from a loadable module, which ftrace prints as `ovl_write_iter [overlay]()`. Nothing
+# in a Tier 0 trace has one, because that kernel is built with everything compiled in, so this went
+# unnoticed until the first capture on a real machine, where it cost 48 dropped lines out of 288.
+MODULE = r"(?:\s+\[(?P<module>[^\]]+)\])?"
+
 # A call that has a body, so its cost arrives later on the closing line.
-OPEN_RE = re.compile(r"^(?P<name>[^\s(]+)\((?P<args>.*)\)\s*\{$")
+OPEN_RE = re.compile(rf"^(?P<name>[^\s(]+){MODULE}\((?P<args>.*)\)\s*\{{$")
 
 # A call with no children, printed complete on one line.
-LEAF_RE = re.compile(r"^(?P<name>[^\s(]+)\((?P<args>.*)\);$")
+LEAF_RE = re.compile(rf"^(?P<name>[^\s(]+){MODULE}\((?P<args>.*)\);$")
 
 # A closing brace, with the name attached when funcgraph-tail is on.
 CLOSE_RE = re.compile(r"^\}(?:\s*/\*\s*(?P<name>.*?)\s*\*/)?$")
@@ -204,7 +209,11 @@ def _read_body(
         frame = stack.pop()
         frame.duration_us = duration_us
         frame.marker = marker
+        # With funcgraph-tail on, the closing brace repeats the name, and it repeats the module
+        # with it, so the comparison is against the name alone.
         named = close.group("name")
+        if named:
+            named = named.split(" [", 1)[0]
         if named and named != frame.name:
             tape.unparsed.append(
                 UnparsedLine(
@@ -215,7 +224,14 @@ def _read_body(
 
     open_call = OPEN_RE.match(content)
     if open_call:
-        frame = Frame(open_call.group("name"), cpu, depth, number, task=task)
+        frame = Frame(
+            open_call.group("name"),
+            cpu,
+            depth,
+            number,
+            task=task,
+            module=open_call.group("module"),
+        )
         _attach(tape, stack, frame)
         stack.append(frame)
         return
@@ -230,6 +246,7 @@ def _read_body(
             duration_us=duration_us,
             marker=marker,
             task=task,
+            module=leaf.group("module"),
         )
         _attach(tape, stack, frame)
         return

@@ -325,8 +325,17 @@ def test_this_repository_has_a_clean_recipe_list():
     assert check(ROOT) == []
 
 
-def test_every_recipe_here_is_still_handwritten():
-    """When this starts failing, somebody has booted a kernel, and that is the good failure."""
+def test_every_recipe_here_is_a_real_capture():
+    """This used to assert the opposite, and the day it failed was the day it had done its job.
+
+    It was written when there was no built kernel and every recording in the repository was a file
+    somebody typed out from the documented format. Its point was to make the replacement of those
+    files a thing that could not be forgotten, because a handwritten fixture quietly becoming a
+    fact is the one failure this project promises not to have.
+
+    Both recipes are captures now, off the pinned 7.2.2 running under v86. The assertion is
+    reversed rather than deleted, so what it guards now is that nobody goes back.
+    """
     backend = corpus.Corpus(ROOT)
     assert backend.recipes, "the repository should have recordings"
-    assert backend.evidence is False
+    assert backend.evidence is True

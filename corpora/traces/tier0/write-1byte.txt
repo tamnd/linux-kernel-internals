@@ -1,0 +1,89 @@
+# tracer: function_graph
+#
+# CPU  TASK/PID         DURATION                  FUNCTION CALLS
+# |     |    |           |   |                     |   |   |   |
+ 0)   writeby-41   | + 22.625 us   |  mutex_unlock();
+ 0)   writeby-41   |               |  vfs_write() {
+ 0)   writeby-41   |               |    shmem_file_write_iter() {
+ 0)   writeby-41   |   4.250 us    |      down_write();
+ 0)   writeby-41   |               |      generic_write_checks() {
+ 0)   writeby-41   |               |        generic_write_checks_count() {
+ 0)   writeby-41   |   4.666 us    |          generic_write_check_limits();
+ 0)   writeby-41   | + 13.667 us   |        }
+ 0)   writeby-41   | + 22.375 us   |      }
+ 0)   writeby-41   |               |      file_remove_privs() {
+ 0)   writeby-41   |               |        file_remove_privs_flags() {
+ 0)   writeby-41   |   3.667 us    |          setattr_should_drop_suidgid();
+ 0)   writeby-41   |               |          cap_inode_need_killpriv() {
+ 0)   writeby-41   |               |            __vfs_getxattr() {
+ 0)   writeby-41   |   3.625 us    |              strcmp();
+ 0)   writeby-41   |   3.334 us    |              strcmp();
+ 0)   writeby-41   |   5.125 us    |              xattr_resolve_name();
+ 0)   writeby-41   |               |              shmem_xattr_handler_get() {
+ 0)   writeby-41   |               |                xattr_full_name() {
+ 0)   writeby-41   |   3.750 us    |                  strlen();
+ 0)   writeby-41   | + 12.250 us   |                }
+ 0)   writeby-41   |   3.708 us    |                simple_xattr_get();
+ 0)   writeby-41   | + 33.834 us   |              }
+ 0)   writeby-41   | + 71.458 us   |            }
+ 0)   writeby-41   | + 79.958 us   |          }
+ 0)   writeby-41   | + 97.708 us   |        }
+ 0)   writeby-41   | ! 105.750 us  |      }
+ 0)   writeby-41   |               |      file_update_time() {
+ 0)   writeby-41   |               |        file_update_time_flags() {
+ 0)   writeby-41   |               |          current_time() {
+ 0)   writeby-41   |   5.083 us    |            ktime_get_coarse_real_ts64_mg();
+ 0)   writeby-41   | + 14.417 us   |          }
+ 0)   writeby-41   | + 23.416 us   |        }
+ 0)   writeby-41   | + 31.458 us   |      }
+ 0)   writeby-41   |               |      generic_perform_write() {
+ 0)   writeby-41   |               |        balance_dirty_pages_ratelimited() {
+ 0)   writeby-41   |               |          balance_dirty_pages_ratelimited_flags() {
+ 0)   writeby-41   |   3.375 us    |            inode_to_bdi();
+ 0)   writeby-41   | + 11.500 us   |          }
+ 0)   writeby-41   | + 19.750 us   |        }
+ 0)   writeby-41   |               |        shmem_write_begin() {
+ 0)   writeby-41   |               |          shmem_get_folio_gfp() {
+ 0)   writeby-41   |               |            filemap_get_entry() {
+ 0)   writeby-41   |   3.333 us    |              __rcu_read_lock();
+ 0)   writeby-41   | + 33.000 us   |              __rcu_read_unlock();
+ 0)   writeby-41   | + 50.583 us   |            }
+ 0)   writeby-41   |               |            shmem_allowable_huge_orders() {
+ 0)   writeby-41   |   3.833 us    |              shmem_huge_global_enabled.isra.0();
+ 0)   writeby-41   | + 12.333 us   |            }
+ 0)   writeby-41   |               |            shmem_alloc_and_add_folio.isra.0() {
+ 0)   writeby-41   |               |              __folio_alloc_noprof() {
+ 0)   writeby-41   |               |                __alloc_frozen_pages_noprof() {
+ 0)   writeby-41   |   8.042 us    |                  get_page_from_freelist();
+ 0)   writeby-41   | + 17.333 us   |                }
+ 0)   writeby-41   | + 25.417 us   |              }
+ 0)   writeby-41   | + 10.084 us   |              shmem_add_to_page_cache();
+ 0)   writeby-41   |               |              shmem_inode_acct_blocks() {
+ 0)   writeby-41   |               |                cap_vm_enough_memory() {
+ 0)   writeby-41   |   3.750 us    |                  cap_capable();
+ 0)   writeby-41   | + 11.792 us   |                }
+ 0)   writeby-41   |   4.250 us    |                __vm_enough_memory();
+ 0)   writeby-41   |   3.833 us    |                inode_add_bytes();
+ 0)   writeby-41   | + 38.791 us   |              }
+ 0)   writeby-41   |   3.750 us    |              shmem_recalc_inode();
+ 0)   writeby-41   |               |              folio_add_lru() {
+ 0)   writeby-41   |   4.083 us    |                __folio_batch_add_and_move();
+ 0)   writeby-41   | + 12.417 us   |              }
+ 0)   writeby-41   | ! 117.833 us  |            }
+ 0)   writeby-41   | ! 200.042 us  |          }
+ 0)   writeby-41   | ! 208.791 us  |        }
+ 0)   writeby-41   |   3.792 us    |        __copy_user_ll();
+ 0)   writeby-41   |               |        shmem_write_end() {
+ 0)   writeby-41   |               |          folio_mark_dirty() {
+ 0)   writeby-41   |   3.542 us    |            folio_mapping();
+ 0)   writeby-41   |   3.541 us    |            noop_dirty_folio();
+ 0)   writeby-41   | + 19.958 us   |          }
+ 0)   writeby-41   |   3.292 us    |          folio_unlock();
+ 0)   writeby-41   | + 39.041 us   |        }
+ 0)   writeby-41   | ! 303.042 us  |      }
+ 0)   writeby-41   |   3.500 us    |      up_write();
+ 0)   writeby-41   | ! 503.875 us  |    }
+ 0)   writeby-41   | ! 516.167 us  |  }
+ 0)   writeby-41   |               |  vfs_write() {
+ 0)   writeby-41   |   3.458 us    |    __copy_user_ll();
+ 0)   writeby-41   |   3.542 us    |    mutex_lock();

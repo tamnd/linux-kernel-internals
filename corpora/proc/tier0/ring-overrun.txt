@@ -1,0 +1,8 @@
+entries: 273
+overrun: 44002
+commit overrun: 0
+bytes: 8264
+oldest event ts:     2.109723
+now ts:     2.116975
+dropped events: 0
+read events: 0

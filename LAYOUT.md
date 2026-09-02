@@ -77,6 +77,8 @@ The lessons and the blueprints are copied into `site/docs/` at build time and th
 
 Two corpus directories are handwritten and are not evidence. `traces/handwritten/` and `btf/handwritten/` exist so the parsers have something to be tested against before a kernel exists, and both are marked `evidence = false` so the claim checker refuses to let a lesson cite them.
 
+`corpora/traces/tier1/` and `corpora/experiments/tier1/` are the exception to everything else being Tier 0, and the bar for putting something in either is a sentence saying why Tier 0 could not produce it. There are only two such sentences and both are permanent: v86 is a uniprocessor emulator, so nothing about more than one CPU can be shown on it, and it has no real clock, so nothing can be timed on it. A Tier 1 capture comes off whatever machine somebody had rather than off the pinned kernel, so its metadata carries the version, the distribution, the architecture and the CPU count in full.
+
 ## Where to put a new file
 
 A new parser goes in `kxray/`, with its fixture in `corpora/` and its test in `tests/`.

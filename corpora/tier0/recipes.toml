@@ -7,19 +7,32 @@ schema = 1
 # the recording filed under that name and hands it back. Both give you a `kxray.models.Tape`.
 #
 # Adding a recipe means capturing it on a real Tier 0 session and committing the capture with its
-# `.meta.toml`. It does not mean writing one. `page-fault` is a capture now. `write-1byte` is still
-# handwritten, is marked `evidence = false` where it lives, and the claim checker refuses a claim
-# that rests on it. It gets replaced the same way the other one did.
+# `.meta.toml`. It does not mean writing one. Both recipes here are captures now. The handwritten
+# files they used to point at are still in `traces/handwritten/`, still marked `evidence = false`,
+# and still doing the job they were written for, which is giving the parser something to test
+# against on a machine with no kernel built.
 
 [[recipes]]
 name = "write-1byte"
 profile = "teaching"
-describes = "one byte written to a file on tmpfs, from the write to the page cache"
-command = "dd if=/dev/zero of=/tmp/one bs=1 count=1"
-functions = ["vfs_write", "ksys_write", "generic_perform_write"]
-trace = "traces/handwritten/write-1byte.txt"
+describes = "one byte written to a file nothing had written to before, from the write down to the page being allocated and the byte copied in"
+# Not `dd`, which is what this used to say, and not any other shell one liner. `dd if=/dev/zero
+# of=/tmp/one bs=1 count=1` is not one write: the shell writes its prompt, dd writes two lines of
+# summary, busybox writes more on the way past, and filtering to `vfs_write` does not help because
+# every one of those is a `vfs_write` too. `/bin/writebyte` turns the tracer on around exactly one
+# write and opens the file before the window, the same trick `/bin/touchpage` uses for faults.
+#
+# `ksys_write` and `generic_perform_write` are gone from the filter as well, for opposite reasons.
+# `generic_perform_write` is inside `vfs_write`, so naming it adds nothing: the capture has it two
+# levels below, under `shmem_file_write_iter`, where it belongs. `ksys_write` is outside, it is
+# what calls `vfs_write`, and leaving it out is the choice of where this trace begins. `vfs_write`
+# is the point where a write stops being a system call and starts being a filesystem's problem,
+# and that is the boundary the lesson is about.
+command = "/bin/writebyte --quiet"
+functions = ["vfs_write"]
+trace = "traces/tier0/write-1byte.txt"
 status = 0
-stdout = "1+0 records in\n1+0 records out\n"
+stdout = ""
 
 [[recipes]]
 name = "page-fault"

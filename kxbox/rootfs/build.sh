@@ -27,10 +27,10 @@ print(" ".join(value) if isinstance(value, list) else value)
 PY
 }
 
-read_touchpage() {
+read_programs() {
     python3 - "$PIN" "$1" <<'PY'
 import sys, tomllib
-pin = tomllib.load(open(sys.argv[1], "rb"))["touchpage"]
+pin = tomllib.load(open(sys.argv[1], "rb"))["programs"]
 value = pin[sys.argv[2]]
 print(" ".join(value) if isinstance(value, list) else value)
 PY
@@ -76,28 +76,35 @@ mkdir -p "$STAGE/bin" "$STAGE/dev" "$STAGE/proc" "$STAGE/sys" "$STAGE/tmp"
 cp "$BUSYBOX" "$STAGE/bin/busybox"
 chmod 755 "$STAGE/bin/busybox"
 
-# The one compiled thing in the image. It needs a cross compiler, so it needs the container, which
+# The compiled things in the image. They need a cross compiler, so they need the container, which
 # is the same one the kernel is built in. A machine with no docker still gets a working box, it
-# just gets one where a page fault has to be traced the noisy way, so this warns instead of
+# just gets one where a fault or a write has to be traced the noisy way, so this warns instead of
 # stopping. The kernel build is the thing that really needs docker and it says so itself.
-TOUCHPAGE_SRC=$(read_touchpage source)
+SOURCES=$(read_programs sources)
 if command -v docker >/dev/null 2>&1; then
-    echo "compiling $TOUCHPAGE_SRC"
+    echo "compiling $SOURCES"
+    BUILD=""
+    for source in $SOURCES; do
+        name=${source%.c}
+        BUILD="$BUILD $(read_programs compiler) $(read_programs flags) -o /out/$name /rootfs/$source;"
+        BUILD="$BUILD strip /out/$name 2>/dev/null || true;"
+    done
     docker run --rm \
         -v "$HERE:/rootfs:ro" -v "$STAGE/bin:/out" \
-        "$(read_touchpage image)" sh -eu -c "
+        "$(read_programs image)" sh -eu -c "
             export DEBIAN_FRONTEND=noninteractive
             apt-get update -qq >/dev/null
-            apt-get install -y -qq --no-install-recommends $(read_touchpage packages) >/dev/null
-            $(read_touchpage compiler) $(read_touchpage flags) \
-                -o /out/touchpage /rootfs/$TOUCHPAGE_SRC
-            strip /out/touchpage 2>/dev/null || true
+            apt-get install -y -qq --no-install-recommends $(read_programs packages) >/dev/null
+            $BUILD
         "
-    chmod 755 "$STAGE/bin/touchpage"
-    echo "touchpage: $(wc -c < "$STAGE/bin/touchpage") bytes"
+    for source in $SOURCES; do
+        name=${source%.c}
+        chmod 755 "$STAGE/bin/$name"
+        echo "$name: $(wc -c < "$STAGE/bin/$name") bytes"
+    done
 else
-    echo "no docker, so no $TOUCHPAGE_SRC in this image"
-    echo "  without it: a page fault trace is thirty faults instead of one"
+    echo "no docker, so none of $SOURCES in this image"
+    echo "  without them: a page fault trace is thirty faults and a write trace is nine writes"
 fi
 
 # One symlink, because /init has a shebang and a shebang needs an interpreter that already exists.

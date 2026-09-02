@@ -37,16 +37,21 @@ required_applets = [
     "sync",
 ]
 
-# The one thing in the image that is not busybox. It is compiled here because there is no applet
-# that faults on a page you chose at a moment you chose, and without one every trace of a page
-# fault is thirty faults with the interesting one somewhere in the middle. The container is the
-# same one the kernel is built in, so this adds no toolchain that was not already needed.
+# The things in the image that are not busybox. They are compiled here because no applet does one
+# thing and stops: there is none that faults on a page you chose at a moment you chose, and none
+# that writes one byte without writing several other things around it. Without them every trace of
+# a page fault is thirty faults, and every trace of a write is nine writes, with the interesting
+# one somewhere in the middle. The container is the same one the kernel is built in, so this adds
+# no toolchain that was not already needed.
 #
 # The cross compiler is used on every host, including an x86 one where the native gcc could do it
 # with -m32. One compiler means one binary, and a binary that differs depending on whose laptop
 # built the image is a difference that turns up later as a trace nobody can reproduce.
-[touchpage]
-source = "touchpage.c"
+#
+# They share `tiny.h`, which is the syscall wrappers and the entry point a C library would have
+# provided. Adding a program means adding one line to `sources` and one file beside it.
+[programs]
+sources = ["touchpage.c", "writebyte.c"]
 image = "debian:trixie-slim"
 compiler = "i686-linux-gnu-gcc"
 packages = ["gcc-i686-linux-gnu"]
