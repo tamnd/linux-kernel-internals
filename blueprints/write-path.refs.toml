@@ -1,0 +1,368 @@
+schema = 1
+
+# Citations for the write path blueprint.
+#
+# Every sentence in `write-path.md` that states something about Linux points at one of these by
+# writing its id in square brackets, and `refcheck` fails the build on a marker with no entry here
+# and on an entry nothing points at.
+#
+# These are confirmed against the pinned tree. Confirming one means running:
+#
+#     ./kxbox/kernel/tree.sh
+#     python3 -m tools.refcheck --tree kxbox/kernel/build/tree/linux-7.2.2 --confirm
+#
+# which finds the anchor, writes down the line it landed on and flips the flag. The tree that gets
+# unpacked is the pristine tarball from kernel.org, checked against the same sha256 the build
+# checks.
+#
+# The anchor is a piece of text to find, never a line number. The line numbers below are output
+# rather than input, and running the command again after a version bump is what finds the ones
+# that moved.
+#
+# Two things about this set are worth knowing before reading it. The write path is spread across
+# four files that do not obviously belong together, and half the surprises in this blueprint come
+# from that: `fs/read_write.c` is the system call, `mm/filemap.c` is the loop that does the work,
+# `mm/page-writeback.c` is the throttle, and the filesystem in the middle is `mm/shmem.c` here and
+# something else on any other machine. The second thing is that several anchors below are a
+# statement inside a function rather than a function signature, because the interesting decisions
+# in this path are single lines in the middle of long functions.
+
+[[references]]
+id = "write-path-R1"
+path = "fs/read_write.c"
+anchor = "SYSCALL_DEFINE3(write, unsigned int, fd,"
+kernel = "7.2.2"
+confirmed = true
+line = 747
+note = "The system call itself. Three arguments, and the return value is a count of bytes rather than a success flag, which is the fact that makes short writes possible and makes ignoring the return value a bug."
+
+[[references]]
+id = "write-path-R2"
+path = "fs/read_write.c"
+anchor = "ssize_t ksys_write(unsigned int fd"
+kernel = "7.2.2"
+confirmed = true
+line = 728
+note = "The descriptor lookup and the file position handling, which is everything the system call does that is about the process rather than about the file."
+
+[[references]]
+id = "write-path-R3"
+path = "fs/read_write.c"
+anchor = "ssize_t vfs_write(struct file *file, const char __user *buf"
+kernel = "7.2.2"
+confirmed = true
+line = 667
+note = "The VFS entry point and the top of everything this blueprint describes. Four refusals, a dispatch and two counters, in about thirty lines."
+
+[[references]]
+id = "write-path-R4"
+path = "fs/read_write.c"
+anchor = "int rw_verify_area(int read_write, struct file *file"
+kernel = "7.2.2"
+confirmed = true
+line = 453
+note = "The position and count checks, plus the two hooks that let something outside the filesystem refuse a write: the security modules and the file notification machinery."
+
+# There is no entry for the line that applies the cap, and that is worth explaining rather than
+# leaving as a gap. The line is `if (count > MAX_RW_COUNT)` inside `vfs_write`, and the identical
+# line appears in `vfs_read` and in `do_sendfile` as well, so an anchor for it would match three
+# places in one file. The rule here is that an anchor matching more than once is rejected, because
+# the first match wins and nobody finds out when the wrong one was picked. So the cap is cited by
+# the function that applies it, R3, and by the value itself, R6.
+
+[[references]]
+id = "write-path-R6"
+path = "include/linux/fs.h"
+anchor = "#define MAX_RW_COUNT (INT_MAX & PAGE_MASK)"
+kernel = "7.2.2"
+confirmed = true
+line = 2424
+note = "What that limit is. A little under two gigabytes on a 32-bit build, rounded down to a page, and it is the same number on 64-bit because the return type is signed and 32 bits wide in the ABI."
+
+[[references]]
+id = "write-path-R7"
+path = "fs/read_write.c"
+anchor = "static ssize_t new_sync_write(struct file *filp"
+kernel = "7.2.2"
+confirmed = true
+line = 585
+note = "The adapter that turns the old three argument interface into the iterator one. It builds a kiocb and an iov_iter on the stack, which is why neither of them is allocated anywhere in this path."
+
+[[references]]
+id = "write-path-R8"
+path = "fs/read_write.c"
+anchor = "ret = filp->f_op->write_iter(&kiocb, &iter);"
+kernel = "7.2.2"
+confirmed = true
+line = 595
+note = "The call into the filesystem, and the line after it is a BUG_ON, because a synchronous write is not allowed to come back saying it will finish later."
+
+[[references]]
+id = "write-path-R9"
+path = "include/linux/fs.h"
+anchor = "static inline void file_start_write(struct file *file)"
+kernel = "7.2.2"
+confirmed = true
+line = 2729
+note = "Taking the filesystem's freeze protection for the duration of the write. This is a lock, it is held across everything below, and it is the reason a frozen filesystem makes writers wait rather than fail."
+
+[[references]]
+id = "write-path-R10"
+path = "mm/shmem.c"
+anchor = "static ssize_t shmem_file_write_iter(struct kiocb *iocb"
+kernel = "7.2.2"
+confirmed = true
+line = 3408
+note = "The filesystem half of the path on the machine this project boots. Five calls, in an order that is nearly the same as the generic one, which is what makes it a fair thing to read as an example."
+
+[[references]]
+id = "write-path-R11"
+path = "mm/filemap.c"
+anchor = "ssize_t generic_file_write_iter(struct kiocb *iocb"
+kernel = "7.2.2"
+confirmed = true
+line = 4498
+note = "The generic version most filesystems use. Take the inode lock, check, write, drop the lock, and then handle O_SYNC outside it."
+
+[[references]]
+id = "write-path-R12"
+path = "mm/filemap.c"
+anchor = "ssize_t __generic_file_write_iter(struct kiocb *iocb"
+kernel = "7.2.2"
+confirmed = true
+line = 4451
+note = "The part inside the inode lock, and the split between direct and buffered writes. Direct writes are a different mechanism from this one and it is worth seeing where they leave."
+
+[[references]]
+id = "write-path-R13"
+path = "fs/read_write.c"
+anchor = "ssize_t generic_write_checks(struct kiocb *iocb"
+kernel = "7.2.2"
+confirmed = true
+line = 1767
+note = "The checks every buffered write goes through, and the place the iterator gets truncated when the write has to be shortened rather than refused."
+
+[[references]]
+id = "write-path-R14"
+path = "fs/read_write.c"
+anchor = "int generic_write_checks_count(struct kiocb *iocb"
+kernel = "7.2.2"
+confirmed = true
+line = 1737
+note = "Refusing a write to a swap file, applying O_APPEND, and refusing a non blocking write that the filesystem cannot do without blocking."
+
+[[references]]
+id = "write-path-R15"
+path = "fs/read_write.c"
+anchor = "iocb->ki_pos = i_size_read(inode);"
+kernel = "7.2.2"
+confirmed = true
+line = 1749
+note = "O_APPEND, in one line. The position is read here rather than by the caller, and it is read with the inode lock held, which is the whole reason appends from two processes do not overwrite each other."
+
+[[references]]
+id = "write-path-R16"
+path = "fs/read_write.c"
+anchor = "int generic_write_check_limits(struct file *file"
+kernel = "7.2.2"
+confirmed = true
+line = 1710
+note = "The file size limits. Two of them, the filesystem's own maximum and the process resource limit, and going past the second one sends SIGXFSZ as well as returning an error."
+
+[[references]]
+id = "write-path-R17"
+path = "fs/inode.c"
+anchor = "int file_remove_privs(struct file *file)"
+kernel = "7.2.2"
+confirmed = true
+line = 2411
+note = "Dropping setuid and setgid because the file has been modified. It runs on every write to every file, and on the pinned machine it is the most expensive thing in the trace after the allocation."
+
+[[references]]
+id = "write-path-R18"
+path = "fs/inode.c"
+anchor = "int file_update_time(struct file *file)"
+kernel = "7.2.2"
+confirmed = true
+line = 2506
+note = "The modification timestamp. It is skipped when the clock has not moved on since the last update, which makes its presence in a trace a fact about when somebody ran it."
+
+[[references]]
+id = "write-path-R19"
+path = "mm/filemap.c"
+anchor = "ssize_t generic_perform_write(struct kiocb *iocb"
+kernel = "7.2.2"
+confirmed = true
+line = 4336
+note = "The loop that does the actual work, and the function this whole blueprint is arranged around. Everything above it is checking and everything below it is the filesystem."
+
+[[references]]
+id = "write-path-R20"
+path = "mm/filemap.c"
+anchor = "size_t chunk = mapping_max_folio_size(mapping);"
+kernel = "7.2.2"
+confirmed = true
+line = 4342
+note = "How much of the write the loop tries to do in one go. It is the largest folio this mapping supports rather than a page, which is why the loop can run once for a write far larger than a page."
+
+[[references]]
+id = "write-path-R21"
+path = "mm/filemap.c"
+anchor = "status = a_ops->write_begin(iocb, mapping, pos, bytes,"
+kernel = "7.2.2"
+confirmed = true
+line = 4364
+note = "The first of the two calls into the filesystem. It comes back with a folio that is locked and belongs to the caller until write_end."
+
+[[references]]
+id = "write-path-R22"
+path = "mm/filemap.c"
+anchor = "copied = copy_folio_from_iter_atomic(folio, offset, bytes, i);"
+kernel = "7.2.2"
+confirmed = true
+line = 4382
+note = "The copy, and the one line in this path that is not allowed to sleep. The comment above it says why: a fault taken here can re-enter the filesystem that is holding the folio lock."
+
+[[references]]
+id = "write-path-R23"
+path = "mm/filemap.c"
+anchor = "if (mapping_writably_mapped(mapping))"
+kernel = "7.2.2"
+confirmed = true
+line = 4373
+note = "The cache flush that only happens when the same file is also mapped into somebody's address space. On architectures with virtually indexed caches, skipping it would let a writer and a mapper see different bytes."
+
+[[references]]
+id = "write-path-R24"
+path = "mm/filemap.c"
+anchor = "status = a_ops->write_end(iocb, mapping, pos, bytes, copied,"
+kernel = "7.2.2"
+confirmed = true
+line = 4385
+note = "The second call into the filesystem, and the one that decides how much of the copy counted. Returning less than was copied makes the loop revert the iterator and try again."
+
+[[references]]
+id = "write-path-R25"
+path = "mm/filemap.c"
+anchor = "if (fatal_signal_pending(current)) {"
+kernel = "7.2.2"
+confirmed = true
+line = 4359
+note = "The only place in the loop a signal is looked at, checked once per folio and only for fatal signals. An ordinary signal does not interrupt a write in progress."
+
+[[references]]
+id = "write-path-R26"
+path = "mm/page-writeback.c"
+anchor = "void balance_dirty_pages_ratelimited(struct address_space *mapping)"
+kernel = "7.2.2"
+confirmed = true
+line = 2111
+note = "The throttle, called once per folio at the top of the loop. Most calls do nothing, and the one that does not can sleep for as long as it takes writeback to catch up."
+
+[[references]]
+id = "write-path-R27"
+path = "mm/page-writeback.c"
+anchor = "int balance_dirty_pages_ratelimited_flags(struct address_space *mapping,"
+kernel = "7.2.2"
+confirmed = true
+line = 2041
+note = "Where the decision is actually made, from a per CPU counter of how many pages this CPU has dirtied since it last looked."
+
+[[references]]
+id = "write-path-R28"
+path = "mm/shmem.c"
+anchor = "shmem_write_begin(const struct kiocb *iocb, struct address_space *mapping,"
+kernel = "7.2.2"
+confirmed = true
+line = 3226
+note = "One filesystem's write_begin. It checks the seals, gets a folio, and refuses a folio with a hardware memory error in it."
+
+[[references]]
+id = "write-path-R29"
+path = "mm/shmem.c"
+anchor = "int shmem_get_folio(struct inode *inode, pgoff_t index, loff_t write_end,"
+kernel = "7.2.2"
+confirmed = true
+line = 2615
+note = "Finding the folio in the page cache or allocating one. On a first write to a fresh file this is where the allocation happens, and it is most of the time in the capture in section 5."
+
+[[references]]
+id = "write-path-R30"
+path = "mm/shmem.c"
+anchor = "if (unlikely(info->seals & (F_SEAL_GROW |"
+kernel = "7.2.2"
+confirmed = true
+line = 3237
+note = "Seals, which are the one way a write to a file that is open for writing can be refused with EPERM at this depth. Only tmpfs and memfd have them."
+
+[[references]]
+id = "write-path-R31"
+path = "mm/shmem.c"
+anchor = "shmem_write_end(const struct kiocb *iocb, struct address_space *mapping,"
+kernel = "7.2.2"
+confirmed = true
+line = 3264
+note = "Growing the file, zeroing the rest of a partly written folio, marking it dirty and unlocking it. The order of those four is the order the rest of the kernel depends on."
+
+[[references]]
+id = "write-path-R32"
+path = "mm/page-writeback.c"
+anchor = "bool folio_mark_dirty(struct folio *folio)"
+kernel = "7.2.2"
+confirmed = true
+line = 2778
+note = "The last thing that happens to the data inside the system call. After this the folio is somebody else's problem and the write returns."
+
+[[references]]
+id = "write-path-R33"
+path = "mm/shmem.c"
+anchor = "static const struct address_space_operations shmem_aops = {"
+kernel = "7.2.2"
+confirmed = true
+line = 5136
+note = "The ops table the loop calls through, filled in for tmpfs. Its dirty_folio is noop_dirty_folio, which is the single line that explains why tmpfs never writes anything back."
+
+[[references]]
+id = "write-path-R34"
+path = "mm/filemap.c"
+anchor = "if (WARN_ON_ONCE(folio_test_dirty(folio) &&"
+kernel = "7.2.2"
+confirmed = true
+line = 211
+note = "The warning that fires when a folio leaves the page cache still marked dirty. It is the one message in this area a reader is likely to meet, and it means data was thrown away rather than written."
+
+[[references]]
+id = "write-path-R35"
+path = "include/linux/fs.h"
+anchor = "static inline ssize_t generic_write_sync(struct kiocb *iocb"
+kernel = "7.2.2"
+confirmed = true
+line = 2663
+note = "O_SYNC and O_DSYNC, handled after the inode lock is dropped. This is the only path in this blueprint that reaches storage before returning."
+
+[[references]]
+id = "write-path-R36"
+path = "include/trace/events/writeback.h"
+anchor = "DEFINE_EVENT(writeback_folio_template, writeback_dirty_folio,"
+kernel = "7.2.2"
+confirmed = true
+line = 90
+note = "The tracepoint that fires when a folio is dirtied, which is the observable event closest to the end of this path."
+
+[[references]]
+id = "write-path-R37"
+path = "include/trace/events/writeback.h"
+anchor = "TRACE_EVENT(balance_dirty_pages,"
+kernel = "7.2.2"
+confirmed = true
+line = 657
+note = "The tracepoint for the throttle, and the one that says how long a writer was made to wait and why. Nothing else in the kernel reports that number."
+
+[[references]]
+id = "write-path-R38"
+path = "fs/proc/base.c"
+anchor = "static int do_io_accounting(struct task_struct *task"
+kernel = "7.2.2"
+confirmed = true
+line = 3002
+note = "Where the per process byte and call counters vfs_write bumps are read back out. It is behind CONFIG_TASK_IO_ACCOUNTING, and section 8 says what that means for the pinned build."

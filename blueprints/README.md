@@ -28,7 +28,7 @@ This is the point. Field offsets in books about the kernel are wrong within a re
 
 `bpc` is version 0.2 and it does generate. Point it at a BTF blob and section 2 becomes a field table with real offsets, sizes and type tags, and section 7 becomes prototypes and an ops table with a row per slot. Section 5 comes from the trace corpus instead. Run it with no blob and it still writes those sections, but what it writes is the empty state, which names every structure and every interface the mechanism needs and then says plainly that nothing has been read yet.
 
-That empty state is what is committed today, because no kernel has been built for this project yet. The alternative was to invent a plausible field table, and an invented offset in a published blueprint reads exactly like a real one.
+The empty state used to be what was committed, because no kernel had been built for this project yet. It is not any more. Both blueprints here now carry sections generated from the BTF of the pinned kernel and from captures taken on it, and the provenance line inside each block says so. What the empty state is still for is a blueprint written before its kernel is available, and it exists so that the alternative never gets used, which was to invent a plausible field table. An invented offset in a published blueprint reads exactly like a real one.
 
 ### How a generated section says where it came from
 
@@ -42,8 +42,6 @@ It is inside the seal, so it cannot be changed without breaking the hash. `kind`
 
 The seal catches an edit to a generated section. Resealing after an edit defeats the seal, so the plain `bpc` run also regenerates every section into memory and compares. An edit that was resealed still fails, and so does a section whose corpus has moved on underneath it.
 
-## Notation
-
 ## Citations
 
 A blueprint that says something about Linux points at the code it got that from. The marker goes in the middle of the sentence, like `[page-fault-R13]`, and it resolves against `page-fault.refs.toml` sitting beside the document.
@@ -52,7 +50,9 @@ Each entry gives a path and an anchor, where the anchor is at least twelve chara
 
 `refcheck` checks both directions. A marker with no entry fails, and so does an entry that nothing points at, which is nearly always a sentence that got rewritten and quietly lost its evidence.
 
-Running `just refs-confirm <a real linux tree>` finds every anchor, writes down the line it landed on and flips `confirmed`. Nothing in this repository has been confirmed yet, because there is no kernel tree here.
+Unpacking the pinned source with `./kxbox/kernel/tree.sh` and then running `python3 -m tools.refcheck --tree kxbox/kernel/build/tree/linux-7.2.2 --confirm` finds every anchor, writes down the line it landed on and flips `confirmed`. All seventy three citations in this directory are confirmed against 7.2.2. The tree itself is not committed, it takes about 1.6 GB, and `rm -rf kxbox/kernel/build/tree` is how the space comes back.
+
+Two things that confirming has caught so far, both worth expecting. An anchor that names a function which has since moved to another file fails loudly, which is the case this whole arrangement exists for. An anchor that matches in more than one place also fails, and that one is more common than it sounds: a single line of C is rarely unique, and `if (count > MAX_RW_COUNT)` appears three times in `fs/read_write.c` alone. The answer to the second is a longer anchor, and when there is no longer anchor to be had, the answer is to cite the function around it and say in the citations file why.
 
 ## Notation
 
