@@ -36,6 +36,19 @@ describe("running a command", () => {
     assert.equal(reply.stdout, "out\n");
     assert.equal(reply.stderr, "err\n");
   });
+
+  it("gets the same answer when the reply arrives one byte at a time", async () => {
+    // This is how the emulator delivers it, and delivering it in one lump is how a whole class of
+    // bug stayed hidden. The status is the part that matters here: it is the last thing on the
+    // wire, so it is the thing a parser in a hurry answers without.
+    const { host: page } = host(
+      { "modprobe nope": { status: 12, stderr: "module not found\n" } },
+      { bytes: true },
+    );
+    const reply = await page.sh("modprobe nope");
+    assert.equal(reply.status, 12);
+    assert.equal(reply.stderr, "module not found\n");
+  });
 });
 
 describe("one command at a time", () => {
@@ -90,8 +103,9 @@ describe("writing a file", () => {
   it("stages the whole thing before touching the target", async () => {
     const { serial, host: page } = host();
     await page.write("/tmp/target", "x".repeat(2000));
-    const order = serial.sent.map((one) => (one.includes(STAGING) ? "staging" : "other"));
-    assert.equal(order.at(-1), "staging", "the decode into the target reads the staging file");
+    const touching = serial.sent.filter((one) => one.includes("/tmp/target"));
+    assert.equal(touching.length, 1, "the target is written by exactly one command");
+    assert.ok(serial.sent.at(-1).includes("/tmp/target"), "and it is the last one");
     assert.equal(serial.files["/tmp/target"], "x".repeat(2000));
   });
 });

@@ -88,10 +88,14 @@ class FakeBridge:
     def __init__(self) -> None:
         self.files = {
             "/sys/kernel/tracing/current_tracer": "nop\n",
-            "/sys/kernel/tracing/trace": TRACE,
+            "/sys/kernel/tracing/trace": "",
             "/sys/kernel/tracing/set_ftrace_filter": "",
             "/sys/kernel/tracing/tracing_on": "0\n",
         }
+        # What the ring buffer fills up with once tracing is turned on. Keeping it here rather than
+        # in `files` is what makes the buffer behave like one: it starts empty, a write to `trace`
+        # empties it again, and it only has anything in it while the tracer is on.
+        self.records = TRACE
         self.ran: list[str] = []
         self.wrote: list[tuple[str, str]] = []
 
@@ -105,6 +109,8 @@ class FakeBridge:
     def write(self, path: str, text: str) -> None:
         self.wrote.append((path, text))
         self.files[path] = text
+        if path == "/sys/kernel/tracing/tracing_on" and text.strip() == "1":
+            self.files["/sys/kernel/tracing/trace"] = self.records
 
     def insmod(self, path: str) -> Reply:
         return Reply(0, f"loaded {path}", "")
@@ -199,6 +205,33 @@ def test_the_live_backend_sets_the_filter_it_was_given():
         "/sys/kernel/tracing/set_ftrace_filter",
         "vfs_write\ngeneric_perform_write",
     ) in fake.wrote
+
+
+def test_the_live_backend_empties_the_buffer_before_it_starts_recording():
+    """A second tape in one session must not carry the first one's records."""
+    fake = FakeBridge()
+    box = kxbox.Box(bridge.V86(fake), "teaching")
+    box.trace("write-1byte", None, functions=["vfs_write"])
+
+    paths = [path for path, _ in fake.wrote]
+    cleared = paths.index("/sys/kernel/tracing/trace")
+    started = paths.index("/sys/kernel/tracing/tracing_on")
+    assert cleared < started, "the buffer has to be emptied before tracing is turned on"
+
+    # The order the other way round is the bug this guards: the tracer would be on for the length
+    # of the clear, so the tape would open with a handful of records belonging to nothing the
+    # reader asked about, and they look exactly like real ones.
+    assert ("/sys/kernel/tracing/trace", "") in fake.wrote
+
+
+def test_two_tapes_in_a_row_do_not_run_into_each_other():
+    fake = FakeBridge()
+    box = kxbox.Box(bridge.V86(fake), "teaching")
+    first = box.trace("write-1byte", None, functions=["vfs_write"])
+    fake.records = ""  # nothing happened the second time
+    second = box.trace("write-1byte", None, functions=["vfs_write"])
+    assert first.find("vfs_write")
+    assert second.events == []
 
 
 def test_a_bridge_missing_a_call_is_refused_at_the_door():

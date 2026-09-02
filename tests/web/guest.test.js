@@ -43,7 +43,7 @@ describe("the command we send", () => {
 
 describe("reading the answer back", () => {
   const stream = (id, { stdout = "", stderr = "", status = 0 } = {}) =>
-    `\n${MARK}:BEG:${id}\n${stdout}${MARK}:ERR:${id}\n${stderr}${MARK}:END:${id}:${status}\n`;
+    `\n${MARK}:BEG:${id}\n${stdout}\n${MARK}:ERR:${id}\n${stderr}\n${MARK}:END:${id}:${status}\n`;
 
   it("says nothing until the command has finished", () => {
     assert.equal(parseReply("abc", `\n${MARK}:BEG:abc\nhalf a line`), null);
@@ -73,6 +73,36 @@ describe("reading the answer back", () => {
     assert.equal(parseReply("abc", stream("xyz", { stdout: "hi\n" })), null);
   });
 
+  it("waits for the status even though the marker before it has arrived", () => {
+    // The bug: the end marker was matched as soon as `__kx:END:abc:` was on the wire, which is one
+    // byte before the status is. The status parsed as empty, empty became 0, and every command
+    // that failed came back looking like it had worked. A real serial line delivers a byte at a
+    // time, so this is not a corner case, it is what always happens.
+    const whole = stream("abc", { stdout: "one\n", status: 7 });
+    const early = whole.slice(0, whole.indexOf(`${MARK}:END:abc:`) + `${MARK}:END:abc:`.length);
+    assert.equal(parseReply("abc", early), null);
+    assert.equal(parseReply("abc", `${early}7`), null); // still no newline, still not finished
+    assert.equal(parseReply("abc", `${early}7\n`).status, 7);
+  });
+
+  it("gives the same answer byte by byte as it does all at once", () => {
+    // Feeding the stream the way the emulator does, one byte at a time, and parsing after each
+    // one. There is exactly one point at which an answer may appear and it has to be the right one.
+    const whole = stream("abc", { stdout: "one\ntwo\n", stderr: "bad\n", status: 3 });
+    const replies = [];
+    for (let at = 1; at <= whole.length; at += 1) {
+      const reply = parseReply("abc", whole.slice(0, at));
+      if (reply) replies.push(reply);
+    }
+    assert.equal(replies.length, 1, `answered ${replies.length} times`);
+    assert.deepEqual(replies[0], { status: 3, stdout: "one\ntwo\n", stderr: "bad\n" });
+  });
+
+  it("throws rather than guessing when the status is not a number", () => {
+    const broken = `\n${MARK}:BEG:abc\n\n${MARK}:ERR:abc\n\n${MARK}:END:abc:huh\n`;
+    assert.throws(() => parseReply("abc", broken), /without a status/);
+  });
+
   it("keeps a multi line answer whole", () => {
     const reply = parseReply("abc", stream("abc", { stdout: "one\ntwo\nthree\n" }));
     assert.equal(reply.stdout, "one\ntwo\nthree\n");
@@ -80,10 +110,19 @@ describe("reading the answer back", () => {
 });
 
 describe("writing a file", () => {
-  it("clears the staging file, appends, and decodes once into the target", () => {
+  it("clears the staging file, appends, decodes, and copies once into the target", () => {
     const lines = writeCommands("/sys/kernel/tracing/current_tracer", "function_graph");
     assert.equal(lines[0], `: > ${STAGING}`);
-    assert.match(lines.at(-1), /^base64 -d < .* > '\/sys\/kernel\/tracing\/current_tracer'$/);
+    assert.match(lines.at(-1), /^cat .* > '\/sys\/kernel\/tracing\/current_tracer'$/);
+  });
+
+  it("never decodes straight into the target, because base64 writes with writev", () => {
+    // Found by tracing the syscalls inside the box. base64 -d into a tracer file gets EINVAL from
+    // the kernel, exits 0 anyway, and leaves the old value in place, which is the worst shape a
+    // failure can have.
+    const lines = writeCommands("/sys/kernel/tracing/current_tracer", "function_graph");
+    const decode = lines.find((one) => one.startsWith("base64 -d"));
+    assert.ok(!decode.includes("current_tracer"), decode);
   });
 
   it("splits a long file into pieces, because the command line has a length", () => {

@@ -131,6 +131,10 @@ class V86:
         before = self.read(CURRENT_TRACER).strip()
         self.write(FILTER, "\n".join(functions) if functions else "")
         self.write(CURRENT_TRACER, "function_graph")
+        # Empty the ring buffer before starting. Writing to it truncates it, which is the whole
+        # effect wanted here. Without this a second tape in the same session carries the first
+        # one's records as well, and the reader gets a trace of something they did a minute ago.
+        self.write(TRACE, "")
         self.write(ON, "1")
         try:
             if do is not None:

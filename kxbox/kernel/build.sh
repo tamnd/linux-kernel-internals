@@ -9,9 +9,14 @@
 # different binutils or a different pahole is a different kernel, and BTF in particular changes
 # with the pahole version. Those three are pinned in pin.toml and installed here by name.
 #
-# Nothing about this has been run yet. It is written down first because a build recipe that lives
-# in somebody's shell history is not a pinned kernel, and because the first person to run it
-# should be following instructions rather than reconstructing them.
+# The tree is unpacked into a docker volume rather than into the repository. A kernel tree is about
+# ninety thousand files and a shared folder on a laptop virtual machine reads every one of them
+# slowly, so the same build takes hours across the mount and minutes inside the volume. Only the
+# tarball and the finished image cross the boundary.
+#
+#     docker volume rm kxbox-src
+#
+# is how you throw the tree away when you are done with it.
 
 set -eu
 
@@ -20,6 +25,7 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "$HERE/../.." && pwd)
 OUT="$HERE/build/$PROFILE"
 CACHE="$HERE/build/cache"
+VOLUME="${KXBOX_VOLUME:-kxbox-src}"
 
 read_pin() {
     python3 - "$HERE/pin.toml" "$PROFILE" "$1" <<'PY'
@@ -68,42 +74,75 @@ if digest.hexdigest() != sys.argv[2]:
 print("checksum ok")
 PY
 
+docker volume create "$VOLUME" >/dev/null
+
 docker run --rm -i \
     -v "$ROOT:/work" \
     -v "$CACHE:/cache" \
-    -w /work \
+    -v "$VOLUME:/src" \
+    -w /src \
     -e PROFILE="$PROFILE" \
     -e VERSION="$VERSION" \
     -e FRAGMENTS="$FRAGMENTS" \
+    -e DEBIAN_FRONTEND=noninteractive \
     debian:trixie-slim sh -eu <<'CONTAINER'
 apt-get update -qq
 apt-get install -y -qq --no-install-recommends \
     build-essential bc bison flex libelf-dev libssl-dev xz-utils \
-    dwarves gcc-14 python3 kmod >/dev/null
+    dwarves python3 kmod >/dev/null
 
-SRC="/cache/linux-$VERSION"
+# The kernel is 32-bit x86 because that is the machine v86 gives us. On an x86 host the native
+# compiler builds it. On anything else there has to be a cross compiler, and saying which one was
+# used is part of the result rather than a detail, because two images built by two compilers are
+# two different kernels even when the source and the config are identical.
+HOST=$(uname -m)
+case "$HOST" in
+    x86_64 | i?86)
+        CROSS=""
+        ;;
+    *)
+        apt-get install -y -qq --no-install-recommends gcc-i686-linux-gnu >/dev/null
+        CROSS="i686-linux-gnu-"
+        ;;
+esac
+
+SRC="/src/linux-$VERSION"
 if [ ! -d "$SRC" ]; then
     echo "unpacking"
-    tar -C /cache -xf "/cache/linux-$VERSION.tar.xz"
+    tar -C /src -xf "/cache/linux-$VERSION.tar.xz"
 fi
 
 cd "$SRC"
-export ARCH=i386
 export KBUILD_BUILD_TIMESTAMP="@0"
 export KBUILD_BUILD_USER=kxbox
 export KBUILD_BUILD_HOST=kxbox
+MAKE="make -s ARCH=i386 CROSS_COMPILE=$CROSS"
 
-make -s ARCH=i386 tinyconfig
+$MAKE tinyconfig
 ./scripts/kconfig/merge_config.sh -m -O . .config \
-    $(for f in $FRAGMENTS; do echo "/work/kxbox/kernel/$f"; done)
-make -s ARCH=i386 olddefconfig
+    $(for f in $FRAGMENTS; do echo "/work/kxbox/kernel/$f"; done) >/dev/null
+$MAKE olddefconfig
 
 # What Kconfig actually did with the fragments, which is not the same as what they asked for.
 cp .config "/work/kxbox/kernel/build/$PROFILE/config"
 
-make -s ARCH=i386 -j"$(nproc)" bzImage
+STARTED=$(date +%s)
+$MAKE -j"$(nproc)" bzImage
+ELAPSED=$(( $(date +%s) - STARTED ))
+
 cp arch/x86/boot/bzImage "/work/kxbox/kernel/build/$PROFILE/bzImage"
 cp vmlinux "/work/kxbox/kernel/build/$PROFILE/vmlinux"
+
+# What actually built this, written next to it, so that a measurement can never drift away from
+# the toolchain that produced it.
+{
+    echo "host_arch = \"$HOST\""
+    echo "cross_compile = \"$CROSS\""
+    echo "compiler = \"$(${CROSS}gcc --version | head -1)\""
+    echo "binutils = \"$(${CROSS}ld --version | head -1)\""
+    echo "pahole = \"$(pahole --version 2>/dev/null || echo absent)\""
+    echo "build_seconds = $ELAPSED"
+} > "/work/kxbox/kernel/build/$PROFILE/toolchain.toml"
 CONTAINER
 
 (cd "$ROOT" && python3 -m tools.kconfig --profile "$PROFILE" --verify "$OUT/config")

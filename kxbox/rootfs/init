@@ -1,0 +1,35 @@
+#!/bin/sh
+# The first process in the box.
+#
+# It mounts the four filesystems every lesson reads, prints one line saying it is ready, and hands
+# the console to a shell. That is all it does, because everything else a lesson needs is a command
+# the bridge sends over the serial port, and an init script that sets things up behind the reader's
+# back is an init script that makes the lessons lie.
+#
+# The ready line is the whole point of the file. The page waits for that exact string rather than
+# for a shell prompt, because a prompt is whatever busybox decided this week and this marker is a
+# fact we control.
+
+/bin/busybox --install -s /bin
+
+mount -t proc none /proc
+mount -t sysfs none /sys
+mount -t tmpfs none /tmp
+
+# The tracer. Its own filesystem since 4.1, still reachable through debugfs, and mounted here
+# under the name every lesson uses. A box where this is missing can still boot and is still no use
+# to anybody, so it is worth saying so on the console rather than failing later in a cell.
+mkdir -p /sys/kernel/tracing
+if ! mount -t tracefs none /sys/kernel/tracing 2>/dev/null; then
+    echo "__kx:NOTRACEFS"
+fi
+mount -t debugfs none /sys/kernel/debug 2>/dev/null
+
+mkdir -p /root /lib/modules
+export HOME=/root
+export PATH=/bin
+export PS1='# '
+
+echo "__kx:READY"
+
+exec /bin/sh

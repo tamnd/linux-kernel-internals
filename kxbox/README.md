@@ -40,4 +40,19 @@ A live session says what Tier 0 is: uniprocessor, 32 bit x86, emulated timing, a
 
 `kernel/` is the pin, the config fragments and the build script. `pin.toml` says which kernel, from where, with which checksum.
 
-Not here: the v86 vendoring, the rootfs, and a built kernel. Nobody has booted anything for this project. Both halves of the protocol are written and both are tested without an emulator, the Python one through a stand in that implements the four calls and the JavaScript one through a guest that answers like a shell, so the part that is unproven is the emulator rather than the code around it.
+`rootfs/` is the initramfs: a pinned busybox, an init script that mounts the filesystems the lessons need and prints the ready marker, and a build script that makes the cpio. `web/vendor.toml` pins v86 and `tools/vendor.py` fetches it against those checksums.
+
+## Booting one
+
+Three commands, in this order, and none of them needs root.
+
+```sh
+python3 -m tools.vendor          # fetch v86 at the pinned commit
+sh kxbox/rootfs/build.sh         # build the initramfs
+sh kxbox/kernel/build.sh A-full  # build the kernel, needs docker
+node kxbox/web/headless.js smoke # boot it and check what works
+```
+
+The kernel build is the only one that takes real time. `headless.js` runs v86 under node, which means the whole thing can be exercised on a machine with no display and in CI, and a boot that broke can be bisected without anybody clicking anything.
+
+The numbers from the first real boot are in `kernel/RESULTS.md`.

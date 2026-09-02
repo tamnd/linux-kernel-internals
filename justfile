@@ -83,13 +83,40 @@ tier0:
 web:
     node --test tests/web/*.test.js
 
-# Serve kxbox/web with the two headers a blocking worker needs. There is nothing to boot yet.
+# Serve Tier 0 with the two headers a blocking worker needs, and open /web/ in a browser.
 web-serve:
     python3 kxbox/web/serve.py
+
+# Fetch v86 at the pinned commit, checked against the sha256 of every file in web/vendor.toml.
+vendor:
+    python3 -m tools.vendor
+
+# Fail if what is in web/vendor is not what the pin asks for.
+vendor-check:
+    python3 -m tools.vendor --check
 
 # Build one profile of the pinned kernel in a container. Takes a while the first time.
 kernel profile="A-full":
     ./kxbox/kernel/build.sh {{profile}}
+
+# Build the initramfs the kernel boots into. No container and no root.
+rootfs:
+    sh kxbox/rootfs/build.sh
+
+# Everything Tier 0 needs, in order, from nothing to a booted kernel.
+box: vendor rootfs kernel boot-smoke
+
+# Boot the built kernel under node and print how long it took.
+boot:
+    node kxbox/web/headless.js boot
+
+# Boot it and check the nine things a lesson stops working without.
+boot-smoke:
+    node kxbox/web/headless.js smoke
+
+# Run one command inside the box.
+boot-sh command:
+    node kxbox/web/headless.js sh {{quote(command)}}
 
 # Check every storyboard against the rules: the budget, the captions, the alt text, the still.
 storyboards:

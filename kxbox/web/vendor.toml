@@ -1,0 +1,50 @@
+schema = 1
+
+# v86, pinned. This is the emulator Tier 0 runs on, and it is a dependency the same way the kernel
+# is a dependency: a different build of it is a different machine, and a trace taken on a different
+# machine is a different trace.
+#
+# The files are not committed. They are four megabytes of binary that anybody can fetch, and a
+# repository that carries its dependencies is a repository nobody can tell apart from its
+# dependencies. `vendor.sh` downloads them and checks every one against the checksums here.
+#
+# The checksums were computed from the downloads on 2026-09-02 and are what the build was actually
+# run against, rather than copied from anywhere.
+
+[v86]
+version = "0.5.455"
+commit = "85961c6"
+url = "https://registry.npmjs.org/v86/-/v86-0.5.455.tgz"
+sha256 = "d0a925e44baaa079f9c01db58de5b5fb9c36c35de22580d6f8cbe8b7aa00c8d3"
+license = "BSD-2-Clause"
+
+# What comes out of the npm tarball and where it lands. The debug build and the fallback wasm are
+# in the package too and are left there, because the fallback is for machines without the wasm
+# features v86 wants and we have no way to test one.
+[[v86.files]]
+member = "package/build/libv86.mjs"
+path = "libv86.mjs"
+sha256 = "aad26766c0246d426969cb28c984896d82b71ac824d8df810cce52b5905cb2da"
+
+[[v86.files]]
+member = "package/build/v86.wasm"
+path = "v86.wasm"
+sha256 = "6121632f6d657d03f2286341ed87edcafd4945fa65ae765b4c7fd0bf2554a9c7"
+
+[[v86.files]]
+member = "package/LICENSE"
+path = "LICENSE"
+sha256 = "3f61ba65e3215b09ef264ba8d777d73c19644309fbb705967634eb5147e500a0"
+
+# The firmware is not in the npm package. It lives in the v86 repository as a checked in binary,
+# so it is fetched from the commit the npm build was made from rather than from a branch, because
+# a branch moves and a boot that used to work would stop working with nothing to point at.
+[[bios]]
+name = "seabios.bin"
+url = "https://raw.githubusercontent.com/copy/v86/85961c6/bios/seabios.bin"
+sha256 = "73e3f359102e3a9982c35fce98eb7cd08f18303ac7f1ba6ebfbe6cdc1c244d98"
+
+[[bios]]
+name = "vgabios.bin"
+url = "https://raw.githubusercontent.com/copy/v86/85961c6/bios/vgabios.bin"
+sha256 = "a4bc0d80cc3ca028c73dafa8fee396b8d054ce87ebd8abfbd31b06b437607880"

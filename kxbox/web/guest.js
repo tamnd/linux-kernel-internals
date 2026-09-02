@@ -18,6 +18,7 @@ export const MARK = "__kx";
 // mktemp worth relying on and a fixed name is easier to explain in a lesson than a random one.
 export const STDERR = "/tmp/.kx.err";
 export const STAGING = "/tmp/.kx.b64";
+export const DECODED = "/tmp/.kx.raw";
 
 let counter = 0;
 
@@ -55,21 +56,39 @@ export function commandFor(id, line) {
 export function parseReply(id, stream) {
   const lines = String(stream).split("\n").map((one) => one.replace(/\r+$/, ""));
 
-  const beg = lines.indexOf(`${MARK}:BEG:${id}`);
-  const err = lines.indexOf(`${MARK}:ERR:${id}`);
-  const end = lines.findIndex((one) => one.startsWith(`${MARK}:END:${id}:`));
+  // Whatever follows the last newline is a line that has not finished arriving, and no marker may
+  // be matched against it. That is not tidiness. The serial line delivers one byte at a time, so
+  // `__kx:END:id:` sits at the end of the stream for a moment with the status digit still on its
+  // way, and matching it then reads the status as an empty string. `parseInt("")` is NaN, NaN
+  // became 0 below, and a command that failed was reported as having worked.
+  const arrived = lines.slice(0, -1);
+
+  const beg = arrived.indexOf(`${MARK}:BEG:${id}`);
+  const err = arrived.indexOf(`${MARK}:ERR:${id}`);
+  const end = arrived.findIndex((one) => one.startsWith(`${MARK}:END:${id}:`));
   if (beg < 0 || err < beg || end < err) return null;
 
-  const status = Number.parseInt(lines[end].slice(`${MARK}:END:${id}:`.length), 10);
+  const digits = arrived[end].slice(`${MARK}:END:${id}:`.length);
+  const status = Number.parseInt(digits, 10);
+  // Falling back to 0 here is what kept the bug above quiet for as long as it was quiet, so this
+  // throws instead. A finished marker with no readable status in it means the guest is broken, and
+  // a broken guest should say so rather than hand back a success.
+  if (Number.isNaN(status)) {
+    throw new Error(`the guest finished ${id} without a status: ${JSON.stringify(digits)}`);
+  }
   return {
-    status: Number.isNaN(status) ? 0 : status,
+    status,
     stdout: join(lines.slice(beg + 1, err)),
     stderr: join(lines.slice(err + 1, end)),
   };
 }
 
+// The markers each start on a line of their own, which costs one newline: a command whose output
+// ended in a newline and a command whose output did not both arrive with the marker on the next
+// line. Joining without adding one back is what makes the two cases come out right, and the
+// difference showed up the first time a real trace came back with a blank line on the end of it.
 function join(lines) {
-  return lines.length === 0 ? "" : `${lines.join("\n")}\n`;
+  return lines.join("\n");
 }
 
 export function readCommand(path) {
@@ -86,15 +105,24 @@ export function insmodCommand(path) {
 // with newlines in it and quoting rules are the wrong thing to be debugging from inside a browser.
 //
 // The staging file is why this is a list and not one command. The target has to be written by a
-// single redirect, because writing to `current_tracer` twice is two writes and the kernel reads
-// each one separately. So the base64 is appended in pieces, and then decoded into the target once.
+// single write, because writing to `current_tracer` twice is two writes and the kernel reads each
+// one separately. So the base64 is appended in pieces, decoded into a file of its own, and copied
+// into the target by cat.
+//
+// That last hop looks like one step too many and it is not. Decoding straight into the target
+// silently does nothing: busybox base64 writes its output with writev, the tracer's write handler
+// answers EINVAL to that, and base64 exits 0 regardless, so the tracer keeps its old value and
+// every check says the write worked. This was traced inside the box with the syscall events on,
+// which is the only reason it is written down as a fact rather than a suspicion. cat writes with
+// an ordinary write, and one call is what the file wants.
 export function writeCommands(path, text, chunk = 512) {
   const encoded = base64(text);
   const lines = [`: > ${STAGING}`];
   for (let at = 0; at < encoded.length; at += chunk) {
     lines.push(`printf '%s' ${quote(encoded.slice(at, at + chunk))} >> ${STAGING}`);
   }
-  lines.push(`base64 -d < ${STAGING} > ${quote(path)}`);
+  lines.push(`base64 -d < ${STAGING} > ${DECODED}`);
+  lines.push(`cat ${DECODED} > ${quote(path)}`);
   return lines;
 }
 
