@@ -68,3 +68,7 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 "lessons/*/build.py" = ["E501"]
 # Same reason: the site builder holds the prose of the two index pages, one paragraph per line.
 "tools/sitebuild.py" = ["E501"]
+# The programs the page hands to Pyodide are not modules and are never imported. They are source
+# text passed to `runPythonAsync`, which wraps them in a coroutine, so top level `await` is allowed
+# there and only there. Ruff is right about every other file and wrong about these two.
+"kxbox/web/*.py" = ["F704"]

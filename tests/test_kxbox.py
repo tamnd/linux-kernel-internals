@@ -4,13 +4,20 @@ The property worth testing is the one the whole design rests on: a lesson cell w
 against the emulator and against a recording, and gets back the same types from both. A fallback
 that is a second code path is a fallback nobody exercises until a reader hits it.
 
-The live backend is driven through a stand in that implements the four calls in `PROTOCOL.md`.
-Nobody has run it against v86, because the kernel is not built and the JavaScript is not written.
-What these tests pin down is the Python half and the protocol it expects.
+The live backend is driven through a stand in that implements the four calls in `PROTOCOL.md`, so
+what these tests pin down is the Python half and the protocol it expects. That is worth saying out
+loud, because a stand in agrees with whatever it was written to agree with. The live backend has
+since been run against a real kernel under v86 and against these same recordings, by
+`kxbox/bothways.py`, and that found four things no test here could have: the wrong tracefs file,
+a missing trace option, a missing `owns_window`, and a restore order that left the guest wedged.
+Tests below cover each of those now, but the order was the other way round and it is worth
+remembering which of the two actually finds this class of mistake.
 """
 
 from __future__ import annotations
 
+import re
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -89,7 +96,9 @@ class FakeBridge:
         self.files = {
             "/sys/kernel/tracing/current_tracer": "nop\n",
             "/sys/kernel/tracing/trace": "",
-            "/sys/kernel/tracing/set_ftrace_filter": "",
+            "/sys/kernel/tracing/set_graph_function": "",
+            "/sys/kernel/tracing/max_graph_depth": "0\n",
+            "/sys/kernel/tracing/trace_options": "",
             "/sys/kernel/tracing/tracing_on": "0\n",
         }
         # What the ring buffer fills up with once tracing is turned on. Keeping it here rather than
@@ -107,6 +116,17 @@ class FakeBridge:
         return self.files[path]
 
     def write(self, path: str, text: str) -> None:
+        # The one rule here that is not bookkeeping. The funcgraph options only exist while
+        # `function_graph` is the selected tracer, and the real kernel answers `Invalid argument`
+        # to anything else. That is not a detail worth modelling for its own sake. It is modelled
+        # because putting the tracer back to `nop` and only then turning the option off is the
+        # obvious order to write, it is the order this used to have, and the failure it causes does
+        # not look like a wrong order. It looks like the guest hanging several commands later.
+        if "funcgraph" in text and self.files["/sys/kernel/tracing/current_tracer"].strip() != (
+            "function_graph"
+        ):
+            raise OSError(f"write error: Invalid argument, writing {text!r} to {path}")
+
         self.wrote.append((path, text))
         self.files[path] = text
         if path == "/sys/kernel/tracing/tracing_on" and text.strip() == "1":
@@ -182,7 +202,9 @@ def test_the_live_backend_puts_the_tracer_back():
     box.trace("write-1byte", None, functions=["vfs_write"])
     assert fake.files["/sys/kernel/tracing/current_tracer"] == "nop"
     assert fake.files["/sys/kernel/tracing/tracing_on"] == "0"
-    assert fake.files["/sys/kernel/tracing/set_ftrace_filter"] == ""
+    assert fake.files["/sys/kernel/tracing/set_graph_function"] == ""
+    assert fake.files["/sys/kernel/tracing/max_graph_depth"] == "0"
+    assert fake.files["/sys/kernel/tracing/trace_options"] == "funcgraph-irqs"
 
 
 def test_the_live_backend_puts_the_tracer_back_even_when_the_callable_throws():
@@ -197,14 +219,65 @@ def test_the_live_backend_puts_the_tracer_back_even_when_the_callable_throws():
     assert fake.files["/sys/kernel/tracing/tracing_on"] == "0"
 
 
-def test_the_live_backend_sets_the_filter_it_was_given():
+def test_the_live_backend_asks_for_the_tree_and_not_just_the_named_functions():
+    """`set_graph_function`, not `set_ftrace_filter`, and the difference is the whole answer.
+
+    The filter traces the functions you name and nothing else, so asking it for `vfs_write` gets a
+    flat list of `vfs_write` calls with no tree under any of them. `set_graph_function` traces the
+    ones you name and everything they call. `kxray.tracefs` has always used the second on a real
+    machine, so for as long as this used the first the same lesson showed a tree on Tier 1 and a
+    flat list on Tier 0, and every test here passed the whole time.
+    """
     fake = FakeBridge()
     box = kxbox.Box(bridge.V86(fake), "teaching")
     box.trace("write-1byte", None, functions=["vfs_write", "generic_perform_write"])
     assert (
-        "/sys/kernel/tracing/set_ftrace_filter",
+        "/sys/kernel/tracing/set_graph_function",
         "vfs_write\ngeneric_perform_write",
     ) in fake.wrote
+    assert "/sys/kernel/tracing/set_ftrace_filter" not in [path for path, _ in fake.wrote]
+
+
+def test_the_live_backend_asks_for_the_options_every_capture_was_taken_with():
+    """A live tape taken with different options is a different file, and looks like a real answer.
+
+    `funcgraph-proc` is the column saying which task a line belongs to, which every committed
+    capture has. `nofuncgraph-irqs` keeps interrupt context out, which is what stops a timer tick
+    that landed inside the window from counting as the trace changing.
+    """
+    fake = FakeBridge()
+    box = kxbox.Box(bridge.V86(fake), "teaching")
+    box.trace("write-1byte", None, functions=["vfs_write"])
+    for option in bridge.WANTED:
+        assert ("/sys/kernel/tracing/trace_options", option) in fake.wrote
+
+
+def test_the_options_the_bridge_asks_for_are_the_ones_the_captures_were_taken_with():
+    """Otherwise the live backend and the recordings are answering slightly different questions.
+
+    This is the check that would have caught `nofuncgraph-irqs` being missing, and it is worth
+    having because the symptom without it is a comparison that passes most of the time.
+    """
+    for path in sorted((ROOT / "corpora" / "traces" / "tier0").glob("*.meta.toml")):
+        meta = tomllib.loads(path.read_text(encoding="utf-8"))
+        assert tuple(meta["options"]) == bridge.WANTED, (
+            f"{path.name} was captured with {meta['options']} and the bridge asks for "
+            f"{list(bridge.WANTED)}"
+        )
+
+
+def test_the_live_backend_stays_out_of_the_window_when_the_command_owns_it():
+    """The rootfs programs turn the tracer on and off around one system call, from the inside.
+
+    If the bridge opened the window as well, everything the shell did on the way to starting the
+    program would be in the capture, and the write the reader came for would be somewhere in the
+    middle with nothing marking it.
+    """
+    fake = FakeBridge()
+    box = kxbox.Box(bridge.V86(fake), "teaching")
+    box.trace("write-1byte", lambda: box.sh("/bin/writebyte --quiet"), owns_window=True)
+    assert ("/sys/kernel/tracing/tracing_on", "1") not in fake.wrote
+    assert fake.ran == ["/bin/writebyte --quiet"]
 
 
 def test_the_live_backend_empties_the_buffer_before_it_starts_recording():
@@ -215,13 +288,45 @@ def test_the_live_backend_empties_the_buffer_before_it_starts_recording():
 
     paths = [path for path, _ in fake.wrote]
     cleared = paths.index("/sys/kernel/tracing/trace")
-    started = paths.index("/sys/kernel/tracing/tracing_on")
+    # The one that turns it on, not the one that makes sure it is off before anything is set up.
+    started = fake.wrote.index(("/sys/kernel/tracing/tracing_on", "1"))
     assert cleared < started, "the buffer has to be emptied before tracing is turned on"
 
     # The order the other way round is the bug this guards: the tracer would be on for the length
     # of the clear, so the tape would open with a handful of records belonging to nothing the
     # reader asked about, and they look exactly like real ones.
     assert ("/sys/kernel/tracing/trace", "") in fake.wrote
+
+
+def test_the_tracer_is_put_back_last_of_everything():
+    """The restore order, which is a rule of the interface and not a matter of taste.
+
+    `funcgraph-proc` is only a writable option while `function_graph` is the selected tracer. Put
+    the tracer back to `nop` first and the kernel refuses the rest of the restore with `Invalid
+    argument`, which leaves the guest recording everything it does into a buffer nobody drains.
+    The next command that reads the buffer waits for megabytes over a serial line and times out,
+    minutes later, looking like a hang with no connection to what caused it. The stand in refuses
+    the same write for the same reason, so getting this wrong fails here in a tenth of a second.
+    """
+    fake = FakeBridge()
+    box = kxbox.Box(bridge.V86(fake), "teaching")
+    box.trace("write-1byte", None, functions=["vfs_write"])
+
+    paths = [path for path, _ in fake.wrote]
+    assert paths[-1] == "/sys/kernel/tracing/current_tracer"
+    assert fake.wrote[-1][1] == "nop"
+
+
+def test_the_tracer_is_put_back_last_even_when_the_callable_throws():
+    fake = FakeBridge()
+    box = kxbox.Box(bridge.V86(fake), "teaching")
+
+    def explode():
+        raise RuntimeError("the lesson did something wrong")
+
+    with pytest.raises(RuntimeError):
+        box.trace("write-1byte", explode, functions=["vfs_write"])
+    assert fake.wrote[-1] == ("/sys/kernel/tracing/current_tracer", "nop")
 
 
 def test_two_tapes_in_a_row_do_not_run_into_each_other():
@@ -339,3 +444,50 @@ def test_every_recipe_here_is_a_real_capture():
     backend = corpus.Corpus(ROOT)
     assert backend.recipes, "the repository should have recordings"
     assert backend.evidence is True
+
+
+def test_one_recipe_here_can_be_run_more_than_once():
+    """Something has to be, or nothing can take a live tape after the comparison has run.
+
+    `kxbox/bothways.py` uses up the fresh guest, because the recordings of the two write recipes
+    are recordings of the first run of a boot and only match the first run of a boot. Anything
+    wanting a live tape afterwards has to have a recipe left that does not care, and if the last
+    one of those ever loses the flag this says so rather than the browser harness timing out.
+    """
+    backend = corpus.Corpus(ROOT)
+    assert backend.repeatable(), "no recipe left that gives the same trace on a second run"
+
+
+def test_the_browser_demo_traces_a_recipe_it_is_allowed_to_trace():
+    """The page runs `first-tape.py` after the comparison, so it has to name a repeatable recipe.
+
+    Naming a write recipe there is not a test failure anywhere else in this suite. It fails in a
+    browser, minutes into a run, as a trace that does not match its recording, and the reason is
+    three files away from the symptom. So it is checked here instead.
+    """
+    program = (ROOT / "kxbox" / "web" / "first-tape.py").read_text(encoding="utf-8")
+    named = re.search(r'^RECIPE = "([^"]+)"', program, re.MULTILINE)
+    assert named, "first-tape.py should name the recipe it traces in a RECIPE line"
+    wanted = named.group(1)
+
+    backend = corpus.Corpus(ROOT)
+    assert wanted in backend.recipes, f"first-tape.py traces `{wanted}`, which is not a recipe"
+    assert backend.recipes[wanted].repeatable, (
+        f"first-tape.py traces `{wanted}`, which is only the same as its recording on the first "
+        "run of a boot, and the page has already run every recipe by the time it gets there"
+    )
+
+
+def test_the_browser_demo_asks_for_what_the_recipe_asks_for():
+    """Same functions, same window. A demo that traced it differently would show a different tree.
+
+    The point of the page is that it shows what a lesson shows. It stopped being true once before,
+    when this program wrote a file over the bridge instead of running the recipe's command, and the
+    picture had seventeen flat frames in it that no lesson would ever produce.
+    """
+    program = (ROOT / "kxbox" / "web" / "first-tape.py").read_text(encoding="utf-8")
+    one = corpus.Corpus(ROOT).recipes[re.search(r'^RECIPE = "([^"]+)"', program, re.M).group(1)]
+    assert one.command in program, f"the demo should run `{one.command}`"
+    assert f"owns_window={one.owns_window}" in program, "the demo should use the recipe's window"
+    for name in one.functions:
+        assert f'"{name}"' in program, f"the demo should ask for `{name}` like the recipe does"

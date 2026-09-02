@@ -183,7 +183,10 @@ async function main(argv) {
     if (!results) throw new Error(`the page did not finish within ${patience}s`);
 
     report(results);
-    return results.error || results.python_error || results.trace_error ? 1 : 0;
+    const disagreed = (results.both_ways?.recipes || []).some((one) => !one.same);
+    const bad =
+      results.error || results.python_error || results.trace_error || results.both_ways_error;
+    return bad || disagreed ? 1 : 0;
   } finally {
     stop();
   }
@@ -200,8 +203,17 @@ function report(r) {
   console.log(`  checks passed       ${r.checks_passed} of ${r.checks.length}`);
   for (const check of r.checks.filter((c) => !c.ok)) console.log(`    FAIL ${check.name}: ${check.detail}`);
   console.log(`  python up           ${r.python_error ? r.python_error : `${r.python} in ${r.python_seconds}s`}`);
-  if (r.tape) console.log(`  one traced write    ${r.tape.frames} calls in ${r.trace_seconds}s`);
-  if (r.trace_error) console.log(`  one traced write    ${r.trace_error}`);
+  if (r.tape) console.log(`  one traced recipe   ${r.tape.frames} calls in ${r.trace_seconds}s, ${r.tape.recipe || "?"}`);
+  if (r.trace_error) console.log(`  one traced recipe   ${r.trace_error}`);
+  if (r.both_ways_error) console.log(`  emulator on and off ${r.both_ways_error}`);
+  if (r.both_ways) {
+    const all = r.both_ways.recipes;
+    const agreed = all.filter((one) => one.same).length;
+    console.log(`  emulator on and off ${agreed} of ${all.length} recipes agree, in ${r.both_ways_seconds}s`);
+    for (const one of all.filter((o) => !o.same)) {
+      console.log(`    DIFFERENT ${one.recipe}: ${one.error || one.differences.join("; ")}`);
+    }
+  }
   console.log("");
   console.log(`  ${r.booted <= 30 ? "under" : "over"} the thirty second bar`);
   console.log("");

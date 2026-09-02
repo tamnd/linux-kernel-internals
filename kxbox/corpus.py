@@ -44,6 +44,20 @@ class Recipe:
     stdout: str = ""
     status: int = 0
     files: dict[str, str] = field(default_factory=dict)
+    # Whether the command turns the tracer on and off itself, from inside, around the one system
+    # call it exists to show. The programs in the rootfs all do, and it is what keeps a first
+    # trace down to three frames. The live backend has to know, because if it opened the window
+    # as well then everything the shell did on the way to starting the program would be in the
+    # capture too. The recording backend does not care, which is exactly why nobody noticed this
+    # was missing until the two were run against each other.
+    owns_window: bool = False
+    # Whether running it a second time in the same boot gives the same trace as the first time.
+    # Most do not, and the reason is the interesting part rather than an inconvenience: a first
+    # write to a file has to find a page for the data and set the file up, and a second write to
+    # the same file finds both done already. So the recording of a file recipe is a recording of
+    # the first run of a boot and only matches the first run of a boot. A recipe that maps fresh
+    # memory every time has nothing to reuse and so gives the same answer forever.
+    repeatable: bool = False
 
     @classmethod
     def from_toml(cls, raw: dict[str, object]) -> Recipe:
@@ -57,6 +71,8 @@ class Recipe:
             stdout=str(raw.get("stdout", "")),
             status=int(raw.get("status", 0) or 0),
             files={str(k): str(v) for k, v in (raw.get("files", {}) or {}).items()},
+            owns_window=bool(raw.get("owns_window", False)),
+            repeatable=bool(raw.get("repeatable", False)),
         )
 
 
@@ -113,6 +129,15 @@ class Corpus:
             f"Tier 0 session and listing it in corpora/tier0/recipes.toml."
         )
 
+    def repeatable(self) -> list[Recipe]:
+        """The recipes that give the same trace however many times they have already run.
+
+        Worth being able to ask for. Anything that wants a live tape on a guest that has already
+        been used for something else has to pick from this list, because every other recording is
+        a recording of the first run of a boot.
+        """
+        return [one for one in self.recipes.values() if one.repeatable]
+
     def sh(self, line: str, *, recipe: str = ""):
         from kxbox.session import Command
 
@@ -130,7 +155,7 @@ class Corpus:
             "else, in the `files` table of a recipe in corpora/tier0/recipes.toml."
         )
 
-    def tape(self, recipe: str, do=None, functions: tuple[str, ...] = ()):
+    def tape(self, recipe: str, do=None, functions: tuple[str, ...] = (), *, owns_window=False):
         """Hand back the recording. The callable and the filter belong to the live backend.
 
         They are still in the signature so that the two backends are called the same way, which

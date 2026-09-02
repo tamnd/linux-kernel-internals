@@ -3,7 +3,7 @@ evidence = true
 
 describes = "one byte written to a file nothing had written to before, from the write system call down to the page being allocated and the byte copied in"
 tracer = "function_graph"
-options = ["funcgraph-proc"]
+options = ["funcgraph-proc", "nofuncgraph-irqs"]
 
 kernel = "7.2.2"
 arch = "i386"
@@ -19,6 +19,7 @@ setup = [
     "echo 0 > /sys/kernel/tracing/tracing_on",
     "echo function_graph > /sys/kernel/tracing/current_tracer",
     "echo funcgraph-proc > /sys/kernel/tracing/trace_options",
+    "echo nofuncgraph-irqs > /sys/kernel/tracing/trace_options",
     "echo vfs_write > /sys/kernel/tracing/set_graph_function",
     "echo > /sys/kernel/tracing/trace",
 ]
@@ -47,6 +48,11 @@ setup = [
 # The durations are emulated. v86 has no real clock, so the order and the nesting are true and the
 # times are not, and no claim rests on them. The cost of tracing is measured on a real machine
 # instead, in ../../experiments/tier1/.
+# `nofuncgraph-irqs` was added to this list after the file was captured, and the file was left
+# alone rather than taken again. It keeps functions called from interrupt context out of the trace,
+# there are none in here, and taking the capture again with it set reproduces this call sequence
+# exactly. What it changes is that reproducing it no longer depends on no timer tick landing inside
+# the window, which is what it depended on before and what nobody would have noticed until it did.
 timings_are_real = false
 
 # What the parser has to get right, and what the tests compare against.

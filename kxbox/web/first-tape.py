@@ -1,4 +1,4 @@
-"""One write, traced from a browser tab, by the same code a lesson would use.
+"""One page fault, traced from a browser tab, by the same code a lesson would use.
 
 This is not a demo written specially for the harness. It is the shortest real thing a lesson does,
 and it is here so that the page proves the whole stack rather than proving that a kernel boots.
@@ -30,20 +30,34 @@ if box is None:
         "bridge to the emulator did not"
     )
 
-# Filtered to `vfs_write` alone. Unfiltered, a single write on this kernel is a few thousand lines,
-# and the point being made is that a real trace arrives, not that a lot of it arrives.
+# The `page-fault` recipe, run the way the recipe says to run it, rather than a trace of this
+# page's own invention. `/bin/touchpage` opens the tracer window from the inside around exactly one
+# first touch of a page, which is what `owns_window` is about and why what comes back has three
+# frames at the top rather than the shell's own work.
+#
+# It is this recipe and not one of the writes because of the ordering on the page. The comparison
+# above runs every recipe against its recording, and the two write recipes only match their
+# recording on the first run of a boot: the second write to the same file finds the page already
+# there and skips the part worth looking at. `page-fault` maps fresh memory every time, so it gives
+# the same answer whether it has run before or not. That is recorded as `repeatable = true` in
+# corpora/tier0/recipes.toml, with the measurement behind it, and `tests/test_web_programs.py`
+# holds this file to naming a recipe that has it.
+RECIPE = "page-fault"
+
 tape = box.tape(
-    "vfs-write",
-    do=lambda: box.write("/tmp/one-byte", "x"),
-    functions=("vfs_write",),
+    RECIPE,
+    do=lambda: box.sh("/bin/touchpage --quiet"),
+    functions=("lock_mm_and_find_vma", "handle_mm_fault"),
+    owns_window=True,
 )
 
-widget = SyscallTape(tape, max_depth=3, title="One write, traced in a browser tab")
+widget = SyscallTape(tape, max_depth=3, title="One page fault, traced in a browser tab")
 
 json.dumps(
     {
         "kernel": box.read("/proc/version").strip(),
         "backend": box.describe(),
+        "recipe": RECIPE,
         "frames": tape.frame_count,
         "roots": [root.name for root in tape.roots][:5],
         "root_count": len(tape.roots),

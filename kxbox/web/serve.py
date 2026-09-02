@@ -28,6 +28,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
+CORPORA = ROOT.parent / "corpora"
 
 # What cross origin isolation costs: the page may not be opened by a different origin, and every
 # subresource has to opt in to being embedded. Both are enforced by the browser, not by us.
@@ -45,6 +46,24 @@ class Isolated(SimpleHTTPRequestHandler):
     """A static file server that says the page may block."""
 
     extensions_map = {**SimpleHTTPRequestHandler.extensions_map, **TYPES}
+
+    def translate_path(self, path: str) -> str:
+        """`/corpora/...` comes out of the repository, everything else out of `kxbox/`.
+
+        The page compares what the live kernel does against the committed recordings, and those
+        live one directory up from everything else here. The alternative was to serve the whole
+        checkout, which would move the page from `/web/` to `/kxbox/web/` and break every URL
+        anybody has written down, to reach one directory.
+        """
+        wanted = path.split("?", 1)[0].split("#", 1)[0]
+        if wanted.startswith(f"/{CORPORA.name}/"):
+            here = self.directory
+            try:
+                self.directory = str(CORPORA.parent)
+                return super().translate_path(wanted)
+            finally:
+                self.directory = here
+        return super().translate_path(path)
 
     def end_headers(self) -> None:
         for name, value in ISOLATION.items():
