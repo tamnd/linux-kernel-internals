@@ -10,8 +10,8 @@ Everything in here is committed, and everything in here is an input to the build
 corpora/
 ├── traces/          # ftrace function_graph and trace_event captures
 ├── btf/             # vmlinux BTF blobs for the pinned kernels, and one small handwritten one
-├── proc/            # /proc and /sys snapshots, and one handwritten symbol table
-├── oops/            # crash text used by the debugging lessons
+├── proc/            # /proc and /sys snapshots, and three handwritten files
+├── oops/            # crash and lockdep text used by the debugging lessons
 ├── litmus/          # herd7 and klitmus7 output for the memory model lessons
 └── tier0/           # recipes.toml, the list of what a Tier 0 session can replay
 ```
@@ -34,7 +34,7 @@ Each file has a sibling `.meta.toml` saying where it came from, so a reader can 
 
 ## The handwritten ones
 
-`traces/handwritten/`, `btf/handwritten/` and `proc/handwritten/` are not evidence and never become evidence. They exist because a parser with nothing to parse is a parser nobody can trust, and there is no built kernel yet. Every `.meta.toml` in those three directories says `evidence = false`, and the claim checker rejects a claim that points at one, so the rule is enforced rather than remembered. The graders go further and refuse to run against them at all, because grading somebody on a file nobody captured is the one thing this project promises not to do.
+`traces/handwritten/`, `btf/handwritten/`, `proc/handwritten/` and `oops/handwritten/` are not evidence and never become evidence. They exist because a parser with nothing to parse is a parser nobody can trust, and there is no built kernel yet. Every `.meta.toml` in those four directories says `evidence = false`, and the claim checker rejects a claim that points at one, so the rule is enforced rather than remembered. The graders go further and refuse to run against them at all, because grading somebody on a file nobody captured is the one thing this project promises not to do.
 
 ## Why files get regenerated rather than edited
 

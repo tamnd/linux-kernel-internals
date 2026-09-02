@@ -1,0 +1,19 @@
+source = "handwritten"
+evidence = false
+reason = "Thirty five lines written by hand in the documented format, so the statistics parser had something to parse. Not a snapshot of any machine. No lesson may cite it."
+
+describes = "the shape of /proc/lockdep_stats on a kernel where lockdep has already reported once and switched itself off"
+kernel = "none"
+arch = "none"
+
+# debug_locks is zero on purpose. That is the state a machine is in after its first splat, and it
+# is the line people skip. Once it is zero the checker is doing nothing at all for the rest of the
+# boot, so a quiet log after that point says nothing about whether the code is correct.
+
+# What the parser has to get right, and what the tests compare against.
+values = 34
+lines_with_a_limit = 5
+lock_classes = 1183
+direct_dependencies = 9714
+debug_locks = 0
+checker_off = true

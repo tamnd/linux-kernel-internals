@@ -1,0 +1,48 @@
+schema = 1
+lesson = "C09"
+
+# One of these five settles on any Linux machine whose kernel was built with CONFIG_PROVE_LOCKING,
+# and it settles the moment the reader reads their own /proc/lockdep_stats. The other four are not
+# settled here. Three want a kernel tree to confirm a citation against, and one wants the reader
+# to build a module and load it, which on Tier 0 wants kxbox to boot.
+#
+# `pending` says what will settle each claim. It is a note to the next person, not a field the
+# ledger reads.
+
+[[claims]]
+id = "C09-01"
+text = "Lockdep does not wait for a deadlock and report it afterwards. It keeps a graph of which lock class has been held while which other one was taken, and it complains at the moment adding an edge would close a cycle, which is usually long before anything could hang."
+evidence_kind = "source"
+evidence = "C09-R1"
+pending = "somebody with a 7.2.2 tree runs refcheck --tree --confirm, which resolves the anchor"
+verified = false
+
+[[claims]]
+id = "C09-02"
+text = "A report can arrive on a run where no thread ever blocked and nothing ever waited, because a cycle in the lock graph is a property of the code and a hang is a property of the timing."
+evidence_kind = "experiment"
+pending = "the reader builds the two thread module, loads it, and reads the splat out of their own dmesg on a machine that never hung"
+verified = false
+
+[[claims]]
+id = "C09-03"
+text = "The checker reasons about lock classes rather than about individual locks, so every mutex initialised by the same line of source is one class to it, and a report names a line of code rather than the object that was held."
+evidence_kind = "source"
+evidence = "C09-R2"
+pending = "somebody with a 7.2.2 tree runs refcheck --tree --confirm, which resolves the anchor"
+verified = false
+
+[[claims]]
+id = "C09-04"
+text = "Lockdep switches itself off after its first report of the boot, and from that moment it checks nothing at all, which is readable in the debug_locks line of /proc/lockdep_stats."
+evidence_kind = "proc"
+pending = "the reader reads debug_locks on their own machine, before a report and after one"
+verified = false
+
+[[claims]]
+id = "C09-05"
+text = "The numbered chain in the middle of a report is the cycle itself, printed highest number first, so the entry numbered zero is the lock being taken right now and the entry at the top of the chain is the lock already held."
+evidence_kind = "source"
+evidence = "C09-R3"
+pending = "somebody with a 7.2.2 tree runs refcheck --tree --confirm, which resolves the anchor"
+verified = false

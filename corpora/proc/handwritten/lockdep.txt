@@ -1,0 +1,9 @@
+all lock classes:
+c1a0b100 FD:    1 BD:    1 ....: cpu_hotplug_lock
+c1a0b1a0 FD:   26 BD:    1 +.+.: (memory_chain).rwsem
+c1a0b240 FD:  118 BD:   14 +.+.: &sb->s_type->i_mutex_key
+c1a0b2e0 FD:   97 BD:   22 +.+.: &sb->s_type->i_mutex_key#3
+c1a0b380 FD:    3 BD:  204 ....: &p->alloc_lock
+c1a0b420 FD:    2 BD:  311 ..-.: &obj_hash[i].lock
+c1a4e0a0 FD:    2 BD:    1 +.+.: lock_a
+c1a4e060 FD:    1 BD:    2 +.+.: lock_b

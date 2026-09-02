@@ -1,0 +1,20 @@
+id = "C09"
+title = "The lock that deadlocks tomorrow"
+part = "C"
+status = "draft"
+
+# What the lesson is written against. A kernel claim with no configuration attached is not a
+# claim, so this block is not optional and refcheck reads it.
+kernel = "7.2.2"
+arch = "x86"
+profile = "A-full"
+
+# Tier 0 is the browser kernel under v86. Uniprocessor, 32 bit, emulated timing, which is exactly
+# the machine on which a timing bug never reproduces and lockdep still finds the ordering.
+tier = 0
+
+# Why this is still a draft. One claim settles on any Linux machine built with CONFIG_PROVE_LOCKING
+# and it works today. Three want a kernel tree to confirm a citation against. The one that needs
+# the reader to load a module and read their own splat needs a kernel they can build against,
+# which on Tier 0 needs kxbox to boot.
+blocked_on = "kxbox"

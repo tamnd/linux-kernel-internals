@@ -80,6 +80,7 @@ nav:
   - The two tiers: tiers.md
   - Lessons:
       - All lessons: lessons/index.md
+      - "C09: The lock that deadlocks tomorrow": lessons/C09/index.ipynb
       - "S05: The first ops plug": lessons/S05/index.ipynb
       - "Z02: Your first trace": lessons/Z02/index.ipynb
   - Blueprints:
