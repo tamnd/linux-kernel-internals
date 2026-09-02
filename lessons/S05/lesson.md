@@ -171,9 +171,9 @@ That constraint shapes the whole design. A filesystem that wants per file state 
 
 ## Most of it is empty
 
-Open a real table and count what is filled. Most slots in an ops table are allowed to be empty, and the caller checks a slot before calling it, so a missing operation comes back as an error rather than as a crash.
+Open a real table and count what is filled. A `struct file_operations` has more than thirty slots, a filesystem fills eight or ten, and the rest are null.
 
-A `struct file_operations` has more than thirty slots. A filesystem fills eight or ten. The rest are null, and the caller checks before it calls, so asking a pipe to `mmap` comes back as an error rather than as a jump to address zero.
+That is not sloppiness, it is the arrangement working. The caller checks a slot before it calls it, so a file whose table never filled in either write slot comes back from write(2) with an error rather than jumping through a null pointer. Asking a pipe to `mmap` comes back as an error rather than as a jump to address zero, so a filesystem that does not want to implement something implements nothing at all.
 
 The cell below draws a real table if your kernel ships BTF at `/sys/kernel/btf/vmlinux`, which most kernels since 2020 do. What it draws is the shape of the type, with every slot empty, because BTF describes types and what sits in a slot is a fact about a running kernel.
 

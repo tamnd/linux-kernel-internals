@@ -11,14 +11,25 @@ from pathlib import Path
 
 from .rules import ALL_RULES, check_file
 
+# Directories that hold somebody else's writing. These rules are the house style of this
+# repository and applying them to a vendored dependency or to an unpacked kernel tree is both
+# meaningless and extremely loud: the first run after `tree.sh` reported a hundred and forty two
+# findings, every one of them in a README that shipped with Linux. A directory named here is
+# skipped wherever it turns up, at any depth.
+NOT_OURS = {".git", "__pycache__", "node_modules", "vendor", "build"}
+
 
 def collect(paths: list[str]) -> list[Path]:
     out: list[Path] = []
     for raw in paths:
         p = Path(raw)
         if p.is_dir():
-            out.extend(sorted(p.rglob("*.md")))
+            out.extend(
+                sorted(found for found in p.rglob("*.md") if not NOT_OURS.intersection(found.parts))
+            )
         elif p.suffix == ".md":
+            # A file named on the command line is checked whatever it is, because asking for it by
+            # name is a person saying they meant this one.
             out.append(p)
     return out
 

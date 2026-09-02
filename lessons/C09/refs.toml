@@ -2,20 +2,22 @@ schema = 1
 
 # Citations into the pinned kernel tree.
 #
-# None of these are confirmed, and that is the honest state rather than an oversight. Confirming
-# one means running `python3 -m tools.refcheck --tree <a real linux tree> --confirm`, which finds
-# the anchor, writes down the line it is on and flips the flag. There is no kernel tree on the
-# machine this was written on.
+# These are confirmed against the pinned tree. Unpack it with `./kxbox/kernel/tree.sh` and run
+# `python3 -m tools.refcheck --tree kxbox/kernel/build/tree/linux-7.2.2 --confirm`, which finds
+# the anchor, writes down the line it is on and flips the flag. Only a confirmed citation can back
+# a claim marked verified, and refcheck is what enforces that.
 #
-# The anchor is a piece of text to find, never a line number.
+# The anchor is a piece of text to find, never a line number. A line number is right on the day it
+# is typed and wrong after the next patch, and the wrongness is silent, because a stale line number
+# still points at a line. An anchor that matches twice is rejected for the same reason.
 
 [[references]]
 id = "C09-R1"
 path = "kernel/locking/lockdep.c"
-anchor = "check_noncircular"
+anchor = "check_noncircular(struct held_lock *src, struct held_lock *target,"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 2149
 note = "The search itself. Before a new edge is added the checker walks the graph looking for a path back, and a path back is a cycle."
 
 [[references]]
@@ -23,8 +25,8 @@ id = "C09-R2"
 path = "Documentation/locking/lockdep-design.rst"
 anchor = "The basic object the validator operates upon"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 11
 note = "The design document, and the place that says the checker's unit is the class rather than the instance. This is the paragraph to read before arguing with a report."
 
 [[references]]
@@ -32,6 +34,6 @@ id = "C09-R3"
 path = "kernel/locking/lockdep.c"
 anchor = "the existing dependency chain (in reverse order) is"
 kernel = "7.2.2"
-confirmed = false
-line = 0
+confirmed = true
+line = 1973
 note = "Where the report is printed, which is also where the order of the numbered entries is decided. The printing is what makes #0 the lock being acquired."

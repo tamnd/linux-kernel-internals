@@ -81,15 +81,24 @@ def test_this_repository_is_clean():
     assert findings == [], messages(findings)
 
 
-def test_every_citation_in_this_repository_is_still_waiting_on_a_kernel_tree():
-    """Written down as a test, so that confirming one is a deliberate act with a diff.
+def test_every_citation_in_this_repository_has_been_resolved():
+    """Written down as a test, so that adding an unconfirmed citation is a deliberate act.
 
-    There is no kernel tree on this machine. If this ever fails it is because somebody resolved a
-    citation against a real tree, which is good news and worth reading the diff for.
+    This test used to say the opposite, because there was no kernel tree to resolve anything
+    against. `./kxbox/kernel/tree.sh` unpacks one now, so an unconfirmed citation is a citation
+    somebody wrote and did not check, and the diff that adds it should say why.
     """
     _, references = refcheck.check(ROOT)
     assert references, "there should be citations by now"
-    assert not any(r.confirmed for r in references)
+    waiting = [r.identifier for r in references if not r.confirmed]
+    assert waiting == [], f"unconfirmed: {waiting}, run `just tree` then `just refs-confirm`"
+
+
+def test_a_confirmed_citation_still_carries_the_line_it_landed_on():
+    """A confirmed flag with no line behind it is the one lie this file cannot catch by reading."""
+    _, references = refcheck.check(ROOT)
+    for reference in references:
+        assert reference.line > 0, f"{reference.identifier} says confirmed with no line"
 
 
 # -- paths into this repository ---------------------------------------------------------------

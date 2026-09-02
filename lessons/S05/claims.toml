@@ -1,10 +1,17 @@
 schema = 1
 lesson = "S05"
 
-# Two of these six are settled the moment a reader runs the lesson, because they are counts taken
-# off the reader's own kernel and no kernel of ours is needed to make them true. The other four
-# are not settled here. Three want a kernel tree to confirm a citation against, and one wants a
-# capture, which wants kxbox to boot.
+# The three source claims are verified. Their citations resolve against the pinned 7.2.2 tree,
+# which `./kxbox/kernel/tree.sh` unpacks, and refcheck refuses to let a claim say verified against
+# a citation nobody has resolved.
+#
+# S05-05 changed while that was being done, and it is worth saying why. It used to cite the
+# file_operations section of Documentation/filesystems/vfs.rst for the idea that most slots may be
+# left empty. That section lists the members and describes each one, and it never says that. The
+# claim now says the narrower thing the code actually shows, and cites the code.
+#
+# Two more are settled the moment a reader runs the lesson, because they are counts taken off the
+# reader's own kernel. The last one wants a capture, which wants kxbox to boot.
 #
 # `pending` says what will settle each claim. It is a note to the next person, not a field the
 # ledger reads.
@@ -14,16 +21,14 @@ id = "S05-01"
 text = "The VFS does not know how to write to any filesystem. It reads a function pointer out of the open file and calls whatever is in it, so the filesystem chose the code that runs and the VFS only chose the slot."
 evidence_kind = "source"
 evidence = "S05-R1"
-pending = "somebody with a 7.2.2 tree runs refcheck --tree --confirm, which resolves the anchor"
-verified = false
+verified = true
 
 [[claims]]
 id = "S05-02"
 text = "The pointer is put there when the file is opened, copied out of the inode, so the implementation is chosen once at open time and every later call follows the same pointer."
 evidence_kind = "source"
 evidence = "S05-R2"
-pending = "somebody with a 7.2.2 tree runs refcheck --tree --confirm, which resolves the anchor"
-verified = false
+verified = true
 
 [[claims]]
 id = "S05-03"
@@ -41,11 +46,10 @@ verified = false
 
 [[claims]]
 id = "S05-05"
-text = "Most slots in an ops table are allowed to be empty, and the caller checks a slot before calling it, so a missing operation comes back as an error rather than as a crash."
+text = "The caller checks a slot before it calls it, so a file whose table never filled in either write slot comes back from write(2) with an error rather than jumping through a null pointer."
 evidence_kind = "source"
 evidence = "S05-R3"
-pending = "somebody with a 7.2.2 tree runs refcheck --tree --confirm, which resolves the anchor"
-verified = false
+verified = true
 
 [[claims]]
 id = "S05-06"

@@ -24,6 +24,19 @@ On an x86 host it builds natively. On anything else it installs `gcc-i686-linux-
 
 The output lands in `kxbox/kernel/build/<profile>/` and is not committed. The recipe is in the repository, the artefacts are not.
 
+## Reading the source
+
+The build keeps its tree inside the container, which is fine for building and no use at all for looking things up. `tree.sh` unpacks the same tarball where a person and a checker can read it.
+
+```sh
+./kxbox/kernel/tree.sh
+python3 -m tools.refcheck --tree kxbox/kernel/build/tree/linux-7.2.2 --confirm
+```
+
+It is the pristine tarball rather than a copy of the built tree, and that difference matters. A built tree has generated headers in it, so a citation that resolved against one would resolve for the person who ran the build and for nobody else. What comes out of `tree.sh` is what comes out of kernel.org, checked against the same sha256 the build checks.
+
+It takes a couple of minutes and about 1.6 GB, and `build/` is ignored by git, so `rm -rf kxbox/kernel/build/tree` is how you get the space back.
+
 ## The config
 
 `config/` holds Kconfig fragments, not a `.config`. A committed `.config` would be stale after one release and wrong in a way nobody could see, so the fragments get merged over `tinyconfig` by the kernel's own `merge_config.sh`, which is the only thing that understands the dependencies between these symbols.
