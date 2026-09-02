@@ -21,6 +21,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { CHECKS, runChecks } from "./checks.js";
 import { Guest, Host } from "./host.js";
 import { READY, serialFor, waitForBoot } from "./page.js";
 
@@ -95,38 +96,19 @@ export async function boot(options = {}) {
   }
 }
 
-// The checks. Each one is a thing some lesson stops working without, and each says what it is for,
-// because a red line in a list of names tells you nothing about what just became impossible.
-const CHECKS = [
-  { name: "shell", what: "the protocol reaches a shell at all", run: (box) => box.sh("echo hello") },
-  { name: "proc", what: "everything /proc based", run: (box) => box.read("/proc/version") },
-  { name: "kallsyms", what: "names in a trace instead of addresses", run: (box) => box.sh("wc -l < /proc/kallsyms") },
-  { name: "tracefs", what: "Z02 and every trace in the book", run: (box) => box.sh("ls /sys/kernel/tracing/current_tracer") },
-  { name: "tracers", what: "function_graph, which is what a tape is made of", run: (box) => box.read("/sys/kernel/tracing/available_tracers") },
-  { name: "dmesg", what: "C09 and every oops lesson", run: (box) => box.sh("dmesg | tail -1") },
-  { name: "write", what: "turning a tracer on, which is a single redirect", run: (box) => box.write("/tmp/probe", "one\ntwo\n") },
-  { name: "readback", what: "the write above actually landing", run: (box) => box.read("/tmp/probe") },
-  { name: "modules", what: "every part that ends in a change", run: (box) => box.sh("test -d /sys/module") },
-  { name: "touchpage", what: "a page fault trace with one fault in it instead of thirty", run: (box) => box.sh("/bin/touchpage") },
-];
-
 async function smoke() {
   const box = await boot();
   console.log(`booted in ${box.seconds.toFixed(1)}s`);
 
+  const results = await runChecks(box.host);
   let bad = 0;
-  for (const check of CHECKS) {
-    try {
-      const answer = await check.run(box.host);
-      const shown = typeof answer === "string" ? answer : (answer && answer.stdout) || "";
-      const status = typeof answer === "object" && answer ? answer.status : 0;
-      const first = shown.trim().split("\n")[0] || "";
-      if (status !== 0) throw new Error(`exit ${status}`);
-      console.log(`  pass  ${check.name.padEnd(9)} ${first.slice(0, 60)}`);
-    } catch (error) {
+  for (const result of results) {
+    if (result.ok) {
+      console.log(`  pass  ${result.name.padEnd(9)} ${result.detail}`);
+    } else {
       bad += 1;
-      console.log(`  FAIL  ${check.name.padEnd(9)} ${error.message.split("\n")[0]}`);
-      console.log(`        without it: ${check.what}`);
+      console.log(`  FAIL  ${result.name.padEnd(9)} ${result.detail}`);
+      console.log(`        without it: ${result.what}`);
     }
   }
 

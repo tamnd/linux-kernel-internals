@@ -7,61 +7,91 @@
     <style>
       body {
         font-family: ui-sans-serif, system-ui, sans-serif;
+        line-height: 1.5;
         margin: 0 auto;
-        max-width: 60rem;
+        max-width: 62rem;
         padding: 2rem 1rem;
       }
       h1 {
-        font-size: 1.25rem;
+        font-size: 1.35rem;
       }
-      #state {
+      h2 {
+        font-size: 1rem;
+        margin-top: 2rem;
+      }
+      p.note {
         color: #475569;
       }
+      #state {
+        background: #f1f5f9;
+        border-left: 3px solid #64748b;
+        padding: 0.5rem 0.75rem;
+      }
+      table {
+        border-collapse: collapse;
+        font-size: 0.875rem;
+        width: 100%;
+      }
+      td {
+        border-bottom: 1px solid #e2e8f0;
+        padding: 0.25rem 0.5rem;
+        vertical-align: top;
+      }
+      td:first-child {
+        font-family: ui-monospace, monospace;
+        width: 3.5rem;
+      }
+      td:nth-child(2) {
+        font-family: ui-monospace, monospace;
+        width: 7rem;
+      }
+      tr.bad td {
+        color: #b91c1c;
+      }
+      pre,
       #console {
         background: #0f172a;
         border-radius: 6px;
         color: #e2e8f0;
         font-family: ui-monospace, monospace;
-        font-size: 0.8rem;
-        height: 24rem;
-        overflow-y: auto;
+        font-size: 0.75rem;
+        overflow-x: auto;
         padding: 0.75rem;
         white-space: pre-wrap;
+      }
+      #console {
+        height: 18rem;
+        overflow-y: auto;
       }
     </style>
   </head>
   <body>
     <h1>Tier 0: a Linux kernel in this tab</h1>
+    <p class="note">This page boots the pinned kernel, checks the things a lesson needs, starts Python beside it, and takes one real trace through the bridge. It exists to answer the question M0 is built around, which is how long a reader waits before anything happens.</p>
+
     <p id="state">Starting.</p>
+
+    <h2>Boot</h2>
+    <p id="boot" class="note">Not yet.</p>
+
+    <h2>What works once it is up</h2>
+    <table>
+      <tbody id="checks"></tbody>
+    </table>
+
+    <h2>Python, in a worker, talking to it</h2>
+    <p id="pystate" class="note">Not yet.</p>
+
+    <h2>One write, traced</h2>
+    <p id="tapestate" class="note">Not yet.</p>
+    <div id="tape"></div>
+
+    <h2>What to paste into RESULTS.md</h2>
+    <pre id="results">Not yet.</pre>
+
+    <h2>What the guest said</h2>
     <div id="console" aria-live="polite" aria-label="Guest console output"></div>
 
-    <!-- The emulator is imported by page.js, from the copy tools/vendor.py fetched. -->
-    <script type="module">
-      import { start } from "./page.js";
-
-      const state = document.getElementById("state");
-      const output = document.getElementById("console");
-
-      if (!crossOriginIsolated) {
-        state.textContent =
-          "This page is not cross origin isolated, so the worker cannot block on the emulator. Serve it with kxbox/web/serve.py.";
-      } else {
-        state.textContent = "Booting.";
-        start()
-          .then(({ emulator, booted }) => {
-            state.textContent = `Booted in ${booted.toFixed(1)} seconds.`;
-            const decoder = new TextDecoder();
-            emulator.add_listener("serial0-output-byte", (byte) => {
-              output.textContent += decoder.decode(new Uint8Array([byte]), { stream: true });
-              output.scrollTop = output.scrollHeight;
-            });
-          })
-          .catch((error) => {
-            // Almost always one of three things: v86 not fetched, the kernel not built, or the
-            // rootfs not built. serve.py prints which one when it starts, so say to look there.
-            state.textContent = `Did not boot: ${error.message}. Check what serve.py printed when it started.`;
-          });
-      }
-    </script>
+    <script type="module" src="./harness.js"></script>
   </body>
 </html>
