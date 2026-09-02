@@ -1,11 +1,17 @@
 """What Tier 0 can do on this machine, and whether the recordings hold together.
 
-    python3 -m kxbox            what backend you would get here, and what it knows how to do
-    python3 -m kxbox --check    fail if a recipe points at a file that is not there
+    python3 -m kxbox              what backend you would get here, and what it knows how to do
+    python3 -m kxbox --check      fail if a recipe points at a file that is not there
+    python3 -m kxbox --both-ways  run every recipe with the emulator and without it
 
 The check is what CI runs. A recipe naming a capture that nobody committed is a lesson cell that
 works for the person who wrote it and fails for everybody else, and it fails at the moment a
 reader is trying to learn something rather than at the moment somebody could fix it.
+
+`--both-ways` is here so that somebody who wants the M0 comparison finds out where to run it. It
+needs an emulator and there is not one outside a browser tab, so on a terminal it prints what is
+missing and returns 2 rather than pretending. `kxbox/web/both-ways.py` is the same code with a
+kernel behind it.
 """
 
 from __future__ import annotations
@@ -67,9 +73,22 @@ def report(root: Path) -> str:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="kxbox", description="What Tier 0 can do here.")
     ap.add_argument("--check", action="store_true", help="Fail if a recording is missing")
+    ap.add_argument(
+        "--both-ways", action="store_true", help="Compare the emulator against the recordings"
+    )
     args = ap.parse_args(argv)
 
     root = repo_root()
+    if args.both_ways:
+        from kxbox import bothways
+
+        found = bothways.run(root=root)
+        print(found.summary())
+        # Three outcomes and three codes, because "nothing was measured" is not a pass and is not
+        # a failure either. A caller that treated it as one of those two would be the exact
+        # mistake this whole module is written to avoid.
+        return {None: 2, True: 0, False: 1}[found.same]
+
     if not args.check:
         print(report(root))
         return 0

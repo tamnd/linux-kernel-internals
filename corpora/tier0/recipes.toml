@@ -11,6 +11,27 @@ schema = 1
 # files they used to point at are still in `traces/handwritten/`, still marked `evidence = false`,
 # and still doing the job they were written for, which is giving the parser something to test
 # against on a machine with no kernel built.
+#
+# `owns_window` says the command opens and closes the tracer window itself, from inside, around
+# the one system call it exists to show. All three of these do, which is what keeps a first trace
+# down to three frames instead of seventeen. It changes nothing about replaying a recording and it
+# matters a great deal to a live kernel, which is why it went missing for as long as it did:
+# nothing had run the two backends against each other until `kxbox/bothways.py`.
+#
+# `repeatable` says the command gives the same trace however many times it has already run on this
+# guest. Running each of these three times in one boot and comparing the call names gives:
+#
+#     write-1byte    run 1 differs from run 2, runs 2 and 3 identical
+#     two-writes     run 1 differs from run 2, runs 2 and 3 identical
+#     page-fault     all three identical
+#
+# That is not a flaw in the two file recipes, it is the thing they are about. A first write has to
+# find a page for the data and set the file up, and a second write to the same file finds both done
+# already, so the tree under `vfs_write` is smaller the second time. `touchpage` maps fresh memory
+# on every run and so has nothing to reuse. The consequence for anything driving a live guest is
+# that the recordings of the two file recipes only match the first run of a boot, so the comparison
+# in `kxbox/bothways.py` has to go first and anything wanting a live tape afterwards has to pick a
+# recipe marked here.
 
 [[recipes]]
 name = "write-1byte"
@@ -29,6 +50,8 @@ describes = "one byte written to a file nothing had written to before, from the 
 # is the point where a write stops being a system call and starts being a filesystem's problem,
 # and that is the boundary the lesson is about.
 command = "/bin/writebyte --quiet"
+owns_window = true
+repeatable = false
 functions = ["vfs_write"]
 trace = "traces/tier0/write-1byte.txt"
 status = 0
@@ -43,6 +66,8 @@ describes = "one byte to a file on tmpfs and one byte to a pipe, in one tracer w
 # would let anybody rule that out. This arrangement is the only one where "the same code went two
 # ways" is something the capture shows rather than something the reader is asked to accept.
 command = "/bin/twowrites --quiet"
+owns_window = true
+repeatable = false
 functions = ["vfs_write"]
 trace = "traces/tier0/two-writes.txt"
 status = 0
@@ -53,6 +78,10 @@ name = "page-fault"
 profile = "teaching"
 describes = "a first touch of an anonymous page, from finding the VMA to the pte being installed"
 command = "/bin/touchpage --quiet"
+owns_window = true
+# The only one of the three that is. `touchpage` maps a fresh anonymous page every run, so there is
+# never anything left over from the run before to make the second one shorter.
+repeatable = true
 # Not `exc_page_fault`, which is what this used to say. That function is noinstr and ftrace is not
 # allowed to attach to it, so asking for it by name gets the write rejected. And not
 # `do_anonymous_page` either, which the compiler inlined out of this build. Both were written down

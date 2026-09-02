@@ -95,13 +95,24 @@ class Box:
             return self.sh(f"insmod {path}", recipe=f"insmod {Path(path).name}")
         return self.backend.insmod(path)
 
-    def trace(self, recipe: str, do=None, *, functions: tuple[str, ...] | list[str] = ()):
+    def trace(
+        self,
+        recipe: str,
+        do=None,
+        *,
+        functions: tuple[str, ...] | list[str] = (),
+        owns_window: bool = False,
+    ):
         """Run something with the function graph tracer on, and hand back a `kxray.models.Tape`.
 
         On a recording the callable is not run, because there is nothing to run it on. The name
         is what both sides agree about.
+
+        `owns_window` says the thing being run opens and closes the tracer window itself, which
+        every compiled program in the rootfs does. It means nothing to a recording and everything
+        to a live kernel.
         """
-        return self.backend.tape(recipe, do, tuple(functions))
+        return self.backend.tape(recipe, do, tuple(functions), owns_window=owns_window)
 
     def banner(self) -> str:
         """What is behind this session, printed before a reader believes anything it says.

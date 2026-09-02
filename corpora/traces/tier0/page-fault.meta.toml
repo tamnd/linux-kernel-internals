@@ -3,7 +3,7 @@ evidence = true
 
 describes = "one anonymous page written to for the first time, from finding the VMA to the pte being installed"
 tracer = "function_graph"
-options = ["funcgraph-proc"]
+options = ["funcgraph-proc", "nofuncgraph-irqs"]
 
 kernel = "7.2.2"
 arch = "i386"
@@ -20,6 +20,7 @@ setup = [
     "echo 0 > /sys/kernel/tracing/tracing_on",
     "echo function_graph > /sys/kernel/tracing/current_tracer",
     "echo funcgraph-proc > /sys/kernel/tracing/trace_options",
+    "echo nofuncgraph-irqs > /sys/kernel/tracing/trace_options",
     "echo lock_mm_and_find_vma > /sys/kernel/tracing/set_graph_function",
     "echo handle_mm_fault >> /sys/kernel/tracing/set_graph_function",
     "echo > /sys/kernel/tracing/trace",
@@ -40,6 +41,11 @@ setup = [
 # The durations are emulated. v86 has no real clock, and four microseconds for `__rcu_read_lock`
 # is a number about the emulator rather than about the kernel. The order is real, the nesting is
 # real, the times are not, and no claim rests on them.
+# `nofuncgraph-irqs` was added to this list after the file was captured, and the file was left
+# alone rather than taken again. It keeps functions called from interrupt context out of the trace,
+# there are none in here, and taking the capture again with it set reproduces this call sequence
+# exactly. What it changes is that reproducing it no longer depends on no timer tick landing inside
+# the window, which is what it depended on before and what nobody would have noticed until it did.
 timings_are_real = false
 
 # What the parser has to get right, and what the tests compare against.
