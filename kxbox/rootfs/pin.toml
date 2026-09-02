@@ -36,3 +36,23 @@ required_applets = [
     "sleep",
     "sync",
 ]
+
+# The one thing in the image that is not busybox. It is compiled here because there is no applet
+# that faults on a page you chose at a moment you chose, and without one every trace of a page
+# fault is thirty faults with the interesting one somewhere in the middle. The container is the
+# same one the kernel is built in, so this adds no toolchain that was not already needed.
+#
+# The cross compiler is used on every host, including an x86 one where the native gcc could do it
+# with -m32. One compiler means one binary, and a binary that differs depending on whose laptop
+# built the image is a difference that turns up later as a trace nobody can reproduce.
+[touchpage]
+source = "touchpage.c"
+image = "debian:trixie-slim"
+compiler = "i686-linux-gnu-gcc"
+packages = ["gcc-i686-linux-gnu"]
+# No C library, so no libc headers to install and nothing to link against. `-nostdlib` is what
+# takes the binary from seven hundred kilobytes to about ten, and the rootfs is a thing a browser
+# downloads. `-fno-pic` because the syscall wrappers want ebx, which position independent code
+# reserves for itself.
+flags = ["-static", "-nostdlib", "-fno-pic", "-fno-stack-protector", "-Os", "-Wall", "-Wextra", "-Werror"]
+

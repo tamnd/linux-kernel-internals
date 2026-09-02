@@ -7,10 +7,9 @@ schema = 1
 # the recording filed under that name and hands it back. Both give you a `kxray.models.Tape`.
 #
 # Adding a recipe means capturing it on a real Tier 0 session and committing the capture with its
-# `.meta.toml`. It does not mean writing one. The two traces listed below are handwritten, they
-# are marked `evidence = false` where they live, and the claim checker refuses a claim that rests
-# on either of them. They are here so the fallback has something to hand back before the kernel
-# boots, and they get replaced by captures the day it does.
+# `.meta.toml`. It does not mean writing one. `page-fault` is a capture now. `write-1byte` is still
+# handwritten, is marked `evidence = false` where it lives, and the claim checker refuses a claim
+# that rests on it. It gets replaced the same way the other one did.
 
 [[recipes]]
 name = "write-1byte"
@@ -25,9 +24,14 @@ stdout = "1+0 records in\n1+0 records out\n"
 [[recipes]]
 name = "page-fault"
 profile = "teaching"
-describes = "a first touch of an anonymous page, from the trap to the pte being installed"
-command = "/bin/touchpage"
-functions = ["exc_page_fault", "handle_mm_fault", "do_anonymous_page"]
-trace = "traces/handwritten/page-fault.txt"
+describes = "a first touch of an anonymous page, from finding the VMA to the pte being installed"
+command = "/bin/touchpage --quiet"
+# Not `exc_page_fault`, which is what this used to say. That function is noinstr and ftrace is not
+# allowed to attach to it, so asking for it by name gets the write rejected. And not
+# `do_anonymous_page` either, which the compiler inlined out of this build. Both were written down
+# from reading the source and both were wrong, which is the argument for capturing rather than
+# describing in one line.
+functions = ["lock_mm_and_find_vma", "handle_mm_fault"]
+trace = "traces/tier0/page-fault.txt"
 status = 0
 stdout = ""

@@ -14,8 +14,12 @@ import pytest
 from kxray.models import Comment, InterruptEntry, InterruptExit, TaskSwitch
 from kxray.trace import parse, parse_file
 
-CORPUS = Path(__file__).resolve().parents[1] / "corpora" / "traces" / "handwritten"
+TRACES = Path(__file__).resolve().parents[1] / "corpora" / "traces"
+CORPUS = TRACES / "handwritten"
+TIER0 = TRACES / "tier0"
 ARTEFACTS = sorted(CORPUS.glob("*.txt"))
+CAPTURES = sorted(TIER0.glob("*.txt"))
+EVERY = ARTEFACTS + CAPTURES
 
 
 def header(*rows: str) -> str:
@@ -24,9 +28,10 @@ def header(*rows: str) -> str:
 
 def test_the_corpus_is_not_empty():
     assert ARTEFACTS, f"no trace artefacts found under {CORPUS}"
+    assert CAPTURES, f"no captures found under {TIER0}"
 
 
-@pytest.mark.parametrize("artefact", ARTEFACTS, ids=lambda p: p.stem)
+@pytest.mark.parametrize("artefact", EVERY, ids=lambda p: f"{p.parent.name}/{p.stem}")
 def test_artefact_matches_its_metadata(artefact):
     meta = tomllib.loads(artefact.with_suffix(".meta.toml").read_text())
     tape = parse_file(artefact)
@@ -47,6 +52,24 @@ def test_handwritten_artefacts_are_not_evidence(artefact):
     meta = tomllib.loads(artefact.with_suffix(".meta.toml").read_text())
     assert meta["source"] == "handwritten"
     assert meta["evidence"] is False
+
+
+@pytest.mark.parametrize("artefact", CAPTURES, ids=lambda p: p.stem)
+def test_a_capture_says_which_machine_it_came_off(artefact):
+    """A recording that does not say what produced it is a recording nobody can take again.
+
+    The `setup` list matters more than it looks. Half of what a function_graph trace contains is
+    decided before the tracer starts, by which functions were filtered in, and a capture without
+    that list is a picture with no way to reproduce it.
+    """
+    meta = tomllib.loads(artefact.with_suffix(".meta.toml").read_text())
+    assert meta["source"] == "tier0"
+    assert meta["evidence"] is True
+    for key in ("kernel", "arch", "profile", "captured", "command", "describes"):
+        assert meta.get(key), f"{artefact.name} has no {key}"
+    assert meta["setup"], "no setup, so nobody can take this again"
+    # Tier 0 is an emulator with no real clock, and a duration off it means nothing.
+    assert meta["timings_are_real"] is False
 
 
 def test_the_write_path_comes_out_as_a_tree():

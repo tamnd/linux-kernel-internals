@@ -1,0 +1,50 @@
+source = "tier0"
+evidence = true
+
+describes = "one anonymous page written to for the first time, from finding the VMA to the pte being installed"
+tracer = "function_graph"
+options = ["funcgraph-proc"]
+
+kernel = "7.2.2"
+arch = "i386"
+profile = "A-full"
+uniprocessor = true
+preempt = true
+captured = "2026-09-02"
+tier = 0
+
+# How to take it again. The tracer is filtered to two functions on purpose, and the reason is in
+# the notes below.
+command = "/bin/touchpage --quiet"
+setup = [
+    "echo 0 > /sys/kernel/tracing/tracing_on",
+    "echo function_graph > /sys/kernel/tracing/current_tracer",
+    "echo funcgraph-proc > /sys/kernel/tracing/trace_options",
+    "echo lock_mm_and_find_vma > /sys/kernel/tracing/set_graph_function",
+    "echo handle_mm_fault >> /sys/kernel/tracing/set_graph_function",
+    "echo > /sys/kernel/tracing/trace",
+]
+
+# Three things about this capture that are not obvious from reading it.
+#
+# The trace does not start at `exc_page_fault`, and it cannot. That function and
+# `do_user_addr_fault` are both marked `noinstr`, so the kernel refuses to let ftrace attach to
+# them, and writing either name to `set_graph_function` is rejected. Tracing the very first
+# instructions after a trap is not safe, so the earliest the tracer can see a fault is the point
+# where the handler has already decided this is a user address and gone looking for the VMA.
+#
+# The first line is a `mutex_unlock()` with no call above it. That is the tail of the `write` that
+# turned tracing on, which was already several frames deep when the tracer started recording. It
+# is the shape every trace has at its start and it is left in rather than trimmed out.
+#
+# The durations are emulated. v86 has no real clock, and four microseconds for `__rcu_read_lock`
+# is a number about the emulator rather than about the kernel. The order is real, the nesting is
+# real, the times are not, and no claim rests on them.
+timings_are_real = false
+
+# What the parser has to get right, and what the tests compare against.
+unparsed_lines = 0
+frames = 41
+roots = 3
+max_depth = 5
+cpus = [0]
