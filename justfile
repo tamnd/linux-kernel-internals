@@ -67,6 +67,11 @@ blueprints:
 blueprints-generate btf="":
     python3 -m tools.bpc --generate {{ if btf == "" { "" } else { "--btf " + btf } }}
 
+# The same thing against the kernel this project pins, once `just kernel-build A-full` has run.
+# That vmlinux is an ELF image and the BTF is in a section inside it, which the reader handles.
+blueprints-generate-pinned:
+    just blueprints-generate kxbox/kernel/build/A-full/vmlinux
+
 # Recompute the seals after regenerating a section.
 reseal:
     python3 -m tools.bpc --reseal blueprints

@@ -18,6 +18,11 @@ One thing BTF does not tell you is the size of a pointer. The file describes typ
 and the same blob means one layout on 32-bit and another on 64-bit. So the pointer size is
 something you pass in, it defaults to 8, and every layout prints which one it used. A lesson
 looking at the Tier 0 kernel passes 4.
+
+`parse_file` takes either kind of file. `/sys/kernel/btf/vmlinux` on a running machine is the raw
+blob, and the `vmlinux` a build produces is an ELF image with the same blob inside it in a section
+called `.BTF`. Both are the same bytes in the end, and which one somebody has depends only on
+whether they are looking at a kernel that is running or one that has just been built.
 """
 
 from __future__ import annotations
@@ -431,10 +436,84 @@ def parse(blob: bytes, *, pointer_size: int = 8, source: str = "<bytes>") -> Btf
     return Btf(types, strings, pointer_size=pointer_size, source=source)
 
 
+ELF_MAGIC = b"\x7fELF"
+
+# The section a kernel build puts its BTF in. objcopy would pull it out in one line, and needing
+# objcopy would mean this only works on a machine with binutils, which rules out a browser and
+# rules out the laptop somebody reads a lesson on.
+BTF_SECTION = b".BTF"
+
+
+def elf_section(blob: bytes, want: bytes = BTF_SECTION) -> bytes | None:
+    """Pull one section out of an ELF image, or None if it is not in there.
+
+    Enough ELF to find a section and no more. The section header table says where each section
+    starts and how long it is, and one of the sections is a table of the names, so finding a
+    section by name is two lookups and no interpretation of anything.
+
+    Both widths and both byte orders, because a 32-bit kernel and a 64-bit one both turn up here
+    and the whole point of Tier 0 is that the kernel in front of you is 32-bit.
+    """
+    if len(blob) < 64 or blob[:4] != ELF_MAGIC:
+        return None
+
+    wide = blob[4] == 2
+    order = "<" if blob[5] == 1 else ">"
+
+    if wide:
+        table_at, entry_size, count, names_index = (
+            struct.unpack_from(order + "Q", blob, 0x28)[0],
+            *struct.unpack_from(order + "HHH", blob, 0x3A),
+        )
+    else:
+        table_at, entry_size, count, names_index = (
+            struct.unpack_from(order + "I", blob, 0x20)[0],
+            *struct.unpack_from(order + "HHH", blob, 0x2E),
+        )
+
+    if not table_at or names_index >= count:
+        return None
+
+    def header(index: int) -> tuple[int, int, int]:
+        """One section header, as (name offset, file offset, size)."""
+        at = table_at + index * entry_size
+        name = struct.unpack_from(order + "I", blob, at)[0]
+        if wide:
+            offset, size = struct.unpack_from(order + "QQ", blob, at + 0x18)
+        else:
+            offset, size = struct.unpack_from(order + "II", blob, at + 0x10)
+        return name, offset, size
+
+    _, names_at, names_size = header(names_index)
+    names = blob[names_at : names_at + names_size]
+
+    for index in range(count):
+        name, offset, size = header(index)
+        end = names.find(b"\0", name)
+        if names[name : name if end < 0 else end] == want:
+            return blob[offset : offset + size]
+    return None
+
+
 def parse_file(path: str | Path, *, pointer_size: int = 8) -> Btf:
-    """Parse a file. `/sys/kernel/btf/vmlinux` on a live machine, or a blob from `corpora/`."""
+    """Parse a file, whether it is a raw BTF blob or a vmlinux with BTF inside it.
+
+    `/sys/kernel/btf/vmlinux` on a running machine is the blob on its own. The `vmlinux` a build
+    leaves behind is an ELF image carrying the same blob in its `.BTF` section. Taking both means
+    a lesson and a blueprint generator can point at whichever one the reader has, and neither has
+    to run objcopy to get there.
+    """
     path = Path(path)
-    return parse(path.read_bytes(), pointer_size=pointer_size, source=str(path))
+    blob = path.read_bytes()
+    if blob[:4] == ELF_MAGIC:
+        inner = elf_section(blob)
+        if inner is None:
+            raise BtfError(
+                f"{path} is an ELF image with no {BTF_SECTION.decode()} section in it, so it was "
+                f"built without CONFIG_DEBUG_INFO_BTF"
+            )
+        blob = inner
+    return parse(blob, pointer_size=pointer_size, source=str(path))
 
 
 def _string(strings: bytes, offset: int) -> str:
