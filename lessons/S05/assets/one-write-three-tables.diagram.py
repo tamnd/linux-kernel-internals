@@ -3,6 +3,11 @@
 The point of the picture is the fork in the middle. Everything above it is identical for all three
 destinations, everything below it is different, and the thing that chose which way to go is a
 pointer that was written into the file when it was opened.
+
+This is also the still that carries the same point as the `ops-plug` animation. The animation
+opens the struct, follows the pointer and swaps the table underneath, which is what motion is
+good at. This picture has to work on its own for a reader who printed the page, and that is the
+version most people will see.
 """
 
 from kxdraw import Scene

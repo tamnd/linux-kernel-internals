@@ -7,6 +7,10 @@ held when this one was taken" as edges, and a complaint the moment a new edge wo
 
 The closing edge is drawn dashed on purpose. It is the only edge in the picture that has not
 happened yet at the moment of the report. Lockdep is refusing to add it.
+
+This is also the still that carries the same point as the `lock-cycle` animation. The animation
+adds the first edge, starts the second, and stops at the moment the loop would close. This picture
+has both edges on screen at once and has to work on its own, which is what most readers get.
 """
 
 from kxdraw import Scene

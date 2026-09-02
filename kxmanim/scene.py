@@ -23,16 +23,22 @@ from kxmanim.primitives import (
     ContextBadge,
     FrameCard,
     LayerDescent,
+    ObjectBox,
+    OpsPlug,
+    PointerThread,
     TraceCell,
 )
 from kxmanim.storyboard import Storyboard
 
-# Which of the nine can actually be drawn as video today. The other five are arithmetic with no
-# renderer behind them yet, which is a smaller gap than it sounds and an honest one to state.
+# Which of the nine can actually be drawn as video today. The last one is arithmetic with no
+# renderer behind it yet, which is a smaller gap than it sounds and an honest one to state.
 RENDERS: frozenset[str] = frozenset(
     {
         "frame-card",
         "layer-band",
+        "object-box",
+        "pointer-thread",
+        "ops-plug",
         "trace-cell",
         "cpu-lane",
         "context-badge",
@@ -123,6 +129,96 @@ def cell_of(
 
 def badge_of(badge: ContextBadge) -> dict[str, Any]:
     return {"glyph": badge.glyph, "label": badge.context.name, "colour": INK}
+
+
+def box_of(box: ObjectBox, x: float, y: float, *, row_height: float = 0.45) -> dict[str, Any]:
+    """One object box as a header and a stack of rows, with the offsets kept.
+
+    The header carries the size and the row count. Fields that were left out are counted rather
+    than dropped, because a box that shows four fields of a forty field struct and does not say so
+    is a picture that quietly tells the reader the struct is small.
+    """
+    rows = [
+        {
+            "y": y - (index + 1) * row_height,
+            "label": row.name,
+            "type_name": row.type_name,
+            "offset": row.byte_offset,
+            "glyphs": list(row.glyphs),
+            "lock": row.lock,
+        }
+        for index, row in enumerate(box.rows)
+    ]
+    return {
+        "x": x,
+        "y": y,
+        "width": 4.6,
+        "height": row_height * (len(box.rows) + 1),
+        "row_height": row_height,
+        "label": box.name,
+        "subtitle": f"{box.size} bytes" if box.size else "",
+        "hidden": box.hidden,
+        "rows": rows,
+        "legend": box.legend(),
+        "fill": PAPER,
+        "stroke": INK,
+    }
+
+
+def thread_of(
+    thread: PointerThread, start: tuple[float, float], end: tuple[float, float]
+) -> dict[str, Any]:
+    """One pointer thread as a line between two points, styled by what the pointer promises.
+
+    The dash pattern is the whole shape. Solid is a reference held, dashed is one that is not, and
+    dotted is RCU, which goes stale the moment the read side ends. Anybody who reads the line and
+    gets it backwards has been handed a use after free by a picture.
+    """
+    return {
+        "start": start,
+        "end": end,
+        "label": f"{thread.from_object}.{thread.from_field}",
+        "target": thread.to_object,
+        "dash": list(thread.reference.dash),
+        "kind": thread.reference.name,
+        "promise": thread.reference.describe(),
+        "colour": INK,
+    }
+
+
+def plug_of(plug: OpsPlug, x: float, y: float, *, socket_height: float = 0.5) -> dict[str, Any]:
+    """One ops table as a column of sockets, with what is plugged into each one.
+
+    An empty socket is drawn hollow and it is not the same thing as a null pointer in the kernel.
+    It means nobody told this drawing what is in that slot, and what sits in a function pointer is
+    a fact about a running machine rather than a fact about a type.
+    """
+    sockets = [
+        {
+            "y": y - (index + 1) * socket_height,
+            "label": one.name,
+            "signature": one.signature,
+            "offset": one.byte_offset,
+            "filled_by": one.filled_by,
+            "fill": BAND if one.filled_by else PAPER,
+            "stroke": INK if one.filled_by else MUTED,
+        }
+        for index, one in enumerate(plug.sockets)
+    ]
+    return {
+        "x": x,
+        "y": y,
+        "width": 5.2,
+        "height": socket_height * (len(plug.sockets) + 1),
+        "socket_height": socket_height,
+        "label": plug.name,
+        "subtitle": plug.instance,
+        "filled": len(plug.filled),
+        "empty": len(plug.sockets) - len(plug.filled),
+        "sockets": sockets,
+        "fill": PAPER,
+        "stroke": INK,
+    }
 
 
 # -- the scene ----------------------------------------------------------------------------------
