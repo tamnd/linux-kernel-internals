@@ -143,3 +143,27 @@ def test_the_corpus_url_is_the_default_branch_of_the_public_repository():
     assert url.endswith(
         "/tamnd/linux-kernel-internals/main/corpora/traces/tier1/multi-cpu-write.txt"
     )
+
+
+def test_the_scratch_directory_is_made_when_it_is_asked_for(tmp_path, monkeypatch):
+    monkeypatch.setattr(colab, "CACHE", tmp_path / "cache")
+    here = colab.scratch("C09")
+    assert here.is_dir()
+
+
+def test_the_scratch_directory_is_the_same_one_every_time(tmp_path, monkeypatch):
+    """So a reader who builds a module in it can find what they built afterwards."""
+    monkeypatch.setattr(colab, "CACHE", tmp_path / "cache")
+    assert colab.scratch("C09") == colab.scratch("C09")
+
+
+def test_two_lessons_get_two_scratch_directories(tmp_path, monkeypatch):
+    monkeypatch.setattr(colab, "CACHE", tmp_path / "cache")
+    assert colab.scratch("C09") != colab.scratch("Z02")
+
+
+def test_the_scratch_directory_is_not_the_repository(tmp_path, monkeypatch):
+    """Which is the whole point of it. A lesson does not leave files in your working tree."""
+    monkeypatch.setattr(colab, "CACHE", tmp_path / "cache")
+    root = colab.repo_root()
+    assert root is None or root not in colab.scratch("C09").parents

@@ -29,6 +29,12 @@ The builder is `tools/nbbuild.py`, and a lesson uses five things from it.
 
 The last one is the rule with teeth. A claim whose evidence is something the reader can run has to be followed by a code cell, and that cell has to come before the next heading. Without the second half, any cell further down the lesson would satisfy it, and the check would pass on a lesson that proves nothing. Claims backed by a citation, and claims marked unobservable, are exempt, because there is nothing to run.
 
+## The seven rules
+
+Run `just notebook-rules` for the list and `just notebook-contract` to check every lesson against it. The rules are the banner first, nothing a browser cannot finish, a caption on every code cell, a widget instead of a raw print where one exists, twenty code cells at most, evidence through the box or a corpus helper, and no writing outside the scratch directory. CONTRIBUTING.md says what each one is for. The checker reads the committed notebook rather than the builder, because the notebook is the file a reader opens.
+
+Two of them need a helper. `kxray.banner()` is the cell after the setup cell in every lesson: it prints which kernel this project pins, what Tier 0 cannot do, which backend the session got, and whether the machine running the notebook can trace anything itself. `kxray.colab.scratch("C09")` is the directory a lesson writes into, made on first use and the same path every time, so a lesson that hands the reader a C file to build does not leave it in whatever directory they started Jupyter in.
+
 ## Running a lesson in Colab
 
 The first code cell installs the toolkit from the repository if it is not there, and finds it without installing anything if you are inside a checkout. After that, `kxray.colab.lesson_module` loads the lesson's grader, from your working copy when there is one and from the default branch otherwise, printing the URL it fetched.

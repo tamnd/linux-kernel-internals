@@ -56,6 +56,11 @@ print("kxray", kxray.__version__, "ready")""",
     note="Setup. Has to be the first code cell, because everything below imports from it.",
 )
 
+lesson.code(
+    """kxray.banner()""",
+    note="Which kernel, which backend, which runtime. Before any evidence, every time.",
+)
+
 lesson.block("hook")
 lesson.md("""Open a file, write one byte, close it. Three lines of C. On the way through, the kernel makes something like a hundred function calls, takes and drops several locks, walks a page cache, and decides whether anything needs to hit a disk.
 

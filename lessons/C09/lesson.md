@@ -33,6 +33,10 @@ grader = colab.lesson_module("C09", "grader")
 print("kxray", kxray.__version__, "ready")
 ```
 
+```python
+kxray.banner()
+```
+
 <!-- block: hook -->
 
 Here is a kernel module that cannot hang.
@@ -113,8 +117,11 @@ PASTED = """"""  # paste a report between the quotes, or leave it empty to read 
 text = PASTED
 if not text.strip():
     try:
-        text = subprocess.run(["dmesg"], capture_output=True, text=True, check=False).stdout
-    except FileNotFoundError:
+        # A timeout, because dmesg on a machine with a busy log is the one command here that can
+        # sit there, and a notebook cell with no timeout is indistinguishable from a hang.
+        run = subprocess.run(["dmesg"], capture_output=True, text=True, check=False, timeout=10)
+        text = run.stdout
+    except (FileNotFoundError, subprocess.TimeoutExpired):
         text = ""
 
 found = lockdep.splats(text, source="dmesg on this machine")
@@ -175,12 +182,13 @@ sudo insmod abba.ko
 dmesg
 ```
 
-The next cell writes `abba.c` and its `Makefile` into the current directory so you have them to hand.
+The next cell writes `abba.c` and its `Makefile` into a scratch directory and prints the path, so you can `cd` there and build. It does not write into the directory you started this notebook in, because a lesson that leaves a C file and a Makefile in your working tree has been rude to you.
 
 ```python
+here = colab.scratch("C09")
 for name in ("abba.c", "Makefile"):
-    Path(name).write_text(colab.lesson_text("C09", f"assets/{name}"))
-    print(f"wrote {name}")
+    (here / name).write_text(colab.lesson_text("C09", f"assets/{name}"))
+print(f"wrote abba.c and Makefile into {here}")
 
 print()
 print(colab.lesson_text("C09", "assets/abba.c").split("#include")[0].strip()[:600])
