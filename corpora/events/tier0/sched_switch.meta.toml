@@ -1,0 +1,37 @@
+source = "tier0"
+evidence = true
+
+describes = "the record one context switch puts in the ring buffer, and the print fmt that turns prev_state into a letter"
+kind = "event-format"
+event = "sched_switch"
+group = "sched"
+event_id = 266
+
+kernel = "7.2.2"
+arch = "i386"
+profile = "A-full"
+uniprocessor = true
+preempt = true
+captured = "2026-09-05"
+tier = 0
+
+# How to take it again.
+command = "cat /sys/kernel/tracing/events/sched/sched_switch/format"
+setup = []
+
+# The field to look at is `prev_state`. It is declared `long` and it is four bytes here,
+# because this kernel is 32 bit x86. On a 64 bit machine the same field is eight bytes and every
+# field after it moves, so a parser holding these offsets as constants would read `next_comm` out
+# of the middle of `prev_state` and report nothing wrong. That is the whole argument for reading
+# this file instead of writing the numbers down.
+#
+# The second thing here is that the record and the printed line are not the same. `prev_state` is
+# stored as an integer and the print fmt runs it through `__print_flags`, so what reaches
+# ../traces/tier0/events-exec.txt is `S`, `R+`, `I` or `X`. The reader marks that field symbolic
+# rather than failing to make a number of it.
+
+# What the parser has to get right, and what the tests compare against.
+unparsed_lines = 0
+fields = 11
+own_fields = 7
+record_size = 60

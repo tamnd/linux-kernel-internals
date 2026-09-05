@@ -1,0 +1,64 @@
+source = "tier0"
+evidence = true
+
+describes = "the shell forking, execing and being scheduled twice, recorded as trace events rather than as function calls, so every line carries the fields the event declared rather than a function name"
+tracer = "nop"
+events = ["sched:sched_switch", "sched:sched_wakeup", "sched:sched_process_exec"]
+options = []
+
+kernel = "7.2.2"
+arch = "i386"
+profile = "A-full"
+uniprocessor = true
+preempt = true
+captured = "2026-09-05"
+tier = 0
+
+# How to take it again.
+command = "/bin/true; sleep 1"
+setup = [
+    "echo 0 > /sys/kernel/tracing/tracing_on",
+    "echo nop > /sys/kernel/tracing/current_tracer",
+    "echo > /sys/kernel/tracing/trace",
+    "echo 1 > /sys/kernel/tracing/events/sched/sched_switch/enable",
+    "echo 1 > /sys/kernel/tracing/events/sched/sched_wakeup/enable",
+    "echo 1 > /sys/kernel/tracing/events/sched/sched_process_exec/enable",
+    "echo 1 > /sys/kernel/tracing/tracing_on",
+]
+
+# `current_tracer` is `nop` and that is not a mistake. Events are not a tracer. They are turned on
+# one at a time under `events/`, and they record whether or not a tracer is running, which is why
+# the banner at the top of this file says `nop` where the other captures name one.
+#
+# Four things in here are worth knowing before reading it.
+#
+# The line at 3.049350 has two different names for the same task on it. The header says `sleep-38`
+# and the event payload says `prev_comm=sh prev_pid=38`. Both are correct. The payload holds a
+# copy of the comm made when the event fired, which was before pid 38 had exec'd, and the header
+# is looked up from the pid when the buffer is printed, by which time the map says `sleep`. So the
+# payload is the truth about the moment and the header is the truth about the pid afterwards. That
+# is the single best reason in this corpus to read the payload through its format rather than
+# trusting the header.
+#
+# `prev_state` never arrives as a number. The format declares it `long` and the print fmt runs it
+# through `__print_flags`, so it reaches this file as `S`, `R+`, `I` or `X`. `S` is sleeping, `I`
+# is idle, `X` is dead, and the `+` on `R+` is a separate flag meaning the task was preempted
+# rather than giving the CPU up. The reader records those as symbolic rather than failing on them.
+#
+# `sched_wakeup` at 3.049282 is in softirq context and the switch that follows it is not. The
+# wakeup happened inside a softirq, and the scheduler ran afterwards on the way out. That is the
+# same request and service shape flat-interrupt.txt shows in function calls, seen in events.
+#
+# The exec at 3.043684 reports `pid=37 old_pid=37`. They are equal because busybox `sh` forks and
+# then execs in the child, so the pid was already 37 before the exec. They differ when a thread
+# other than the group leader execs, which nothing in this capture does.
+#
+# The timestamps are emulated, so the order is true and the intervals are the emulator's.
+timings_are_real = false
+
+# What the parser has to get right, and what the tests compare against.
+unparsed_lines = 0
+events_read = 13
+cpus = [0]
+event_counts = { sched_switch = 8, sched_wakeup = 3, sched_process_exec = 2 }
+symbolic_fields = ["prev_state"]

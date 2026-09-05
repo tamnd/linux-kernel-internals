@@ -1,0 +1,32 @@
+source = "tier0"
+evidence = true
+
+describes = "the record for one exec, and the only field shape in this corpus that does not hold its own value"
+kind = "event-format"
+event = "sched_process_exec"
+group = "sched"
+event_id = 259
+
+kernel = "7.2.2"
+arch = "i386"
+profile = "A-full"
+uniprocessor = true
+preempt = true
+captured = "2026-09-05"
+tier = 0
+
+# How to take it again.
+command = "cat /sys/kernel/tracing/events/sched/sched_process_exec/format"
+setup = []
+
+# `filename` is a `__data_loc char[]`, which is four bytes in the record holding an offset and
+# a length, with the string itself further along. That is how a variable length value fits in a
+# fixed size record, and it is why the size column says 4 for a field that prints as `/bin/true`.
+# Adding four to an offset to find the next field is right, and adding the length of the string
+# is wrong.
+
+# What the parser has to get right, and what the tests compare against.
+unparsed_lines = 0
+fields = 7
+own_fields = 3
+record_size = 20

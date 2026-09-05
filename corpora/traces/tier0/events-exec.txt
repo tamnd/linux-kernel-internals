@@ -1,0 +1,25 @@
+# tracer: nop
+#
+# entries-in-buffer/entries-written: 13/13   #P:1
+#
+#                                _-----=> irqs-off/BH-disabled
+#                               / _----=> need-resched
+#                              | / _---=> hardirq/softirq
+#                              || / _--=> preempt-depth
+#                              ||| / _-=> migrate-disable
+#                              |||| /     delay
+#           TASK-PID     CPU#  |||||  TIMESTAMP  FUNCTION
+#              | |         |   |||||     |         |
+              sh-1       [000] d..2.     3.040809: sched_switch: prev_comm=sh prev_pid=1 prev_prio=120 prev_state=S ==> next_comm=sh next_pid=37 next_prio=120
+            true-37      [000] .....     3.043684: sched_process_exec: filename=/bin/true pid=37 old_pid=37
+            true-37      [000] dN.5.     3.045548: sched_wakeup: comm=sh pid=1 prio=120 target_cpu=000
+            true-37      [000] d..2.     3.045634: sched_switch: prev_comm=true prev_pid=37 prev_prio=120 prev_state=R+ ==> next_comm=sh next_pid=1 next_prio=120
+              sh-1       [000] d..2.     3.047368: sched_switch: prev_comm=sh prev_pid=1 prev_prio=120 prev_state=R+ ==> next_comm=true next_pid=37 next_prio=120
+            true-37      [000] d..2.     3.047471: sched_switch: prev_comm=true prev_pid=37 prev_prio=120 prev_state=X ==> next_comm=sh next_pid=38 next_prio=120
+           sleep-38      [000] dNs4.     3.049282: sched_wakeup: comm=rcu_preempt pid=13 prio=120 target_cpu=000
+           sleep-38      [000] d..2.     3.049350: sched_switch: prev_comm=sh prev_pid=38 prev_prio=120 prev_state=R+ ==> next_comm=rcu_preempt next_pid=13 next_prio=120
+     rcu_preempt-13      [000] d..2.     3.049472: sched_switch: prev_comm=rcu_preempt prev_pid=13 prev_prio=120 prev_state=I ==> next_comm=sh next_pid=1 next_prio=120
+              sh-1       [000] d..2.     3.049646: sched_switch: prev_comm=sh prev_pid=1 prev_prio=120 prev_state=S ==> next_comm=sh next_pid=38 next_prio=120
+           sleep-38      [000] .....     3.051161: sched_process_exec: filename=/bin/sleep pid=38 old_pid=38
+           sleep-38      [000] dN.5.     3.053948: sched_wakeup: comm=sh pid=1 prio=120 target_cpu=000
+           sleep-38      [000] d..2.     3.054033: sched_switch: prev_comm=sleep prev_pid=38 prev_prio=120 prev_state=R+ ==> next_comm=sh next_pid=1 next_prio=120

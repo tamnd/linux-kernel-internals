@@ -16,7 +16,7 @@ node kxbox/web/headless.js sh '...'
 
 is enough to do it by hand. `kxbox` does the same thing from Python, through `box.tape(name)`, and looks the recording up here when there is no emulator.
 
-Two tracers write files into this directory. Anything named `flat-` came off the flat function tracer, which prints one line per call with no nesting and no duration, and everything else came off `function_graph`, which prints the call tree with a time against each frame. The difference is not cosmetic and it decides which questions a file can answer, so it is in the file name rather than only in the metadata.
+Three things write files into this directory. Anything named `flat-` came off the flat function tracer, which prints one line per call with no nesting and no duration. Anything named `events-` came off trace events, which are not a tracer at all. Everything else came off `function_graph`, which prints the call tree with a time against each frame. The difference is not cosmetic and it decides which questions a file can answer, so it is in the file name as well as in the metadata.
 
 ## page-fault.txt
 
@@ -75,3 +75,15 @@ Then read the transitions. `d.h2.` and `d.h1.` are the hardware interrupt handle
 The middle of the file is the thing that is hard to show any other way. `raise_softirq` and `__raise_softirq_irqoff` are the request, `handle_softirqs` three lines later is the service, and the four lines in between are the gap. The interrupt handler did not do the RCU work. It wrote down that the work was needed and got out, and the work ran afterwards with interrupts on. That gap is what deferred work means, and here it is with timestamps on it.
 
 What this file cannot tell you is how long any of it took. The timestamps are the emulator's. Order is true, intervals are not, and the cost of a softirq is a Tier 1 question.
+
+## events-exec.txt
+
+The shell forking, execing `/bin/true`, and then doing it again for `sleep`, recorded as trace events rather than as function calls. Thirteen events: eight `sched_switch`, three `sched_wakeup`, two `sched_process_exec`.
+
+The banner says `tracer: nop` and that is not a mistake. Events are not a tracer. They are switched on one at a time under `events/`, and they record whether or not a tracer is running, so `current_tracer` stays at `nop` while this is being taken. Anybody expecting a tracer name at the top of the file will think the capture went wrong.
+
+The reason to read this one carefully is the line at `3.049350`. Its header says `sleep-38` and its payload says `prev_comm=sh prev_pid=38`. Same pid, two names, and both of them are correct. The payload holds a copy of the comm made when the event fired, which was before pid 38 had exec'd `sleep`. The header is not stored per line at all: ftrace keeps a map from pid to name and fills the column in when the buffer is printed, and by then the map says `sleep`. So the payload is the truth about the moment and the header is the truth about the pid afterwards. That is the strongest argument in this corpus for reading an event's payload through its format instead of trusting what the header says.
+
+`prev_state` never arrives as a number here. `S` is sleeping, `I` is idle, `X` is dead, and `R+` is runnable with the `+` meaning the task was preempted rather than giving up the CPU. The format file next door declares that field a signed integer, and `print fmt` ran it through `__print_flags` before this text existed. Both are true and they are not the same thing, and `kxray.trace.events` records the field as symbolic rather than pretending it failed to read a number.
+
+The `sched_wakeup` at `3.049282` is in softirq context and the switch that follows it is not. Something woke a task up from inside a softirq, and the scheduler ran afterwards on the way out. That is the same request and service shape `flat-interrupt.txt` shows in function calls, seen here in events instead.

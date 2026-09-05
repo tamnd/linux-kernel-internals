@@ -1,0 +1,34 @@
+source = "tier0"
+evidence = true
+
+describes = "the record every system call entry produces, with the six arguments as one array"
+kind = "event-format"
+event = "sys_enter"
+group = "raw_syscalls"
+event_id = 326
+
+kernel = "7.2.2"
+arch = "i386"
+profile = "A-full"
+uniprocessor = true
+preempt = true
+captured = "2026-09-05"
+tier = 0
+
+# How to take it again.
+command = "cat /sys/kernel/tracing/events/raw_syscalls/sys_enter/format"
+setup = []
+
+# `args` is `unsigned long args[6]`, so one field of 24 bytes rather than six fields. It is the
+# only array in this corpus that is not a string, and it is here because a reader that assumes a
+# field is one value gets this wrong.
+#
+# This event is not in ../traces/tier0/events-exec.txt. It is kept because its shape is not in
+# any of the others, and a corpus of formats that only holds the shapes one capture happened to
+# use is a corpus that tests one code path.
+
+# What the parser has to get right, and what the tests compare against.
+unparsed_lines = 0
+fields = 6
+own_fields = 2
+record_size = 36
