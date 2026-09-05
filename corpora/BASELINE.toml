@@ -12,9 +12,9 @@
 schema = 1
 
 [totals]
-artefacts = 38
-lines = 5224
-read = 2779
+artefacts = 39
+lines = 7837
+read = 5392
 skipped = 454
 unparsed = 0
 
@@ -210,6 +210,15 @@ reader = "proc-version"
 lines = 1
 found = 3
 read = 1
+skipped = 0
+unparsed = 0
+
+[[artefact]]
+path = "corpora/replays/tier1/build-and-boot-uml.cast"
+reader = "cast"
+lines = 2613
+found = 13
+read = 2613
 skipped = 0
 unparsed = 0
 

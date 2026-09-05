@@ -42,6 +42,7 @@ from kxwidgets.locks import LockTimeline
 from kxwidgets.memory import MemoryScale
 from kxwidgets.objects import ObjectGraph
 from kxwidgets.ops import OpsExplorer
+from kxwidgets.replay import SessionPlayer
 from kxwidgets.shapes import RENDERS, render
 from kxwidgets.structmap import StructMap
 from kxwidgets.tape import SyscallTape
@@ -56,6 +57,7 @@ __all__ = [
     "ObjectGraph",
     "OpsExplorer",
     "PredictionGate",
+    "SessionPlayer",
     "StructMap",
     "SyscallTape",
     "TapeDiff",
