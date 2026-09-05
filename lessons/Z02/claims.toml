@@ -40,6 +40,7 @@ text = "The trace file holds the output of every CPU in one stream, so indentati
 evidence_kind = "trace"
 evidence = "corpora/traces/tier1/multi-cpu-write.txt"
 verified = true
+why_not_pinned = "v86 is a uniprocessor emulator, so a trace with more than one CPU in it cannot be captured on Tier 0 at any price or with any amount of work. The claim is about how one trace file interleaves the output of several CPUs, which is the same on every architecture and on every kernel that has this tracer."
 # Six CPUs, six writers, released together. The CPU column changes 33 times in 305 lines, and at
 # lines 187 to 206 two CPUs alternate almost line by line while both are part way through their
 # own call. Read that stretch as one stack and it is nonsense.
@@ -68,6 +69,7 @@ text = "Tracing every function costs the traced work real time, so the same writ
 evidence_kind = "experiment"
 evidence = "corpora/experiments/tier1/tracer-cost.txt"
 verified = true
+why_not_pinned = "v86 has no clock you can measure with, so a claim about how long something takes has to be measured somewhere else. The claim is that tracing costs the traced work real time rather than that it costs any particular number of nanoseconds, and the reader is told to run the same thing on their own machine and get their own figure."
 # About 257 nanoseconds a write untraced and about 6619 with function_graph on, which is roughly
 # twenty five times. Measured on a real machine, because Tier 0 has no clock to measure with. The
 # reader can run the same thing on their own machine and should get their own numbers.
