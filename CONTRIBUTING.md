@@ -67,9 +67,19 @@ verified = true
 
 Two rules in there are worth spelling out. Every artefact under `corpora/` has a `.meta.toml` beside it saying where it came from, and a claim marked `verified = true` against an artefact whose metadata says `evidence = false` is a build failure. That is what keeps a handwritten fixture from turning into a fact. And a lesson whose `meta.toml` says `status = "published"` has to have every claim verified, which is how a draft is allowed to be honest about what is still missing.
 
-Say which kernel, which config and which architecture. A kernel claim without a configuration attached is not a claim. The pinned tree is Linux 7.2.2 and the pinned configs are in `kxbox/kernel/`.
+Say which kernel, which config and which architecture. A kernel claim without a configuration attached is not a claim, because the same sentence is true on one build and false on another and the reader cannot tell which one they have. Every lesson's `meta.toml` carries `kernel`, `arch`, `profile` and `tier`, the profile has to be one that `kxbox/kernel/pin.toml` actually builds, and the kernel version has to be the one that profile builds. The pinned tree is Linux 7.2.2 and the pinned configs are in `kxbox/kernel/`.
 
-Tier 0 is the browser kernel under v86. It is uniprocessor, it is 32 bit, and its timing is emulated. A claim that depends on real concurrency, on 64 bit layout or on real timing cannot cite Tier 0 evidence, and CI will reject it if it tries.
+Evidence has to come off the machine the lesson says it does, or the claim has to say why not. Some of the exceptions are permanent and correct. Tier 0 is the browser kernel under v86, which is uniprocessor, 32 bit and has no real clock, so a claim about a second CPU or about how long something takes has to reach for a Tier 1 capture. A lesson about lockdep has to cite captures taken under the `D-lockdep` profile, because lockdep is not compiled into the default one. When that happens, put the reason in a `why_not_pinned` field on the claim, in a sentence. `just claims` checks that the reason is there, and it also checks the other direction: a `why_not_pinned` on a claim whose evidence now matches is an excuse for a problem that went away, and a wrong explanation is worse than none.
+
+## The corpus and the baseline
+
+Everything under `corpora/` is an artefact with a `.meta.toml` beside it saying where it came from. `just baseline` records how much of each one the parsers understand, in `corpora/BASELINE.toml`, and CI fails when any of it moves.
+
+Every line of every artefact goes in one of three buckets. `read` turned into something. `skipped` was never data, so a blank line, a separator, or a header the kernel prints above the rows. `unparsed` was meant to be data and was not understood. The three have to add up to the number of lines in the file, and the tool checks that first, because a reader whose numbers do not add up is counting some lines and forgetting others.
+
+The bucket to watch is not the last one. A rise in `unparsed` is loud and the tests already catch it. The quiet failure is a line sliding from `read` to `skipped`, which is what a regular expression that stopped matching looks like from outside: nothing raises, nothing is logged, and the lesson shows the reader less than it did last week. Run `just baseline-show` to see the table.
+
+If you change a parser or add an artefact, run `just baseline-write` and say in the commit message why a number moved. A number moving on its own is the failure the file exists to catch. Adding an artefact that no reader claims is an error rather than an omission, so add it to the routing table in `tools/baseline.py` at the same time.
 
 ## Writing a blueprint
 

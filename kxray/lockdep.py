@@ -33,6 +33,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from kxray.models import READ, SKIPPED, UNPARSED, Lines
+
 STATS = Path("/proc/lockdep_stats")
 CLASSES = Path("/proc/lockdep")
 
@@ -89,6 +91,9 @@ CLASS_LINE = re.compile(
     r"^(?P<address>[0-9a-f]{8,16})\s+FD:\s*(?P<fd>\d+)\s+BD:\s*(?P<bd>\d+)\s+"
     r"(?P<usage>\S+):\s+(?P<name>.+?)\s*$"
 )
+
+# The one line the kernel prints above the rows of `/proc/lockdep`.
+CLASSES_HEADER = re.compile(r"^all lock classes:\s*$")
 
 # ` lock-classes:      1024 [max: 8192]`
 STAT_LINE = re.compile(
@@ -464,20 +469,49 @@ class Stats:
         return "\n".join(lines)
 
 
+def _read_stat(line: str) -> tuple[str, int, int | None] | None:
+    """One `name: value [max: n]` line, or None when it is not one."""
+    found = STAT_LINE.match(unprefix(line))
+    if found is None:
+        return None
+    # One spelling for a key. The file writes some names with spaces and some with hyphens,
+    # and a reader should not have to remember which is which to ask for a number.
+    name = found["name"].strip().replace(" ", "_").replace("-", "_")
+    return name, int(found["value"]), int(found["max"]) if found["max"] else None
+
+
 def parse_stats(text: str, source: str = "<text>") -> Stats:
     values: dict[str, int] = {}
     maxima: dict[str, int] = {}
     for line in text.splitlines():
-        found = STAT_LINE.match(unprefix(line))
-        if found is None:
+        one = _read_stat(line)
+        if one is None:
             continue
-        # One spelling for a key. The file writes some names with spaces and some with hyphens,
-        # and a reader should not have to remember which is which to ask for a number.
-        name = found["name"].strip().replace(" ", "_").replace("-", "_")
-        values[name] = int(found["value"])
-        if found["max"]:
-            maxima[name] = int(found["max"])
+        name, value, most = one
+        values[name] = value
+        if most is not None:
+            maxima[name] = most
     return Stats(values, maxima, source)
+
+
+def account_stats(text: str) -> Lines:
+    """How every line of a `/proc/lockdep_stats` snapshot was treated, for `tools/baseline`.
+
+    The whole file is counters, so a blank line is the only thing there is to skip. The last
+    section of the real file is a set of hardirq and softirq lines with no numbers on them, and
+    those do not match, which is why the count is not zero and is not allowed to move on its own.
+    """
+    return _account(text, _read_stat)
+
+
+def _account(text: str, read) -> Lines:
+    lines = Lines()
+    for line in text.splitlines():
+        if not line.strip():
+            lines.count(SKIPPED)
+        else:
+            lines.count(READ if read(line) is not None else UNPARSED)
+    return lines
 
 
 @dataclass(frozen=True)
@@ -501,18 +535,39 @@ class LockClass:
         return self.name.split("#")[1] if "#" in self.name else ""
 
 
+def _read_class(line: str) -> LockClass | None:
+    one = CLASS_LINE.match(unprefix(line))
+    if one is None:
+        return None
+    return LockClass(one["address"], int(one["fd"]), int(one["bd"]), one["usage"], one["name"])
+
+
 def parse_classes(text: str, limit: int | None = None) -> list[LockClass]:
     found = []
     for line in text.splitlines():
-        one = CLASS_LINE.match(unprefix(line))
+        one = _read_class(line)
         if one is None:
             continue
-        found.append(
-            LockClass(one["address"], int(one["fd"]), int(one["bd"]), one["usage"], one["name"])
-        )
+        found.append(one)
         if limit is not None and len(found) >= limit:
             break
     return found
+
+
+def account_classes(text: str) -> Lines:
+    """How every line of a `/proc/lockdep` snapshot was treated, for `tools/baseline`.
+
+    `all lock classes:` is the header the kernel prints above the rows, so it is skipped rather
+    than counted as a failure. That distinction is the whole reason this function exists: a header
+    the parser is entitled to ignore and a row it could not read look identical from outside.
+    """
+    lines = Lines()
+    for line in text.splitlines():
+        if not line.strip() or CLASSES_HEADER.match(unprefix(line)):
+            lines.count(SKIPPED)
+        else:
+            lines.count(READ if _read_class(line) is not None else UNPARSED)
+    return lines
 
 
 def busiest(classes: list[LockClass], count: int = 10) -> list[LockClass]:

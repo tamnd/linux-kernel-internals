@@ -20,15 +20,21 @@ from __future__ import annotations
 
 import os
 import platform
+import re
 import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from kxray.models import READ, SKIPPED, UNPARSED, Lines
+
 # Where the tracing filesystem is mounted, newest location first.
 LOCATIONS = (Path("/sys/kernel/tracing"), Path("/sys/kernel/debug/tracing"))
 
 CONTROLS = ("current_tracer", "tracing_on", "trace")
+
+# `oldest event ts:     2.109723`, a clock reading rather than a count of anything.
+TIMESTAMP = re.compile(r"^\s*[a-z ]+ts:\s+\d+\.\d+\s*$")
 
 
 class Unavailable(RuntimeError):
@@ -99,16 +105,45 @@ class Tracefs:
     def stats(self, cpu: int = 0) -> dict[str, int]:
         """The per CPU counters, where `overrun` says how many events the ring buffer dropped."""
         path = self.path(f"per_cpu/cpu{cpu}/stats")
-        if not path.exists():
-            return {}
-        numbers = {}
-        for line in path.read_text().splitlines():
-            name, _, value = line.partition(":")
-            try:
-                numbers[name.strip()] = int(value.strip())
-            except ValueError:
-                continue
-        return numbers
+        return parse_stats(path.read_text()) if path.exists() else {}
+
+
+def _read_stat(line: str) -> tuple[str, int] | None:
+    """One `name: count` line of a per CPU stats file, or None when it is not one."""
+    name, sep, value = line.partition(":")
+    if not sep:
+        return None
+    try:
+        return name.strip(), int(value.strip())
+    except ValueError:
+        return None
+
+
+def parse_stats(text: str) -> dict[str, int]:
+    """The counters in a per CPU stats file, by name."""
+    found = (_read_stat(line) for line in text.splitlines())
+    return dict(one for one in found if one is not None)
+
+
+def account_stats(text: str) -> Lines:
+    """How every line of a per CPU stats file was treated, for `tools/baseline`.
+
+    Two of the lines in that file are timestamps rather than counters, `oldest event ts` and
+    `now ts`, and this reader collects counters. Those are skipped on purpose and not failures,
+    which is a distinction the old code could not make because it treated a line it does not
+    collect and a line it could not read the same way.
+    """
+    lines = Lines()
+    for line in text.splitlines():
+        if not line.strip():
+            lines.count(SKIPPED)
+        elif _read_stat(line) is not None:
+            lines.count(READ)
+        elif TIMESTAMP.match(line):
+            lines.count(SKIPPED)
+        else:
+            lines.count(UNPARSED)
+    return lines
 
 
 def find(locations: tuple[Path, ...] = LOCATIONS) -> Tracefs | None:

@@ -5,7 +5,7 @@ default:
     @just --list
 
 # Everything CI runs, in the same order. Run this before you open a pull request.
-check: lint prose diagrams-check claims refs blueprints kconfig tier0 web storyboards notebooks site-check test
+check: lint prose diagrams-check claims baseline refs blueprints kconfig tier0 web storyboards notebooks site-check test
 
 # Install the development dependencies into a local virtual environment.
 setup:
@@ -37,6 +37,18 @@ claims:
 # Print the kinds of evidence a claim is allowed to rest on.
 claim-kinds:
     python3 -m tools.claimledger --list-kinds
+
+# Check how much of every committed artefact the parsers still understand.
+baseline:
+    python3 -m tools.baseline
+
+# Print what the readers see, without comparing it to anything.
+baseline-show:
+    python3 -m tools.baseline --show
+
+# Write down what the readers see now. Say in the commit message why a number moved.
+baseline-write:
+    python3 -m tools.baseline --write
 
 # Check every reference: paths we write about, and citations into the kernel.
 refs:

@@ -50,6 +50,13 @@ jobs:
       - name: Notebooks
         run: uv run python -m tools.nbbuild --check
 
+      # How much of every committed artefact the parsers understand. The number that matters is
+      # not the unparsed one, which fails loudly anyway. It is a line sliding from read to skipped,
+      # which is what a regular expression that stopped matching looks like from outside: no error,
+      # no exception, and a lesson quietly showing the reader less than it did last week.
+      - name: Parser baseline
+        run: uv run python -m tools.baseline
+
       - name: Test
         run: uv run python -m pytest
 
