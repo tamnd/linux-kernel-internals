@@ -1,0 +1,71 @@
+schema = 1
+
+# One sentence per step, saying what to look at. The recording is evidence and is never edited, so
+# everything a person wants to say about it lives here instead. Every note carries the command it
+# belongs to as well as the number, and `kxray.replay.notes` refuses to load this file if the two
+# stop matching, because a note pointing at the wrong step is worse than no note at all.
+
+[[step]]
+number = 0
+command = "cat /etc/os-release"
+note = "Where this starts. A Debian 13 container with no compiler in it, which is the image pin.toml names."
+
+[[step]]
+number = 1
+command = "apt-get update && apt-get install -y --no-install-recommends build-essential flex bison bc libssl-dev libelf-dev xz-utils"
+note = "Seven packages, and the two on the end are the ones people miss. Without bc the build stops partway through with `bc: not found`, and without libelf-dev it stops on the object tool. Forty three seconds here saves an hour of reading error messages."
+
+[[step]]
+number = 2
+command = "gcc --version | head -1"
+note = "The compiler answering for itself. pin.toml asks for gcc 14 and this is gcc 14, which is why this session is worth keeping rather than being a build on whatever was lying around."
+
+[[step]]
+number = 3
+command = "ld --version | head -1"
+note = "Same again for the linker. pin.toml asks for binutils 2.44."
+
+[[step]]
+number = 4
+command = "sha256sum linux-7.2.2.tar.xz"
+note = "The hash printed here is character for character the one in pin.toml. That is the whole provenance chain in one line: the kernel built below is the kernel this project pins and not a tarball that happened to have the right name."
+
+[[step]]
+number = 5
+command = "tar xf linux-7.2.2.tar.xz"
+note = "Twenty four seconds and not one line of output, which is worth seeing. A step with an empty fold is a step that did its work quietly, and the strip above still gives it its share of the width."
+
+[[step]]
+number = 6
+command = "cd linux-7.2.2"
+note = "Nothing happens here and it is in the recording anyway, because leaving it out would make the next command look like it ran in the wrong directory."
+
+[[step]]
+number = 7
+command = "make ARCH=um defconfig"
+note = "The line to read is the one saying the default configuration is based on x86_64_defconfig. User Mode Linux is a port, and it starts from the ordinary x86 defaults and then keeps only what makes sense for a kernel that is a process."
+
+[[step]]
+number = 8
+command = "grep -c ^CONFIG_ .config"
+note = "471 options. The A-full profile this project builds elsewhere has thousands, and the difference is most of the drivers, because a kernel that is a process has almost no hardware to drive."
+
+[[step]]
+number = 9
+command = "make ARCH=um -j6"
+note = "Five minutes and eleven seconds, on six cores, and every other step in this session put together comes to a minute and a half. Look at the strip at the top before reading any of the 1524 lines: this one command is the session and everything else is punctuation."
+
+[[step]]
+number = 10
+command = "ls -lh linux"
+note = "84 megabytes, and the important word is the file name. There is no bzImage and no disk image here. The kernel came out as a program you run."
+
+[[step]]
+number = 11
+command = "cat /root/kxreplay/inside.sh"
+note = "What the kernel is about to run as its init process. Four questions asked of a kernel that is two seconds old: which version are you, how many processors can you see, how long have you been alive, and what did you say on the way up."
+
+[[step]]
+number = 12
+command = "./linux rootfstype=hostfs rootflags=/ ro init=/root/kxreplay/inside.sh mem=256M"
+note = "The kernel built above, running, with no disk image anywhere. hostfs gives it the container's own filesystem as its root read only, so the boot needs nothing that was not already there. It prints the same version string the compiler stamped into it a minute ago, says it can see one processor, answers the four questions and powers itself off."

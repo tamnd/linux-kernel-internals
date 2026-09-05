@@ -1,0 +1,68 @@
+source = "tier1"
+evidence = true
+
+describes = "thirteen commands in one shell that take a Debian container with no compiler in it, install a toolchain, check the pinned tarball against its hash, build Linux 7.2.2 as a User Mode Linux binary, and run that binary until the kernel it contains says its own version number and powers itself off"
+
+kernel = "7.2.2"
+arch = "um"
+profile = "um-defconfig"
+tier = 1
+uniprocessor = true
+cpu_count = 1
+captured = "2026-09-05"
+
+# Two machines are involved and they are not the same machine, which is the thing to keep straight
+# while reading this. The kernel that was built and booted is 7.2.2, the version this project pins.
+# The machine it was built on and ran on is somebody else's kernel entirely.
+distribution = "debian:trixie-slim in Docker, on Ubuntu 24.04.4"
+host_kernel = "6.8.0-136-generic"
+host_arch = "x86_64"
+host_cpu_count = 6
+image = "debian@sha256:d7e12182ce18b85b93007c1dedf31f2d29e01ccf3182cc4017c709b6259bc132"
+
+# The toolchain the container came with, which is the one `pin.toml` asks for. Steps 2 and 3 of the
+# recording are these two lines being printed by the machine rather than being written down here.
+gcc = "14.2.0"
+binutils = "2.44"
+
+# `uniprocessor` and `cpu_count` above are about the kernel that booted, not about the machine. The
+# UML kernel saw one processor, and step 12 has it saying so. The host had six and used all of them
+# for the build.
+tarball_sha256 = "7d0e7ce14f98c43efe880cffbf354a59be45928fdf7170d7333c374ae91c0d83"
+
+# Why this is Tier 1 and not Tier 0. Two separate reasons, either of which is enough.
+#
+# The first is that Tier 0 has no compiler. v86 runs a kernel in the browser and it does not run
+# gcc, binutils, make, flex and bison over a hundred and sixty megabytes of source. Nothing about
+# that is a limit that better engineering removes.
+#
+# The second is the timings, which are the reason this file exists at all rather than a paragraph
+# saying a kernel build takes a while. Step 9 took five minutes and eleven seconds and every other
+# step in the session put together took a minute and a half. A reader who has never built a kernel
+# does not know that, and the strip across the top of the widget shows it before they read a word.
+# A duration measured inside v86 would be a fact about the emulator.
+#
+# What the numbers are and are not. They are what happened on a shared machine with other people's
+# work on it, load average around ten on six cores while this ran. They are not a benchmark and
+# nothing should be concluded from comparing them with anything. The shape is the point: one step
+# is the build and the rest are rounding.
+command = "python3 -m kxray.replay.record, driving one bash under a pseudo terminal, thirteen commands"
+setup = [
+    "docker run -d --name kxbuild --security-opt seccomp=unconfined --cap-add=SYS_PTRACE --tmpfs /dev/shm:rw,exec,size=2g -v /root/kxreplay:/root/kxreplay -w /root/kxreplay debian:trixie-slim sleep infinity",
+    "docker exec kxbuild apt-get update",
+    "docker exec kxbuild apt-get install -y --no-install-recommends python3",
+    "curl -O https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-7.2.2.tar.xz",
+    "write inside.sh, the four line init script step 11 prints",
+]
+
+# The two Docker options in that first line are not decoration and both were found the hard way.
+#
+# `--security-opt seccomp=unconfined --cap-add=SYS_PTRACE` is there because User Mode Linux is a
+# kernel that runs as an ordinary process and it uses ptrace to intercept the system calls of the
+# processes inside it. Docker's default seccomp profile blocks that, and the boot dies during its
+# own start up checks.
+#
+# `--tmpfs /dev/shm:rw,exec,size=2g` is there because Docker mounts /dev/shm noexec by default. UML
+# puts its physical memory in a file under /dev/shm and maps it executable, and with noexec the
+# boot stops on the line `Checking PROT_EXEC mmap in /dev/shm...Operation not permitted`. That was
+# the last thing standing between a working build and a working boot.

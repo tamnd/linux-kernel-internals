@@ -32,7 +32,7 @@ linux-kernel-internals/
 ├── kxdraw/                  # diagrams as code, out to svg and excalidraw
 ├── lessons/                 # 103 lessons: build.py, its notebook, assets, grader
 ├── blueprints/              # the normative specifications: one .md, one .refs.toml, assets/
-├── corpora/                 # pinned traces, event formats, BTF dumps, /proc snapshots, oopses
+├── corpora/                 # pinned traces, event formats, BTF dumps, /proc snapshots, oopses, recorded sessions
 ├── capstones/               # three tracks, harnesses and scorecards
 ├── conformance/             # graders, KUnit and kselftest drivers
 ├── site/                    # the published book: head.yml, docs/, and the staged copies
@@ -92,6 +92,12 @@ Three of the five ride along in BTF as a `type_tag` record. `__iomem` does not, 
 `kxray/source/kconfig.py` reads the kernel's Kconfig files, which is the other half of `tools/kconfig.py`: not what this project asked for but what the kernel does about it. It answers one question, which is why a symbol is on. `CONFIG_PREEMPT=y` gives a `.config` with `CONFIG_PREEMPT_BUILD=y` and `CONFIG_PREEMPTION=y` in it that nobody chose, and six of the fifteen symbols in `kernel/Kconfig.preempt` have no prompt at all, so they cannot be set by hand and in a `.config` they look exactly like something a person picked. What it does not do is evaluate a condition, because doing that properly means being `scripts/kconfig`.
 
 `kxray/source/citations.py` is what `tools/refcheck` hashes with. A citation here is anchored on text and never on a line number, and that already survived files moving. What it did not survive is the anchor holding still while the code under it changes, which is the common case, because an anchor is usually a signature and the body underneath is the part people edit. So a confirmed citation carries a hash of the seven lines around its anchor, taken over whitespace normalised text, so that reindentation and tab churn do not fire and a renamed variable does. All 73 citations in this repository carry one.
+
+`kxray/replay/` is four small modules for one job: a reader on a machine that cannot build a kernel watching a machine that did. `record.py` runs commands under a pseudo terminal and writes an asciinema v2 file, `cast.py` reads that file back and counts what happened to every line of it, `terminal.py` works out what the screen would have said, and `session.py` cuts the byte stream into steps. The pseudo terminal is not a detail. A program behaves differently when it thinks a person is watching, so a build recorded through a pipe is a recording of the program's other personality.
+
+What makes a recording steppable is four escape sequences the shell is asked to print, which is a real convention called OSC 133 that several terminals already speak: a prompt is starting, the prompt is finished, the command has begun, the command is over and its status was this. Nothing else in the stream says where one command ended and the next began. A recording taken without them comes back as one step holding the whole session, and the widget says so, because the alternative is guessing at where the prompts were by looking for a dollar sign in a build log that prints dollar signs.
+
+`kxray/replay/terminal.py` is deliberately not a terminal emulator. It handles escape sequences, carriage returns, backspaces and tabs, and nothing else, because those four are what appears in a recorded build or boot. The carriage return is the one that has to be there: `make` draws a line over the top of the last one, so a build log printed with `cat` shows two hundred lines where the screen had one. If a recording ever turns up that needs cursor addressing, the fix is to record something simpler rather than to write a terminal.
 
 `kxray/layout.py` is the arithmetic that turns a tree of frames into rectangles. It is in `kxray` for the same reason. A widget and an animation of the same trace call it and get the same answer, so the wide box is in the same place in both.
 

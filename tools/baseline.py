@@ -50,6 +50,8 @@ from kxray.proc import maps as proc_maps
 from kxray.proc import percpu as proc_percpu
 from kxray.proc import pidstat as proc_pidstat
 from kxray.proc import version as proc_version
+from kxray.replay import cast as replay_cast
+from kxray.replay import session as replay_session
 from kxray.source import kconfig as source_kconfig
 from kxray.source import maintainers as source_maintainers
 from kxray.source import syscalls as source_syscalls
@@ -97,6 +99,7 @@ ROUTES = (
     ("corpora/oops/*/*.txt", "lockdep-splat"),
     ("corpora/btf/*/*.btf", "btf"),
     ("corpora/experiments/*/*.txt", "none"),
+    ("corpora/replays/*/*.cast", "cast"),
 )
 
 
@@ -239,6 +242,15 @@ def _btf(path: Path) -> tuple[int, Lines | None]:
     return len(btf.parse_file(path).types) - 1, None
 
 
+def _cast(path: Path) -> tuple[int, Lines | None]:
+    # A recorded session. The number worth pinning is how many steps come out of it, because the
+    # steps are found from marks in the middle of the byte stream rather than from the shape of a
+    # line, and a change to that walk would leave the line counts alone and quietly halve the
+    # walkthrough.
+    one = replay_cast.parse_file(path)
+    return len(replay_session.steps_of(one)), one.lines
+
+
 def _unread(path: Path) -> tuple[int, Lines | None]:
     # An artefact a person reads and no parser does. Its line count is still pinned, so a truncated
     # file is caught even here.
@@ -264,6 +276,7 @@ READERS = {
     "tracefs-stats": _tracefs_stats,
     "lockdep-splat": _lockdep_splat,
     "btf": _btf,
+    "cast": _cast,
     "none": _unread,
 }
 

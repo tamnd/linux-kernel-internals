@@ -22,6 +22,8 @@ The usual result is that people read about the kernel for months, feel like they
 
 **A real kernel in a browser tab.** Not a simulation and not a diagram. A real Linux kernel booted under [v86](https://github.com/copy/v86), with `/proc`, `/sys/kernel/tracing`, `dmesg`, `insmod` and a shell. It is self hosted, so there is no third party service to depend on and no rate limit to negotiate. Every lesson has an experiment you run with nothing installed.
 
+**The few things a browser cannot do are recorded rather than described.** You cannot build a kernel inside a 32 bit emulator in a tab, so the lessons that build one ship a recording of a real machine doing it, taken in the container this project pins. You step through it: the command, what came back, how long it took, and whether it worked. A recording is not the same as running it yourself and does not pretend to be, but it beats a paragraph telling you what you would have seen.
+
 **Nothing is asserted that you cannot watch happen.** The kernel exports a live, typed, queryable view of its own running state through five separate mechanisms, so there is very little excuse for an unbacked claim. Every claim in the book is registered in a public ledger with the evidence that backs it, and a lesson is allowed at most two claims that nobody can observe.
 
 **Predict before you look.** Every experiment asks you to guess first, then explains why the wrong answers were tempting. You write one byte. How many bytes reach the disk? Does `read()` on a cached file even enter the kernel? Most experienced programmers get these wrong, and being wrong on the record is what makes the correction stick.
