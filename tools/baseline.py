@@ -45,8 +45,8 @@ from pathlib import Path
 from kxray import kallsyms, lockdep, tracefs
 from kxray.btf import reader as btf
 from kxray.models import Lines
+from kxray.trace import events, formats, parse_file
 from kxray.trace import function as trace_function
-from kxray.trace import parse_file
 
 CORPORA = Path("corpora")
 BASELINE = CORPORA / "BASELINE.toml"
@@ -60,7 +60,9 @@ ROUTES = (
     # tells them apart, so the narrower pattern has to come first. `flat-` on the front of a
     # capture means the flat function tracer took it.
     ("corpora/traces/*/flat-*.txt", "function"),
+    ("corpora/traces/*/events-*.txt", "events"),
     ("corpora/traces/*/*.txt", "function_graph"),
+    ("corpora/events/*/*.format", "event-format"),
     ("corpora/proc/*/kallsyms.txt", "kallsyms"),
     ("corpora/proc/*/lockdep.txt", "lockdep-classes"),
     ("corpora/proc/*/lockdep_stats.txt", "lockdep-stats"),
@@ -109,6 +111,18 @@ def _function_flat(path: Path) -> tuple[int, Lines | None]:
     return len(log.calls), log.lines
 
 
+def _events(path: Path) -> tuple[int, Lines | None]:
+    # Read through every format in the corpus rather than through none, because an event that
+    # stops binding to its format is exactly the drift this file exists to catch, and a reader
+    # given no formats would not notice.
+    log = events.parse_file(path, formats.load(CORPORA / "events" / "tier0"))
+    return len(log.events), log.lines
+
+
+def _event_format(path: Path) -> tuple[int, Lines | None]:
+    return len(formats.parse_file(path).fields), formats.account(path.read_text(encoding="utf-8"))
+
+
 def _kallsyms(path: Path) -> tuple[int, Lines | None]:
     text = path.read_text(encoding="utf-8")
     return len(kallsyms.parse(text)), kallsyms.account(text)
@@ -152,6 +166,8 @@ def _unread(path: Path) -> tuple[int, Lines | None]:
 READERS = {
     "function_graph": _function_graph,
     "function": _function_flat,
+    "events": _events,
+    "event-format": _event_format,
     "kallsyms": _kallsyms,
     "lockdep-classes": _lockdep_classes,
     "lockdep-stats": _lockdep_stats,

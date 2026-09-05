@@ -32,7 +32,7 @@ linux-kernel-internals/
 ├── kxdraw/                  # diagrams as code, out to svg and excalidraw
 ├── lessons/                 # 103 lessons: build.py, its notebook, assets, grader
 ├── blueprints/              # the normative specifications: one .md, one .refs.toml, assets/
-├── corpora/                 # pinned traces, BTF dumps, /proc snapshots, oopses
+├── corpora/                 # pinned traces, event formats, BTF dumps, /proc snapshots, oopses
 ├── capstones/               # three tracks, harnesses and scorecards
 ├── conformance/             # graders, KUnit and kselftest drivers
 ├── site/                    # the published book: head.yml, docs/, and the staged copies
@@ -68,6 +68,12 @@ Three of the five ride along in BTF as a `type_tag` record. `__iomem` does not, 
 `kxray/trace/function.py` reads the flat function tracer, which is `function` rather than `function_graph` in `current_tracer`. One line per call, no nesting, no duration, and one column function_graph does not print at all, which is the state of the machine at the moment of the call. So the two parsers answer different questions and the project keeps both. function_graph says what called what and how long it took. The flat tracer says what ran and under what rules, across every task, at a fraction of the cost.
 
 `Flags` in `kxray/models.py` is where that column is turned into one of the six contexts in `kxray/vocabulary.py`, and it is deliberately unable to answer one of them. A held spinlock raises the preemption count and so does a bare `preempt_disable()`, the column carries only the count, and nothing in it can tell the two apart, so both come back as `nopreempt` and `atomic` is never returned. That is the honest reading. A parser that guessed there would be right most of the time and wrong in exactly the cases somebody was debugging.
+
+`kxray/trace/formats.py` reads an event's `format` file, which is the kernel publishing its own layout at `/sys/kernel/tracing/events/<group>/<event>/format`. It exists so that nothing has to hard code the shape of a record, and the reason that matters is one field: `sched_switch` declares `long prev_state`, which is four bytes on the 32 bit box this project pins and eight on almost any machine a reader is sitting at, and every field after it moves. A parser holding those offsets as constants is correct on one machine and silently wrong on the other, which is the worst way to be wrong. What this does not do is evaluate `print fmt`. That line is a C expression with nested macro expansions in it, and evaluating it properly means being a C compiler, so it is kept as text.
+
+`kxray/trace/events.py` reads event lines through those formats. Pulling `key=value` pairs out of a line is the small half and is not the point. Reading them through the format gives three things a plain split cannot: values arrive as numbers where the format declares numbers, keys the format does not declare are named rather than kept quietly, and a field the format calls a number that arrived as text is recorded as symbolic rather than treated as a failure. That last one is normal. `sched_switch` stores `prev_state` as an integer and prints it as `S` or `R+`, because `print fmt` has already run by the time you read the text, so the record and the line are both correct and are not the same thing.
+
+`kxray/models.py` holds `TraceLog` under all three parsers. The banner at the top of a trace says how many events the kernel produced and how many survived, and a trace where those differ has holes in it that nothing in the body of the file admits to, so it is read rather than skipped. The per tracer subclasses add only what is actually different, which is the list of things on the lines.
 
 `kxray/layout.py` is the arithmetic that turns a tree of frames into rectangles. It is in `kxray` for the same reason. A widget and an animation of the same trace call it and get the same answer, so the wide box is in the same place in both.
 

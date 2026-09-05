@@ -18,11 +18,23 @@ TRACES = Path(__file__).resolve().parents[1] / "corpora" / "traces"
 CORPUS = TRACES / "handwritten"
 TIER0 = TRACES / "tier0"
 TIER1 = TRACES / "tier1"
-# `flat-*` is the other tracer. Those captures live in the same directories and end in `.txt`
-# too, and tests/test_function_trace.py is what reads them.
-ARTEFACTS = sorted(one for one in CORPUS.glob("*.txt") if not one.name.startswith("flat-"))
-CAPTURES = sorted(one for one in TIER0.glob("*.txt") if not one.name.startswith("flat-"))
-TIER1_CAPTURES = sorted(one for one in TIER1.glob("*.txt") if not one.name.startswith("flat-"))
+
+
+# Three tracers write `.txt` into these directories and only one of them is this parser's. The
+# filter is on each capture's own metadata rather than on its file name, because the metadata is
+# where the answer actually lives. tests/test_function_trace.py and tests/test_events.py read the
+# other two.
+def graphs(directory):
+    return sorted(
+        one
+        for one in directory.glob("*.txt")
+        if tomllib.loads(one.with_suffix(".meta.toml").read_text())["tracer"] == "function_graph"
+    )
+
+
+ARTEFACTS = graphs(CORPUS)
+CAPTURES = graphs(TIER0)
+TIER1_CAPTURES = graphs(TIER1)
 EVERY = ARTEFACTS + CAPTURES + TIER1_CAPTURES
 
 

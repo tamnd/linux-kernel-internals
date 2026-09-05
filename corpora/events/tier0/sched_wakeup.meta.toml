@@ -1,0 +1,35 @@
+source = "tier0"
+evidence = true
+
+describes = "the record for one task being made runnable, which is the event that comes before a switch"
+kind = "event-format"
+event = "sched_wakeup"
+group = "sched"
+event_id = 268
+
+kernel = "7.2.2"
+arch = "i386"
+profile = "A-full"
+uniprocessor = true
+preempt = true
+captured = "2026-09-05"
+tier = 0
+
+# How to take it again.
+command = "cat /sys/kernel/tracing/events/sched/sched_wakeup/format"
+setup = []
+
+# `comm` is a `char[16]` copied into the record at the moment the event fired, which is what
+# makes this file worth having next to the trace. The task name in the trace header is looked up
+# from a pid at print time and can therefore be a later name for the same process, and the comm
+# in the record cannot, because it was copied then.
+#
+# `target_cpu` prints as `000` rather than `0`, from the `%03d` in the print fmt. It is declared
+# an int and it reads back as the integer 0, which is the sort of thing that goes wrong quietly
+# when a reader compares printed text instead of values.
+
+# What the parser has to get right, and what the tests compare against.
+unparsed_lines = 0
+fields = 8
+own_fields = 4
+record_size = 36
