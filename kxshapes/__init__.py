@@ -394,6 +394,139 @@ def lanes(tape: Tape, *, max_depth: int | None = None) -> list[CpuLane]:
     return [CpuLane(cpu, tuple(per_cpu[cpu])) for cpu in sorted(per_cpu)]
 
 
+# The calls that take a lock and the calls that drop it again, as far as `function_graph` can see
+# them. This is a short list on purpose. It covers the locks the lessons actually trace, and a
+# lesson that needs another one passes its own pair rather than growing this table until nobody
+# knows what is in it.
+LOCK_PAIRS: dict[str, str] = {
+    "down_write": "up_write",
+    "down_read": "up_read",
+    "mutex_lock": "mutex_unlock",
+    "_raw_spin_lock": "_raw_spin_unlock",
+}
+
+
+@dataclass(frozen=True)
+class Hold:
+    """One lock, from the call that took it to the call that dropped it.
+
+    Two numbers, and they answer different questions. `waited_us` is how long the taking took, and
+    on an uncontended lock that is a fraction of a microsecond and on a contended one it is the
+    whole story. `held_us` is how long it stayed held afterwards, which is what decides whether
+    anybody else is going to wait.
+
+    What is not here is which lock. `function_graph` records that `down_write` was called and does
+    not record what it was called on, so two writers on two different inodes and two writers on the
+    same one look identical in the trace. That is a real limit and it gets said out loud rather
+    than papered over with a plausible label. Working out which lock needs either a tracepoint that
+    carries the address or lockdep, and both of those are a different capture.
+    """
+
+    taken_by: str
+    inside: str
+    cpu: int
+    task: str
+    waited_us: float | None
+    held_us: float | None
+    cell: TraceCell
+    wait_cell: TraceCell
+
+    # How long a taking call has to run before it counts as somebody having waited. A judgement,
+    # not a constant of nature. An uncontended `down_write` on a warm cache is around a tenth of a
+    # microsecond, and one that had to sleep and be woken is thousands, so anywhere in the middle
+    # works and the exact number does not matter much.
+    CONTENDED_US = 1.0
+
+    def contended(self, *, timings_are_real: bool | None) -> bool | None:
+        """Whether anybody actually waited, or None when that cannot be answered.
+
+        The caller has to say whether the clock behind the trace was real, and there is no default,
+        because the answer is different on the two tiers and getting it wrong is not visible in the
+        output. Tier 0 is an emulator. Its `down_write` takes microseconds because the emulator is
+        slow, not because anything was contended, and there is only one CPU in it to contend with.
+        Reading those numbers as contention is the exact mistake this argument exists to stop.
+        """
+        if not timings_are_real or self.waited_us is None:
+            return None
+        return self.waited_us >= self.CONTENDED_US
+
+    def alt(self) -> str:
+        waited = "unknown" if self.waited_us is None else f"{self.waited_us:.3f} us"
+        held = "unknown" if self.held_us is None else f"{self.held_us:.3f} us"
+        return (
+            f"{self.task} on cpu {self.cpu} took a lock with {self.taken_by} inside "
+            f"{self.inside}, waited {waited} to get it, held it for {held}"
+        )
+
+
+def holds(
+    tape: Tape,
+    *,
+    pairs: dict[str, str] | None = None,
+) -> list[Hold]:
+    """Every lock this trace took and dropped again, in the order they were taken.
+
+    A hold is found by looking for the taking call and the dropping call as children of the same
+    parent, which is what a lock taken and released inside one function looks like. A lock taken in
+    one function and dropped in another is not found, and that is honest rather than lazy: the two
+    calls are in different subtrees and nothing in the trace says they are the same lock.
+
+    The band is as wide as everything that happened in between, which is a measurement. Where it
+    sits from the left is call order, exactly like every other box in a tape, for the same reason:
+    `function_graph` records how long a call took and never when it started.
+    """
+    pairs = pairs or LOCK_PAIRS
+    found: list[Hold] = []
+    for root in tape.roots:
+        where = {id(span.frame): span for span in place(root)}
+        for frame in root.walk():
+            found.extend(_holds_under(frame, where, pairs, root.depth))
+    return found
+
+
+def _holds_under(parent: Frame, where, pairs: dict[str, str], base_depth: int) -> list[Hold]:
+    """The holds among one frame's immediate children, matched innermost pair first."""
+    out: list[Hold] = []
+    children = parent.children
+    for index, child in enumerate(children):
+        release = pairs.get(child.name)
+        if release is None:
+            continue
+        closing = next(
+            (one for one in children[index + 1 :] if one.name == release),
+            None,
+        )
+        if closing is None:
+            continue
+        between = children[index + 1 : children.index(closing)]
+        durations = [one.duration_us for one in between]
+        held = None if any(one is None for one in durations) else sum(durations)
+
+        taken, dropped = where[id(child)], where[id(closing)]
+        left = taken.left + taken.width
+        cell = TraceCell(
+            name=f"held inside {parent.name}",
+            row=child.depth - base_depth,
+            left=left,
+            width=max(dropped.left - left, 0.0),
+            duration_us=held,
+            to_scale=taken.to_scale and dropped.to_scale,
+        )
+        out.append(
+            Hold(
+                taken_by=child.name,
+                inside=parent.name,
+                cpu=child.cpu,
+                task=child.task or "unknown",
+                waited_us=child.duration_us,
+                held_us=held,
+                cell=cell,
+                wait_cell=TraceCell.of(taken, base_depth),
+            )
+        )
+    return out
+
+
 # -- 8. context badge ---------------------------------------------------------------------------
 
 

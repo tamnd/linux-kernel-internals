@@ -1,0 +1,763 @@
+# tracer: function_graph
+#
+# CPU  TASK/PID         DURATION                  FUNCTION CALLS
+# |     |    |           |   |                     |   |   |   |
+ 1)    sh-2759     |   1.917 us    |  _raw_spin_lock();
+ 2)    sh-2610     |   1.833 us    |  mutex_unlock();
+ 3)    sh-2761     |   1.500 us    |  __rcu_read_lock();
+ ------------------------------------------
+ 2)    sh-2610     =>    sh-2760    
+ ------------------------------------------
+
+ 2)    sh-2760     |               |  finish_task_switch.isra.0() {
+ 2)    sh-2760     |               |    raw_spin_rq_unlock() {
+ 2)    sh-2760     |   0.208 us    |      _raw_spin_unlock();
+ 2)    sh-2760     |   0.583 us    |    }
+ 2)    sh-2760     |   1.250 us    |  }
+ 0)  dockerd-1927  |               |  finish_task_switch.isra.0() {
+ 0)  dockerd-1927  |               |    raw_spin_rq_unlock() {
+ 0)  dockerd-1927  |   0.250 us    |      _raw_spin_unlock();
+ 0)  dockerd-1927  |   1.000 us    |    }
+ 0)  dockerd-1927  |   2.958 us    |  }
+ ------------------------------------------
+ 2)    sh-2760     =>  dockerd-1312 
+ ------------------------------------------
+
+ 2)  dockerd-1312  |               |  finish_task_switch.isra.0() {
+ 2)  dockerd-1312  |               |    raw_spin_rq_unlock() {
+ 2)  dockerd-1312  |   0.292 us    |      _raw_spin_unlock();
+ 2)  dockerd-1312  |   1.000 us    |    }
+ 2)  dockerd-1312  |   3.375 us    |  }
+ 0)  dockerd-1927  |               |  vfs_write() {
+ 0)  dockerd-1927  |               |    rw_verify_area() {
+ 0)  dockerd-1927  |   1.000 us    |      security_file_permission();
+ 0)  dockerd-1927  |   1.417 us    |    }
+ 0)  dockerd-1927  |   0.167 us    |    dynamic_might_resched();
+ 0)  dockerd-1927  |               |    ext4_file_write_iter() {
+ 0)  dockerd-1927  | + 38.208 us   |      ext4_buffered_write_iter();
+ 0)  dockerd-1927  | + 38.875 us   |    }
+ 0)  dockerd-1927  | + 43.042 us   |  }
+ 0)  dockerd-1927  |               |  vfs_write() {
+ 0)  dockerd-1927  |               |    rw_verify_area() {
+ 0)  dockerd-1927  |   0.584 us    |      security_file_permission();
+ 0)  dockerd-1927  |   0.875 us    |    }
+ 0)  dockerd-1927  |   0.166 us    |    dynamic_might_resched();
+ 0)  dockerd-1927  |               |    ext4_file_write_iter() {
+ 0)  dockerd-1927  |   6.542 us    |      ext4_buffered_write_iter();
+ 0)  dockerd-1927  |   6.875 us    |    }
+ 0)  dockerd-1927  |   8.625 us    |  }
+ 0)  dockerd-1927  |               |  vfs_write() {
+ 0)  dockerd-1927  |               |    rw_verify_area() {
+ 0)  dockerd-1927  |   0.458 us    |      security_file_permission();
+ 0)  dockerd-1927  |   0.792 us    |    }
+ 0)  dockerd-1927  |   0.166 us    |    dynamic_might_resched();
+ 0)  dockerd-1927  |               |    ext4_file_write_iter() {
+ 0)  dockerd-1927  |   6.750 us    |      ext4_buffered_write_iter();
+ 0)  dockerd-1927  |   7.083 us    |    }
+ 0)  dockerd-1927  |   8.666 us    |  }
+ 0)  dockerd-1927  |               |  vfs_write() {
+ 0)  dockerd-1927  |               |    rw_verify_area() {
+ 0)  dockerd-1927  |   0.417 us    |      security_file_permission();
+ 0)  dockerd-1927  |   0.750 us    |    }
+ 0)  dockerd-1927  |   0.125 us    |    dynamic_might_resched();
+ 0)  dockerd-1927  |               |    ext4_file_write_iter() {
+ 0)  dockerd-1927  |   6.167 us    |      ext4_buffered_write_iter();
+ 0)  dockerd-1927  |   6.500 us    |    }
+ 0)  dockerd-1927  |   8.000 us    |  }
+ ------------------------------------------
+ 0)  dockerd-1927  =>    sh-2758    
+ ------------------------------------------
+
+ 0)    sh-2758     |               |  finish_task_switch.isra.0() {
+ 0)    sh-2758     |               |    raw_spin_rq_unlock() {
+ 0)    sh-2758     |   0.208 us    |      _raw_spin_unlock();
+ 0)    sh-2758     |   0.625 us    |    }
+ 0)    sh-2758     |   1.625 us    |  }
+ ------------------------------------------
+ 0)    sh-2758     =>  dockerd-1927 
+ ------------------------------------------
+
+ 0)  dockerd-1927  |               |  vfs_write() {
+ 0)  dockerd-1927  |               |    rw_verify_area() {
+ 0)  dockerd-1927  |   2.125 us    |      security_file_permission();
+ 0)  dockerd-1927  |   2.875 us    |    }
+ 0)  dockerd-1927  |   0.166 us    |    dynamic_might_resched();
+ 0)  dockerd-1927  |               |    ext4_file_write_iter() {
+ 0)  dockerd-1927  | + 34.167 us   |      ext4_buffered_write_iter();
+ 0)  dockerd-1927  | + 34.750 us   |    }
+ 0)  dockerd-1927  | + 41.000 us   |  }
+ ------------------------------------------
+ 2)  dockerd-1312  =>  dockerd-1295 
+ ------------------------------------------
+
+ 2)  dockerd-1295  |               |  finish_task_switch.isra.0() {
+ 2)  dockerd-1295  |               |    raw_spin_rq_unlock() {
+ 2)  dockerd-1295  |   0.417 us    |      _raw_spin_unlock();
+ 2)  dockerd-1295  |   1.166 us    |    }
+ 2)  dockerd-1295  |   3.958 us    |  }
+ ------------------------------------------
+ 3)    sh-2761     =>  dockerd-2296 
+ ------------------------------------------
+
+ 3)  dockerd-2296  |               |  finish_task_switch.isra.0() {
+ 3)  dockerd-2296  |               |    raw_spin_rq_unlock() {
+ 3)  dockerd-2296  |   0.375 us    |      _raw_spin_unlock();
+ 3)  dockerd-2296  |   0.959 us    |    }
+ 3)  dockerd-2296  |   2.791 us    |  }
+ ------------------------------------------
+ 3)  dockerd-2296  =>  dockerd-1927 
+ ------------------------------------------
+
+ 3)  dockerd-1927  |               |  vfs_write() {
+ 3)  dockerd-1927  |               |    rw_verify_area() {
+ 3)  dockerd-1927  |   0.708 us    |      security_file_permission();
+ 3)  dockerd-1927  |   1.208 us    |    }
+ 3)  dockerd-1927  |   0.166 us    |    dynamic_might_resched();
+ 3)  dockerd-1927  |               |    ext4_file_write_iter() {
+ 3)  dockerd-1927  | + 36.791 us   |      ext4_buffered_write_iter();
+ 3)  dockerd-1927  | + 37.250 us   |    }
+ 3)  dockerd-1927  | + 40.209 us   |  }
+ 3)  dockerd-1927  |               |  vfs_write() {
+ 3)  dockerd-1927  |               |    rw_verify_area() {
+ 3)  dockerd-1927  |   0.667 us    |      security_file_permission();
+ 3)  dockerd-1927  |   1.167 us    |    }
+ 3)  dockerd-1927  |   0.250 us    |    dynamic_might_resched();
+ 3)  dockerd-1927  |               |    ext4_file_write_iter() {
+ 3)  dockerd-1927  | + 23.417 us   |      ext4_buffered_write_iter();
+ 3)  dockerd-1927  | + 23.834 us   |    }
+ 3)  dockerd-1927  | + 26.583 us   |  }
+ ------------------------------------------
+ 1)    sh-2759     =>    dd-2791    
+ ------------------------------------------
+
+ 1)    dd-2791     |               |  vfs_write() {
+ 1)    dd-2791     |               |    rw_verify_area() {
+ 1)    dd-2791     |   2.292 us    |      security_file_permission();
+ 1)    dd-2791     |   2.916 us    |    }
+ 1)    dd-2791     |   0.167 us    |    dynamic_might_resched();
+ 1)    dd-2791     |               |    shmem_file_write_iter() {
+ 1)    dd-2791     |   0.250 us    |      down_write();
+ 1)    dd-2791     |   0.500 us    |      generic_write_checks();
+ 1)    dd-2791     |   3.125 us    |      file_remove_privs();
+ 1)    dd-2791     |   2.875 us    |      file_update_time();
+ 1)    dd-2791     |               |      generic_perform_write() {
+ 3)  dockerd-1927  |               |  vfs_write() {
+ 3)  dockerd-1927  |               |    rw_verify_area() {
+ 3)  dockerd-1927  |   1.459 us    |      security_file_permission();
+ 3)  dockerd-1927  |   2.292 us    |    }
+ 3)  dockerd-1927  |   0.208 us    |    dynamic_might_resched();
+ 3)  dockerd-1927  |               |    ext4_file_write_iter() {
+ 3)  dockerd-1927  | + 35.417 us   |      ext4_buffered_write_iter();
+ 3)  dockerd-1927  | + 35.875 us   |    }
+ 3)  dockerd-1927  | + 42.583 us   |  }
+ 3)  dockerd-1927  |               |  vfs_write() {
+ 3)  dockerd-1927  |               |    rw_verify_area() {
+ 3)  dockerd-1927  |   0.875 us    |      security_file_permission();
+ 3)  dockerd-1927  |   1.500 us    |    }
+ 3)  dockerd-1927  |   0.166 us    |    dynamic_might_resched();
+ 3)  dockerd-1927  |               |    ext4_file_write_iter() {
+ 3)  dockerd-1927  | + 41.000 us   |      ext4_buffered_write_iter();
+ 3)  dockerd-1927  | + 41.667 us   |    }
+ 3)  dockerd-1927  | + 46.250 us   |  }
+ ------------------------------------------
+ 2)  dockerd-1295  =>    dd-2792    
+ ------------------------------------------
+
+ 2)    dd-2792     |               |  vfs_write() {
+ 2)    dd-2792     |               |    rw_verify_area() {
+ 2)    dd-2792     |   1.875 us    |      security_file_permission();
+ 2)    dd-2792     |   2.750 us    |    }
+ 2)    dd-2792     |   0.208 us    |    dynamic_might_resched();
+ 2)    dd-2792     |               |    shmem_file_write_iter() {
+ 2)    dd-2792     |               |      down_write() {
+ ------------------------------------------
+ 3)  dockerd-1927  =>    dd-2790    
+ ------------------------------------------
+
+ 3)    dd-2790     |               |  vfs_write() {
+ 3)    dd-2790     |               |    rw_verify_area() {
+ 3)    dd-2790     |   1.584 us    |      security_file_permission();
+ 3)    dd-2790     |   2.292 us    |    }
+ 3)    dd-2790     |   0.208 us    |    dynamic_might_resched();
+ 3)    dd-2790     |               |    shmem_file_write_iter() {
+ 3)    dd-2790     |               |      down_write() {
+ ------------------------------------------
+ 3)    dd-2790     =>  dockerd-1927 
+ ------------------------------------------
+
+ 3)  dockerd-1927  |               |  vfs_write() {
+ 3)  dockerd-1927  |               |    rw_verify_area() {
+ 3)  dockerd-1927  |   1.167 us    |      security_file_permission();
+ 3)  dockerd-1927  |   1.792 us    |    }
+ 3)  dockerd-1927  |               |    sock_write_iter() {
+ 3)  dockerd-1927  | + 28.583 us   |      __sock_sendmsg();
+ 3)  dockerd-1927  | + 29.125 us   |    }
+ 3)  dockerd-1927  | + 34.041 us   |  }
+ ------------------------------------------
+ 3)  dockerd-1927  =>  contain-1209 
+ ------------------------------------------
+
+ 3)  contain-1209  |               |  finish_task_switch.isra.0() {
+ 3)  contain-1209  |               |    raw_spin_rq_unlock() {
+ 3)  contain-1209  |   0.292 us    |      _raw_spin_unlock();
+ 3)  contain-1209  |   0.542 us    |    }
+ 3)  contain-1209  |   1.292 us    |  }
+ 3)  contain-1209  |               |  vfs_write() {
+ 3)  contain-1209  |               |    rw_verify_area() {
+ 3)  contain-1209  |   0.959 us    |      security_file_permission();
+ 3)  contain-1209  |   1.583 us    |    }
+ 3)  contain-1209  |   0.167 us    |    dynamic_might_resched();
+ 3)  contain-1209  |               |    ext4_file_write_iter() {
+ 3)  contain-1209  | + 31.958 us   |      ext4_buffered_write_iter();
+ 3)  contain-1209  | + 32.416 us   |    }
+ 3)  contain-1209  | + 36.542 us   |  }
+ 3)  contain-1209  |               |  vfs_write() {
+ 3)  contain-1209  |               |    rw_verify_area() {
+ 3)  contain-1209  |   0.459 us    |      security_file_permission();
+ 3)  contain-1209  |   0.791 us    |    }
+ 3)  contain-1209  |   0.125 us    |    dynamic_might_resched();
+ 3)  contain-1209  |               |    ext4_file_write_iter() {
+ 3)  contain-1209  | + 13.125 us   |      ext4_buffered_write_iter();
+ 3)  contain-1209  | + 13.500 us   |    }
+ 3)  contain-1209  | + 15.125 us   |  }
+ 3)  contain-1209  |               |  vfs_write() {
+ 3)  contain-1209  |               |    rw_verify_area() {
+ 3)  contain-1209  |   0.458 us    |      security_file_permission();
+ 3)  contain-1209  |   0.792 us    |    }
+ 3)  contain-1209  |   0.167 us    |    dynamic_might_resched();
+ 3)  contain-1209  |               |    ext4_file_write_iter() {
+ 3)  contain-1209  |   6.333 us    |      ext4_buffered_write_iter();
+ 3)  contain-1209  |   6.667 us    |    }
+ 3)  contain-1209  |   8.250 us    |  }
+ 3)  contain-1209  |               |  vfs_write() {
+ 3)  contain-1209  |               |    rw_verify_area() {
+ 3)  contain-1209  |   0.458 us    |      security_file_permission();
+ 3)  contain-1209  |   0.750 us    |    }
+ 3)  contain-1209  |   0.167 us    |    dynamic_might_resched();
+ 3)  contain-1209  |               |    ext4_file_write_iter() {
+ 3)  contain-1209  |   6.500 us    |      ext4_buffered_write_iter();
+ 3)  contain-1209  |   6.833 us    |    }
+ 3)  contain-1209  |   8.375 us    |  }
+ ------------------------------------------
+ 3)  contain-1209  =>  contain-1889 
+ ------------------------------------------
+
+ 3)  contain-1889  |               |  finish_task_switch.isra.0() {
+ 3)  contain-1889  |               |    raw_spin_rq_unlock() {
+ 3)  contain-1889  |   0.291 us    |      _raw_spin_unlock();
+ 3)  contain-1889  |   0.833 us    |    }
+ 3)  contain-1889  |   2.209 us    |  }
+ 3)  contain-1889  |               |  vfs_write() {
+ 3)  contain-1889  |               |    rw_verify_area() {
+ 3)  contain-1889  |   1.167 us    |      security_file_permission();
+ 3)  contain-1889  |   1.541 us    |    }
+ 3)  contain-1889  |               |    sock_write_iter() {
+ 3)  contain-1889  | + 24.834 us   |      __sock_sendmsg();
+ 3)  contain-1889  | + 25.375 us   |    }
+ 3)  contain-1889  | + 28.125 us   |  }
+ ------------------------------------------
+ 3)  contain-1889  =>  contain-1216 
+ ------------------------------------------
+
+ 3)  contain-1216  |               |  finish_task_switch.isra.0() {
+ 3)  contain-1216  |               |    raw_spin_rq_unlock() {
+ 3)  contain-1216  |   0.167 us    |      _raw_spin_unlock();
+ 3)  contain-1216  |   0.500 us    |    }
+ 3)  contain-1216  |   0.958 us    |  }
+ ------------------------------------------
+ 2)    dd-2792     =>  dockerd-1295 
+ ------------------------------------------
+
+ 2)  dockerd-1295  |               |  vfs_write() {
+ 2)  dockerd-1295  |               |    rw_verify_area() {
+ 2)  dockerd-1295  |   0.500 us    |      security_file_permission();
+ 2)  dockerd-1295  |   1.000 us    |    }
+ 2)  dockerd-1295  |               |    sock_write_iter() {
+ 2)  dockerd-1295  | + 12.667 us   |      __sock_sendmsg();
+ 2)  dockerd-1295  | + 13.042 us   |    }
+ 2)  dockerd-1295  | + 15.125 us   |  }
+ ------------------------------------------
+ 3)  contain-1216  =>  contain-1209 
+ ------------------------------------------
+
+ 3)  contain-1209  |               |  vfs_write() {
+ 3)  contain-1209  |               |    rw_verify_area() {
+ 3)  contain-1209  |   0.750 us    |      security_file_permission();
+ 3)  contain-1209  |   1.333 us    |    }
+ 3)  contain-1209  |   0.166 us    |    dynamic_might_resched();
+ 3)  contain-1209  |               |    ext4_file_write_iter() {
+ 3)  contain-1209  | + 31.417 us   |      ext4_buffered_write_iter();
+ 3)  contain-1209  | + 31.917 us   |    }
+ 3)  contain-1209  | + 36.375 us   |  }
+ ------------------------------------------
+ 3)  contain-1209  =>  contain-1214 
+ ------------------------------------------
+
+ 3)  contain-1214  |               |  finish_task_switch.isra.0() {
+ 3)  contain-1214  |               |    raw_spin_rq_unlock() {
+ 3)  contain-1214  |   0.250 us    |      _raw_spin_unlock();
+ 3)  contain-1214  |   0.959 us    |    }
+ 3)  contain-1214  |   3.208 us    |  }
+ ------------------------------------------
+ 1)    dd-2791     =>  lima-gu-1102 
+ ------------------------------------------
+
+ 1)  lima-gu-1102  |               |  finish_task_switch.isra.0() {
+ 1)  lima-gu-1102  |               |    raw_spin_rq_unlock() {
+ 1)  lima-gu-1102  |   0.292 us    |      _raw_spin_unlock();
+ 1)  lima-gu-1102  |   1.042 us    |    }
+ 1)  lima-gu-1102  |   0.167 us    |    irq_enter_rcu();
+ 1)  lima-gu-1102  |               |    do_interrupt_handler() {
+ 1)  lima-gu-1102  |   ==========> |
+ 1)  lima-gu-1102  | + 14.042 us   |      gic_handle_irq();
+ 1)  lima-gu-1102  |   <========== |
+ 1)  lima-gu-1102  | + 14.459 us   |    }
+ 1)  lima-gu-1102  |               |    irq_exit_rcu() {
+ 1)  lima-gu-1102  |   0.167 us    |      sched_core_idle_cpu();
+ 1)  lima-gu-1102  |   0.541 us    |    }
+ 1)  lima-gu-1102  | + 19.208 us   |  }
+ ------------------------------------------
+ 3)  contain-1214  =>  lima-gu-2195 
+ ------------------------------------------
+
+ 3)  lima-gu-2195  |               |  finish_task_switch.isra.0() {
+ 3)  lima-gu-2195  |               |    raw_spin_rq_unlock() {
+ 3)  lima-gu-2195  |   0.250 us    |      _raw_spin_unlock();
+ 3)  lima-gu-2195  |   0.750 us    |    }
+ 3)  lima-gu-2195  |   2.042 us    |  }
+ ------------------------------------------
+ 3)  lima-gu-2195  =>  contain-1209 
+ ------------------------------------------
+
+ 3)  contain-1209  |               |  vfs_write() {
+ 3)  contain-1209  |               |    rw_verify_area() {
+ 3)  contain-1209  |   2.250 us    |      security_file_permission();
+ 3)  contain-1209  |   3.083 us    |    }
+ 3)  contain-1209  |   0.208 us    |    dynamic_might_resched();
+ 3)  contain-1209  |               |    ext4_file_write_iter() {
+ 3)  contain-1209  | + 66.542 us   |      ext4_buffered_write_iter();
+ 3)  contain-1209  | + 67.584 us   |    }
+ 3)  contain-1209  | + 75.958 us   |  }
+ 3)  contain-1209  |               |  vfs_write() {
+ 3)  contain-1209  |               |    rw_verify_area() {
+ 3)  contain-1209  |   0.500 us    |      security_file_permission();
+ 3)  contain-1209  |   0.833 us    |    }
+ 3)  contain-1209  |   0.250 us    |    dynamic_might_resched();
+ 3)  contain-1209  |               |    ext4_file_write_iter() {
+ 3)  contain-1209  | + 82.084 us   |      ext4_buffered_write_iter();
+ 3)  contain-1209  | + 82.958 us   |    }
+ 3)  contain-1209  | + 84.917 us   |  }
+ 3)  contain-1209  |               |  vfs_write() {
+ 3)  contain-1209  |               |    rw_verify_area() {
+ 3)  contain-1209  |   0.917 us    |      security_file_permission();
+ 3)  contain-1209  |   1.292 us    |    }
+ 3)  contain-1209  |   0.167 us    |    dynamic_might_resched();
+ 3)  contain-1209  |               |    ext4_file_write_iter() {
+ 3)  contain-1209  |   9.166 us    |      ext4_buffered_write_iter();
+ 3)  contain-1209  |   9.583 us    |    }
+ 3)  contain-1209  | + 11.834 us   |  }
+ 3)  contain-1209  |               |  vfs_write() {
+ 3)  contain-1209  |               |    rw_verify_area() {
+ 3)  contain-1209  |   0.459 us    |      security_file_permission();
+ 3)  contain-1209  |   0.792 us    |    }
+ 3)  contain-1209  |   0.166 us    |    dynamic_might_resched();
+ 3)  contain-1209  |               |    ext4_file_write_iter() {
+ 3)  contain-1209  |   6.500 us    |      ext4_buffered_write_iter();
+ 3)  contain-1209  |   6.833 us    |    }
+ 3)  contain-1209  |   8.417 us    |  }
+ 3)  contain-1209  |               |  vfs_write() {
+ 3)  contain-1209  |               |    rw_verify_area() {
+ 3)  contain-1209  |   0.459 us    |      security_file_permission();
+ 3)  contain-1209  |   0.791 us    |    }
+ 3)  contain-1209  |   0.209 us    |    dynamic_might_resched();
+ 3)  contain-1209  |               |    ext4_file_write_iter() {
+ 3)  contain-1209  |   5.833 us    |      ext4_buffered_write_iter();
+ 3)  contain-1209  |   6.208 us    |    }
+ 3)  contain-1209  |   7.792 us    |  }
+ 3)  contain-1209  |               |  vfs_write() {
+ 3)  contain-1209  |               |    rw_verify_area() {
+ 3)  contain-1209  |   0.458 us    |      security_file_permission();
+ 3)  contain-1209  |   0.750 us    |    }
+ 3)  contain-1209  |   0.125 us    |    dynamic_might_resched();
+ 3)  contain-1209  |               |    ext4_file_write_iter() {
+ 3)  contain-1209  |   6.708 us    |      ext4_buffered_write_iter();
+ 3)  contain-1209  |   7.042 us    |    }
+ 3)  contain-1209  |   8.541 us    |  }
+ ------------------------------------------
+ 1)  lima-gu-1102  =>    dd-2791    
+ ------------------------------------------
+
+ 1)    dd-2791     | * 29620.20 us |      } /* generic_perform_write */
+ 1)    dd-2791     | + 13.958 us   |      up_write();
+ 1)    dd-2791     | * 29643.58 us |    } /* shmem_file_write_iter */
+ 1)    dd-2791     | * 29650.79 us |  } /* vfs_write */
+ ------------------------------------------
+ 2)  dockerd-1295  =>    dd-2792    
+ ------------------------------------------
+
+ 2)    dd-2792     | * 10435.87 us |      } /* down_write */
+ 2)    dd-2792     |   1.000 us    |      generic_write_checks();
+ 2)    dd-2792     |   0.500 us    |      file_remove_privs();
+ 2)    dd-2792     |   1.833 us    |      file_update_time();
+ 2)    dd-2792     | # 4295.333 us |      generic_perform_write();
+ 3)  contain-1209  |               |  vfs_write() {
+ 3)  contain-1209  |               |    rw_verify_area() {
+ 3)  contain-1209  |   2.208 us    |      security_file_permission();
+ 3)  contain-1209  |   3.083 us    |    }
+ 3)  contain-1209  |   0.167 us    |    dynamic_might_resched();
+ 3)  contain-1209  |               |    ext4_file_write_iter() {
+ 3)  contain-1209  | + 51.166 us   |      ext4_buffered_write_iter();
+ 3)  contain-1209  | + 52.334 us   |    }
+ 3)  contain-1209  | + 58.958 us   |  }
+ 2)    dd-2792     |   8.125 us    |      up_write();
+ 2)    dd-2792     | * 14746.41 us |    } /* shmem_file_write_iter */
+ 2)    dd-2792     | * 14753.12 us |  } /* vfs_write */
+ ------------------------------------------
+ 3)  contain-1209  =>    dd-2790    
+ ------------------------------------------
+
+ 3)    dd-2790     | * 14778.45 us |      } /* down_write */
+ 3)    dd-2790     |   1.250 us    |      generic_write_checks();
+ 3)    dd-2790     |   0.584 us    |      file_remove_privs();
+ 3)    dd-2790     |   2.000 us    |      file_update_time();
+ 3)    dd-2790     |               |      generic_perform_write() {
+ ------------------------------------------
+ 3)    dd-2790     =>  contain-1216 
+ ------------------------------------------
+
+ 3)  contain-1216  |               |  vfs_write() {
+ 3)  contain-1216  |               |    rw_verify_area() {
+ 3)  contain-1216  |   2.167 us    |      security_file_permission();
+ 3)  contain-1216  |   2.958 us    |    }
+ 3)  contain-1216  |   0.292 us    |    dynamic_might_resched();
+ 3)  contain-1216  |               |    ext4_file_write_iter() {
+ 3)  contain-1216  | + 39.042 us   |      ext4_buffered_write_iter();
+ 3)  contain-1216  | + 39.542 us   |    }
+ 3)  contain-1216  | + 47.041 us   |  }
+ 3)  contain-1216  |               |  vfs_write() {
+ 3)  contain-1216  |               |    rw_verify_area() {
+ 3)  contain-1216  |   0.541 us    |      security_file_permission();
+ 3)  contain-1216  |   0.917 us    |    }
+ 3)  contain-1216  |   0.208 us    |    dynamic_might_resched();
+ 3)  contain-1216  |               |    ext4_file_write_iter() {
+ 3)  contain-1216  |   7.042 us    |      ext4_buffered_write_iter();
+ 3)  contain-1216  |   7.375 us    |    }
+ 3)  contain-1216  |   9.208 us    |  }
+ 3)  contain-1216  |               |  vfs_write() {
+ 3)  contain-1216  |               |    rw_verify_area() {
+ 3)  contain-1216  |   0.458 us    |      security_file_permission();
+ 3)  contain-1216  |   0.792 us    |    }
+ 3)  contain-1216  |   0.125 us    |    dynamic_might_resched();
+ 3)  contain-1216  |               |    ext4_file_write_iter() {
+ 3)  contain-1216  |   5.750 us    |      ext4_buffered_write_iter();
+ 3)  contain-1216  |   6.166 us    |    }
+ 3)  contain-1216  |   7.666 us    |  }
+ 3)  contain-1216  |               |  vfs_write() {
+ 3)  contain-1216  |               |    rw_verify_area() {
+ 3)  contain-1216  |   0.458 us    |      security_file_permission();
+ 3)  contain-1216  |   0.792 us    |    }
+ 3)  contain-1216  |   0.125 us    |    dynamic_might_resched();
+ 3)  contain-1216  |               |    ext4_file_write_iter() {
+ 3)  contain-1216  |   6.292 us    |      ext4_buffered_write_iter();
+ 3)  contain-1216  |   6.584 us    |    }
+ 3)  contain-1216  |   8.125 us    |  }
+ 3)  contain-1216  |               |  vfs_write() {
+ 3)  contain-1216  |               |    rw_verify_area() {
+ 3)  contain-1216  |   0.417 us    |      security_file_permission();
+ 3)  contain-1216  |   0.750 us    |    }
+ 3)  contain-1216  |   0.167 us    |    dynamic_might_resched();
+ 3)  contain-1216  |               |    ext4_file_write_iter() {
+ 3)  contain-1216  |   6.500 us    |      ext4_buffered_write_iter();
+ 3)  contain-1216  |   6.833 us    |    }
+ 3)  contain-1216  |   8.333 us    |  }
+ 3)  contain-1216  |               |  vfs_write() {
+ 3)  contain-1216  |               |    rw_verify_area() {
+ 3)  contain-1216  |   0.458 us    |      security_file_permission();
+ 3)  contain-1216  |   0.750 us    |    }
+ 3)  contain-1216  |   0.125 us    |    dynamic_might_resched();
+ 3)  contain-1216  |               |    ext4_file_write_iter() {
+ 3)  contain-1216  |   6.292 us    |      ext4_buffered_write_iter();
+ 3)  contain-1216  |   6.584 us    |    }
+ 3)  contain-1216  |   8.083 us    |  }
+ ------------------------------------------
+ 3)  contain-1216  =>  contain-1214 
+ ------------------------------------------
+
+ 3)  contain-1214  |               |  vfs_write() {
+ 3)  contain-1214  |               |    rw_verify_area() {
+ 3)  contain-1214  |   1.375 us    |      security_file_permission();
+ 3)  contain-1214  |   2.208 us    |    }
+ 3)  contain-1214  |   0.167 us    |    dynamic_might_resched();
+ 3)  contain-1214  |               |    shmem_file_write_iter() {
+ 3)  contain-1214  |   0.333 us    |      down_write();
+ 3)  contain-1214  |   0.375 us    |      generic_write_checks();
+ 3)  contain-1214  |   0.625 us    |      file_remove_privs();
+ 3)  contain-1214  |   1.708 us    |      file_update_time();
+ 3)  contain-1214  |   4.041 us    |      generic_perform_write();
+ 3)  contain-1214  |   0.167 us    |      up_write();
+ 3)  contain-1214  |   9.208 us    |    }
+ 3)  contain-1214  |   0.292 us    |    __fsnotify_parent();
+ 3)  contain-1214  | + 14.875 us   |  }
+ 3)  contain-1214  |               |  vfs_write() {
+ 3)  contain-1214  |               |    rw_verify_area() {
+ 3)  contain-1214  |   0.458 us    |      security_file_permission();
+ 3)  contain-1214  |   0.792 us    |    }
+ 3)  contain-1214  |   0.167 us    |    dynamic_might_resched();
+ 3)  contain-1214  |               |    shmem_file_write_iter() {
+ 3)  contain-1214  |   0.250 us    |      down_write();
+ 3)  contain-1214  |   0.250 us    |      generic_write_checks();
+ 3)  contain-1214  |   0.208 us    |      file_remove_privs();
+ 3)  contain-1214  |   0.334 us    |      file_update_time();
+ 3)  contain-1214  |   2.625 us    |      generic_perform_write();
+ 3)  contain-1214  |   0.167 us    |      up_write();
+ 3)  contain-1214  |   4.833 us    |    }
+ 3)  contain-1214  |   0.125 us    |    __fsnotify_parent();
+ 3)  contain-1214  |   6.750 us    |  }
+ ------------------------------------------
+ 3)  contain-1214  =>  contain-1210 
+ ------------------------------------------
+
+ 3)  contain-1210  |               |  finish_task_switch.isra.0() {
+ 3)  contain-1210  |               |    raw_spin_rq_unlock() {
+ 3)  contain-1210  |   0.250 us    |      _raw_spin_unlock();
+ 3)  contain-1210  |   0.666 us    |    }
+ 3)  contain-1210  |   1.250 us    |  }
+ ------------------------------------------
+ 3)  contain-1210  =>  contain-1216 
+ ------------------------------------------
+
+ 3)  contain-1216  |               |  vfs_write() {
+ 3)  contain-1216  |               |    rw_verify_area() {
+ 3)  contain-1216  |   0.667 us    |      security_file_permission();
+ 3)  contain-1216  |   1.125 us    |    }
+ 3)  contain-1216  |   0.167 us    |    dynamic_might_resched();
+ 3)  contain-1216  |               |    ext4_file_write_iter() {
+ 3)  contain-1216  | + 21.291 us   |      ext4_buffered_write_iter();
+ 3)  contain-1216  | + 21.792 us   |    }
+ 3)  contain-1216  | + 24.500 us   |  }
+ ------------------------------------------
+ 3)  contain-1216  =>    dd-2790    
+ ------------------------------------------
+
+ 3)    dd-2790     | # 6537.875 us |      } /* generic_perform_write */
+ 3)    dd-2790     |   0.292 us    |      up_write();
+ 3)    dd-2790     | * 21323.50 us |    } /* shmem_file_write_iter */
+ 3)    dd-2790     | * 21329.58 us |  } /* vfs_write */
+ ------------------------------------------
+ 3)    dd-2790     =>  contain-1216 
+ ------------------------------------------
+
+ 3)  contain-1216  |               |  vfs_write() {
+ 3)  contain-1216  |               |    rw_verify_area() {
+ 3)  contain-1216  |   0.834 us    |      security_file_permission();
+ 3)  contain-1216  |   1.250 us    |    }
+ 3)  contain-1216  |   0.167 us    |    dynamic_might_resched();
+ 3)  contain-1216  |               |    ext4_file_write_iter() {
+ 3)  contain-1216  | + 17.583 us   |      ext4_buffered_write_iter();
+ 3)  contain-1216  | + 17.958 us   |    }
+ 3)  contain-1216  | + 20.458 us   |  }
+ 3)  contain-1216  |               |  vfs_write() {
+ 3)  contain-1216  |               |    rw_verify_area() {
+ 3)  contain-1216  |   0.416 us    |      security_file_permission();
+ 3)  contain-1216  |   0.666 us    |    }
+ 3)  contain-1216  |   0.167 us    |    dynamic_might_resched();
+ 3)  contain-1216  |               |    ext4_file_write_iter() {
+ 3)  contain-1216  |   6.041 us    |      ext4_buffered_write_iter();
+ 3)  contain-1216  |   6.333 us    |    }
+ 3)  contain-1216  |   7.791 us    |  }
+ 3)  contain-1216  |               |  vfs_write() {
+ 3)  contain-1216  |               |    rw_verify_area() {
+ 3)  contain-1216  |   0.416 us    |      security_file_permission();
+ 3)  contain-1216  |   0.708 us    |    }
+ 3)  contain-1216  |   0.125 us    |    dynamic_might_resched();
+ 3)  contain-1216  |               |    ext4_file_write_iter() {
+ 3)  contain-1216  |   4.875 us    |      ext4_buffered_write_iter();
+ 3)  contain-1216  |   5.541 us    |    }
+ 3)  contain-1216  |   7.125 us    |  }
+ 3)  contain-1216  |               |  vfs_write() {
+ 3)  contain-1216  |               |    rw_verify_area() {
+ 3)  contain-1216  |   0.416 us    |      security_file_permission();
+ 3)  contain-1216  |   0.708 us    |    }
+ 3)  contain-1216  |   0.167 us    |    dynamic_might_resched();
+ 3)  contain-1216  |               |    ext4_file_write_iter() {
+ 3)  contain-1216  |   5.584 us    |      ext4_buffered_write_iter();
+ 3)  contain-1216  |   5.958 us    |    }
+ 3)  contain-1216  |   7.500 us    |  }
+ 3)  contain-1216  |               |  vfs_write() {
+ 3)  contain-1216  |               |    rw_verify_area() {
+ 3)  contain-1216  |   0.417 us    |      security_file_permission();
+ 3)  contain-1216  |   0.791 us    |    }
+ 3)  contain-1216  |   0.167 us    |    dynamic_might_resched();
+ 3)  contain-1216  |               |    ext4_file_write_iter() {
+ 3)  contain-1216  |   4.791 us    |      ext4_buffered_write_iter();
+ 3)  contain-1216  |   5.125 us    |    }
+ 3)  contain-1216  |   6.667 us    |  }
+ 3)  contain-1216  |               |  vfs_write() {
+ 3)  contain-1216  |               |    rw_verify_area() {
+ 3)  contain-1216  |   0.375 us    |      security_file_permission();
+ 3)  contain-1216  |   0.666 us    |    }
+ 3)  contain-1216  |   0.167 us    |    dynamic_might_resched();
+ 3)  contain-1216  |               |    ext4_file_write_iter() {
+ 3)  contain-1216  |   5.333 us    |      ext4_buffered_write_iter();
+ 3)  contain-1216  |   5.708 us    |    }
+ 3)  contain-1216  |   7.125 us    |  }
+ 3)  contain-1216  |               |  vfs_write() {
+ 3)  contain-1216  |               |    rw_verify_area() {
+ 3)  contain-1216  |   1.541 us    |      security_file_permission();
+ 3)  contain-1216  |   2.250 us    |    }
+ 3)  contain-1216  |   0.167 us    |    dynamic_might_resched();
+ 3)  contain-1216  |               |    ext4_file_write_iter() {
+ 3)  contain-1216  | + 24.000 us   |      ext4_buffered_write_iter();
+ 3)  contain-1216  | + 24.500 us   |    }
+ 3)  contain-1216  | + 29.500 us   |  }
+ 3)  contain-1216  |               |  vfs_write() {
+ 3)  contain-1216  |               |    rw_verify_area() {
+ 3)  contain-1216  |   0.709 us    |      security_file_permission();
+ 3)  contain-1216  |   1.292 us    |    }
+ 3)  contain-1216  |   0.125 us    |    dynamic_might_resched();
+ 3)  contain-1216  |               |    ext4_file_write_iter() {
+ 3)  contain-1216  |   8.833 us    |      ext4_buffered_write_iter();
+ 3)  contain-1216  |   9.167 us    |    }
+ 3)  contain-1216  | + 12.875 us   |  }
+ ------------------------------------------
+ 0)  dockerd-1927  =>    dd-2793    
+ ------------------------------------------
+
+ 0)    dd-2793     |               |  vfs_write() {
+ 0)    dd-2793     |               |    rw_verify_area() {
+ 0)    dd-2793     |   1.459 us    |      security_file_permission();
+ 0)    dd-2793     |   2.084 us    |    }
+ 0)    dd-2793     |   0.208 us    |    dynamic_might_resched();
+ 0)    dd-2793     |               |    shmem_file_write_iter() {
+ 0)    dd-2793     |   0.250 us    |      down_write();
+ 0)    dd-2793     |   0.375 us    |      generic_write_checks();
+ 0)    dd-2793     |   0.500 us    |      file_remove_privs();
+ 0)    dd-2793     |   1.750 us    |      file_update_time();
+ 0)    dd-2793     | # 5036.416 us |      generic_perform_write();
+ 3)  contain-1216  |               |  vfs_write() {
+ 3)  contain-1216  |               |    rw_verify_area() {
+ 3)  contain-1216  |   1.167 us    |      security_file_permission();
+ 3)  contain-1216  |   1.750 us    |    }
+ 3)  contain-1216  |   0.209 us    |    dynamic_might_resched();
+ 3)  contain-1216  |               |    ext4_file_write_iter() {
+ 3)  contain-1216  | + 22.750 us   |      ext4_buffered_write_iter();
+ 3)  contain-1216  | + 23.250 us   |    }
+ 3)  contain-1216  | + 27.167 us   |  }
+ 0)    dd-2793     |   0.334 us    |      up_write();
+ 0)    dd-2793     | # 5043.416 us |    }
+ 0)    dd-2793     | # 5050.000 us |  }
+ ------------------------------------------
+ 1)    dd-2791     =>  contain-1216 
+ ------------------------------------------
+
+ 1)  contain-1216  |               |  vfs_write() {
+ 1)  contain-1216  |               |    rw_verify_area() {
+ 1)  contain-1216  |   0.583 us    |      security_file_permission();
+ 1)  contain-1216  |   1.041 us    |    }
+ 1)  contain-1216  |               |    sock_write_iter() {
+ 1)  contain-1216  | + 24.041 us   |      __sock_sendmsg();
+ 1)  contain-1216  | + 24.500 us   |    }
+ 1)  contain-1216  | + 28.625 us   |  }
+ ------------------------------------------
+ 2)    dd-2792     =>  dockerd-1295 
+ ------------------------------------------
+
+ 2)  dockerd-1295  |               |  vfs_write() {
+ 2)  dockerd-1295  |               |    rw_verify_area() {
+ 2)  dockerd-1295  |   0.917 us    |      security_file_permission();
+ 2)  dockerd-1295  |   1.458 us    |    }
+ 2)  dockerd-1295  |               |    sock_write_iter() {
+ 2)  dockerd-1295  | + 22.708 us   |      __sock_sendmsg();
+ 2)  dockerd-1295  | + 23.084 us   |    }
+ 2)  dockerd-1295  | + 26.792 us   |  }
+ ------------------------------------------
+ 2)  dockerd-1295  =>   sshd-1096   
+ ------------------------------------------
+
+ 2)   sshd-1096    |               |  finish_task_switch.isra.0() {
+ 2)   sshd-1096    |               |    raw_spin_rq_unlock() {
+ 2)   sshd-1096    |   0.167 us    |      _raw_spin_unlock();
+ 2)   sshd-1096    |   0.500 us    |    }
+ 2)   sshd-1096    |   1.000 us    |  }
+ 2)   sshd-1096    |               |  vfs_write() {
+ 2)   sshd-1096    |               |    rw_verify_area() {
+ 2)   sshd-1096    |   0.583 us    |      security_file_permission();
+ 2)   sshd-1096    |   0.958 us    |    }
+ 2)   sshd-1096    |               |    sock_write_iter() {
+ 2)   sshd-1096    | + 71.166 us   |      __sock_sendmsg();
+ 2)   sshd-1096    | + 71.625 us   |    }
+ 2)   sshd-1096    | + 73.209 us   |  }
+ ------------------------------------------
+ 2)   sshd-1096    =>  dockerd-1312 
+ ------------------------------------------
+
+ 2)  dockerd-1312  |               |  vfs_write() {
+ 2)  dockerd-1312  |               |    rw_verify_area() {
+ 2)  dockerd-1312  |   0.583 us    |      security_file_permission();
+ 2)  dockerd-1312  |   0.833 us    |    }
+ 2)  dockerd-1312  |               |    sock_write_iter() {
+ 2)  dockerd-1312  | + 13.500 us   |      __sock_sendmsg();
+ 2)  dockerd-1312  | + 13.875 us   |    }
+ 2)  dockerd-1312  | + 15.417 us   |  }
+ ------------------------------------------
+ 2)  dockerd-1312  =>  contain-1889 
+ ------------------------------------------
+
+ 2)  contain-1889  |               |  vfs_write() {
+ 2)  contain-1889  |   0.875 us    |    irq_enter_rcu();
+ 2)  contain-1889  |               |    do_interrupt_handler() {
+ 2)  contain-1889  |   ==========> |
+ 2)  contain-1889  | + 17.750 us   |      gic_handle_irq();
+ 2)  contain-1889  |   <========== |
+ 2)  contain-1889  | + 18.292 us   |    }
+ 2)  contain-1889  |               |    irq_exit_rcu() {
+ 2)  contain-1889  |   0.208 us    |      sched_core_idle_cpu();
+ 2)  contain-1889  |   0.584 us    |    }
+ 2)  contain-1889  |               |    rw_verify_area() {
+ 2)  contain-1889  |   0.417 us    |      security_file_permission();
+ 2)  contain-1889  |   0.750 us    |    }
+ 2)  contain-1889  |               |    sock_write_iter() {
+ 2)  contain-1889  |   9.000 us    |      __sock_sendmsg();
+ 2)  contain-1889  |   9.334 us    |    }
+ 2)  contain-1889  | + 34.750 us   |  }
+ ------------------------------------------
+ 2)  contain-1889  =>  contain-1210 
+ ------------------------------------------
+
+ 2)  contain-1210  |               |  vfs_write() {
+ 2)  contain-1210  |               |    rw_verify_area() {
+ 2)  contain-1210  |   0.917 us    |      security_file_permission();
+ 2)  contain-1210  |   1.250 us    |    }
+ 2)  contain-1210  |               |    eventfd_write() {
+ 2)  contain-1210  |   0.542 us    |      _raw_spin_lock_irq();
+ 2)  contain-1210  |   0.958 us    |      __wake_up_locked_key();
+ 2)  contain-1210  |   0.167 us    |      _raw_spin_unlock_irq();
+ 2)  contain-1210  |   2.375 us    |    }
+ 2)  contain-1210  |   5.083 us    |  }
+ ------------------------------------------
+ 2)  contain-1210  =>   sshd-1096   
+ ------------------------------------------
+
+ 2)   sshd-1096    |               |  vfs_write() {
+ 2)   sshd-1096    |               |    rw_verify_area() {
+ 2)   sshd-1096    |   0.917 us    |      security_file_permission();
+ 2)   sshd-1096    |   1.583 us    |    }
+ 2)   sshd-1096    |               |    sock_write_iter() {
+ 2)   sshd-1096    | ! 225.042 us  |      __sock_sendmsg();
+ 2)   sshd-1096    | ! 226.583 us  |    }
+ 2)   sshd-1096    | ! 231.875 us  |  }
+ ------------------------------------------
+ 1)  contain-1216  =>    sh-2610    
+ ------------------------------------------
+
+ 1)    sh-2610     |               |  vfs_write() {
+ 1)    sh-2610     |               |    rw_verify_area() {
+ 1)    sh-2610     |   0.791 us    |      security_file_permission();
+ 1)    sh-2610     |   1.583 us    |    }
+ 1)    sh-2610     |   0.167 us    |    dynamic_might_resched();
+ 1)    sh-2610     |               |    __check_object_size() {
+ 1)    sh-2610     |   0.250 us    |      __check_object_size.part.0();
+ 1)    sh-2610     |   0.584 us    |    }
+ 1)    sh-2610     |               |    mutex_lock() {
+ 1)    sh-2610     |   0.167 us    |      dynamic_might_resched();
+ 1)    sh-2610     |   0.458 us    |    }

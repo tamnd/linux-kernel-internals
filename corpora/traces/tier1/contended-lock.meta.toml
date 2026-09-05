@@ -1,0 +1,78 @@
+source = "tier1"
+evidence = true
+
+describes = "four processes on four CPUs writing eight megabytes each to the same tmpfs file at the same moment, so three of them queue on the one inode lock"
+tracer = "function_graph"
+options = ["funcgraph-proc", "funcgraph-cpu"]
+
+kernel = "6.8.0-117-generic"
+distribution = "Alpine 3.22 in a privileged container on Ubuntu 24.04"
+arch = "aarch64"
+uniprocessor = false
+cpu_count = 4
+captured = "2026-09-05"
+tier = 1
+
+# How to take it again. It needs a real Linux machine with more than one CPU and root, because
+# tracefs has to be mounted and written to. Tier 0 cannot produce this and never will, for two
+# separate reasons rather than one: v86 is a uniprocessor emulator, so there is no second CPU to
+# queue behind, and its clock is emulated, so a wait of ten milliseconds would not mean anything
+# even if one appeared.
+#
+# The recipe is the same as multi-cpu-write.txt with one deliberate change. That capture has six
+# writers on six different files, and this one has four writers on the same file. That single
+# difference is the whole experiment: six inodes means six locks and nobody waits, one inode means
+# one lock and everybody after the first one does.
+#
+# The writes are eight megabytes rather than one byte, because the lock has to be held long enough
+# for the queue to be worth looking at. A one byte write holds the inode lock for a few
+# microseconds, and four of those on four CPUs mostly miss each other.
+command = "four taskset pinned dd processes released from a barrier, each writing 8M to /dev/shm/target"
+setup = [
+    "mount -t tracefs nodev /sys/kernel/tracing",
+    "echo 0 > /sys/kernel/tracing/tracing_on",
+    "echo function_graph > /sys/kernel/tracing/current_tracer",
+    "echo funcgraph-proc > /sys/kernel/tracing/trace_options",
+    "echo funcgraph-cpu > /sys/kernel/tracing/trace_options",
+    "echo vfs_write > /sys/kernel/tracing/set_graph_function",
+    "echo 3 > /sys/kernel/tracing/max_graph_depth",
+    "echo > /sys/kernel/tracing/trace",
+]
+
+# Six things about this capture that are worth knowing.
+#
+# There are six locks in it that were both taken and dropped inside one function, and two of them
+# were contended. `dd-2792` waited 10435.87 us and `dd-2790` waited 14778.45 us, both in
+# `down_write` inside `shmem_file_write_iter`. In the same file, `contain-1214` waited 0.333 us and
+# 0.25 us for the same call on a file nobody else wanted. Two numbers four orders of magnitude
+# apart, from one capture, is the entire point of this file.
+#
+# The best line in it is the one that is not a number. `dd-2790` opens `down_write() {` on CPU 3
+# and then the very next thing in the file is a task switch banner away from it, because waiting
+# for a rwsem means going to sleep. You can watch it lose the CPU.
+#
+# `dd-2793` did not wait, and that is not a failure of the experiment. It arrived after the queue
+# had drained, which the trace shows plainly: its `down_write` is well past the `up_write` of the
+# last writer that had queued. A barrier made of a file appearing is good to a few hundred
+# microseconds and these writes are ten milliseconds long, so three out of four landing in the
+# queue is what that barrier buys.
+#
+# The depth is limited to 3, which is why `down_write` and `up_write` are leaves here and
+# `generic_perform_write` is one line. Anything deeper and four writers of eight megabytes fill the
+# ring buffer with page cache work, which is a different lesson.
+#
+# `dockerd` and `containerd` are in here writing to ext4 and to sockets, and `sshd` and the virtual
+# machine's guest agent are too. None of it is the experiment and all of it is left in, for the
+# same reason as multi-cpu-write.txt: a trace on a real machine has other people's work in it.
+#
+# The durations are real. This is a real machine with a real clock, so unlike Tier 0 the numbers
+# mean something. It is a virtual machine on a laptop and they are noisy, but the gap between
+# 0.25 us and 14778 us survives any amount of noise.
+timings_are_real = true
+
+# What the parser has to get right, and what the tests compare against.
+unparsed_lines = 0
+frames = 405
+roots = 40
+max_depth = 2
+cpus = [0, 1, 2, 3]
