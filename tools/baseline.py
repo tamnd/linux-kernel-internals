@@ -45,6 +45,7 @@ from pathlib import Path
 from kxray import kallsyms, lockdep, tracefs
 from kxray.btf import reader as btf
 from kxray.models import Lines
+from kxray.trace import function as trace_function
 from kxray.trace import parse_file
 
 CORPORA = Path("corpora")
@@ -55,6 +56,10 @@ SCHEMA = 1
 # this file", and it is here rather than in each artefact's metadata so that the whole mapping can
 # be read at once.
 ROUTES = (
+    # Both tracers write `.txt` into the same directory and the file name is the only thing that
+    # tells them apart, so the narrower pattern has to come first. `flat-` on the front of a
+    # capture means the flat function tracer took it.
+    ("corpora/traces/*/flat-*.txt", "function"),
     ("corpora/traces/*/*.txt", "function_graph"),
     ("corpora/proc/*/kallsyms.txt", "kallsyms"),
     ("corpora/proc/*/lockdep.txt", "lockdep-classes"),
@@ -99,6 +104,11 @@ def _function_graph(path: Path) -> tuple[int, Lines | None]:
     return tape.frame_count, tape.lines
 
 
+def _function_flat(path: Path) -> tuple[int, Lines | None]:
+    log = trace_function.parse_file(path)
+    return len(log.calls), log.lines
+
+
 def _kallsyms(path: Path) -> tuple[int, Lines | None]:
     text = path.read_text(encoding="utf-8")
     return len(kallsyms.parse(text)), kallsyms.account(text)
@@ -141,6 +151,7 @@ def _unread(path: Path) -> tuple[int, Lines | None]:
 
 READERS = {
     "function_graph": _function_graph,
+    "function": _function_flat,
     "kallsyms": _kallsyms,
     "lockdep-classes": _lockdep_classes,
     "lockdep-stats": _lockdep_stats,

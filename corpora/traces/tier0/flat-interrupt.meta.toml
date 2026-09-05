@@ -1,0 +1,57 @@
+source = "tier0"
+evidence = true
+
+describes = "one second of an idle machine, filtered to the interrupt and softirq path, so the trace crosses from hardirq context into softirq context and the flags column changes underneath it"
+tracer = "function"
+options = []
+
+kernel = "7.2.2"
+arch = "i386"
+profile = "A-full"
+uniprocessor = true
+preempt = true
+captured = "2026-09-05"
+tier = 0
+
+# How to take it again.
+command = "sleep 1"
+setup = [
+    "echo 0 > /sys/kernel/tracing/tracing_on",
+    "echo nop > /sys/kernel/tracing/current_tracer",
+    "echo > /sys/kernel/tracing/trace",
+    "echo function > /sys/kernel/tracing/current_tracer",
+    "printf '*softirq*\\nhandle_irq_event*\\nhrtimer_interrupt\\nhrtimer_run_queues\\nrun_rebalance_domains\\nrcu_core\\n' > /sys/kernel/tracing/set_ftrace_filter",
+    "echo 1 > /sys/kernel/tracing/tracing_on",
+]
+
+# Four things about this capture that are not obvious from reading it.
+#
+# The task name on every line is `sleep` and `sleep` did none of this. A timer interrupt runs on
+# whatever task happened to be on the CPU when it arrived, and it borrows that task's stack and
+# its name in the trace. So the comm column answers "who was interrupted", not "who ran", and the
+# flags column is the only thing on the line that says which is which. That is the single most
+# useful lesson in this file.
+#
+# The flags column changes four times in eight lines and each change is a real transition. `d.h2.`
+# and `d.h1.` are the hardware interrupt handler, with interrupts off and the preemption count
+# raised. `dN.1.` is after `irq_exit_rcu` has decided softirqs are pending: still interrupts off,
+# `N` because something in the handler set need-resched, and the count down to one. `.Ns1.` is the
+# softirq itself, interrupts back on and the `s` saying which context this is. `rcu_core` on that
+# last line is the work the interrupt asked for, running afterwards rather than inside it.
+#
+# `raise_softirq` and `__raise_softirq_irqoff` are in here on purpose. They are the request, and
+# `handle_softirqs` three lines later is the service, and the four lines in between are the gap
+# between them. That gap is what "deferred work" means and it is hard to show any other way.
+#
+# One second of an idle machine is one timer tick worth of this, which is why the filter is narrow
+# and the window is short. Unfiltered, the same second is tens of thousands of lines.
+#
+# The timestamps are emulated. The order is true and the intervals are the emulator's, so nothing
+# here says how long a softirq takes. That question is a Tier 1 question.
+timings_are_real = false
+
+# What the parser has to get right, and what the tests compare against.
+unparsed_lines = 0
+calls = 8
+cpus = [0]
+contexts = { hardirq = 4, nopreempt = 3, softirq = 1 }

@@ -260,6 +260,10 @@ def test_the_options_the_bridge_asks_for_are_the_ones_the_captures_were_taken_wi
     """
     for path in sorted((ROOT / "corpora" / "traces" / "tier0").glob("*.meta.toml")):
         meta = tomllib.loads(path.read_text(encoding="utf-8"))
+        # The bridge only ever asks for function_graph, and the options it asks for are that
+        # tracer's options. A flat function tracer capture has none of them and wants none.
+        if meta["tracer"] != "function_graph":
+            continue
         assert tuple(meta["options"]) == bridge.WANTED, (
             f"{path.name} was captured with {meta['options']} and the bridge asks for "
             f"{list(bridge.WANTED)}"

@@ -18,9 +18,11 @@ TRACES = Path(__file__).resolve().parents[1] / "corpora" / "traces"
 CORPUS = TRACES / "handwritten"
 TIER0 = TRACES / "tier0"
 TIER1 = TRACES / "tier1"
-ARTEFACTS = sorted(CORPUS.glob("*.txt"))
-CAPTURES = sorted(TIER0.glob("*.txt"))
-TIER1_CAPTURES = sorted(TIER1.glob("*.txt"))
+# `flat-*` is the other tracer. Those captures live in the same directories and end in `.txt`
+# too, and tests/test_function_trace.py is what reads them.
+ARTEFACTS = sorted(one for one in CORPUS.glob("*.txt") if not one.name.startswith("flat-"))
+CAPTURES = sorted(one for one in TIER0.glob("*.txt") if not one.name.startswith("flat-"))
+TIER1_CAPTURES = sorted(one for one in TIER1.glob("*.txt") if not one.name.startswith("flat-"))
 EVERY = ARTEFACTS + CAPTURES + TIER1_CAPTURES
 
 

@@ -1,0 +1,20 @@
+# tracer: function
+#
+# entries-in-buffer/entries-written: 8/8   #P:1
+#
+#                                _-----=> irqs-off/BH-disabled
+#                               / _----=> need-resched
+#                              | / _---=> hardirq/softirq
+#                              || / _--=> preempt-depth
+#                              ||| / _-=> migrate-disable
+#                              |||| /     delay
+#           TASK-PID     CPU#  |||||  TIMESTAMP  FUNCTION
+#              | |         |   |||||     |         |
+           sleep-37      [000] d.h2.     7.712200: handle_irq_event <-handle_level_irq
+           sleep-37      [000] d.h1.     7.712263: hrtimer_run_queues <-update_process_times
+           sleep-37      [000] d.h1.     7.712292: raise_softirq <-invoke_rcu_core
+           sleep-37      [000] d.h1.     7.712308: __raise_softirq_irqoff <-raise_softirq
+           sleep-37      [000] dN.1.     7.712379: do_softirq_own_stack <-irq_exit_rcu
+           sleep-37      [000] dN.1.     7.712394: __do_softirq <-do_softirq_own_stack
+           sleep-37      [000] dN.1.     7.712408: handle_softirqs <-__do_softirq
+           sleep-37      [000] .Ns1.     7.712426: rcu_core <-rcu_core_si

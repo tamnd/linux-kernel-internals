@@ -15,6 +15,7 @@ sides come back as the recording and every recipe matches itself perfectly.
 from __future__ import annotations
 
 import os
+import tomllib
 from pathlib import Path
 
 import kxdiff
@@ -91,7 +92,16 @@ def test_every_committed_recording_is_one_task_doing_one_thing():
     longer. If a recording ever arrives with two tasks in it, either the capture caught something
     it should not have or a recipe stopped being one operation, and both are worth stopping for.
     """
-    found = sorted((ROOT / "corpora" / "traces" / "tier0").glob("*.txt"))
+    # A recording is something the recording backend can hand back in place of a live run, and
+    # everything the two backends compare is function_graph. The flat function tracer captures in
+    # the same directory are read by lessons directly and are not recipes, so they are not this
+    # test's business, and one of them is a second of timer interrupts with no single task in it
+    # by design.
+    found = [
+        path
+        for path in sorted((ROOT / "corpora" / "traces" / "tier0").glob("*.txt"))
+        if tomllib.loads(path.with_suffix(".meta.toml").read_text())["tracer"] == "function_graph"
+    ]
     assert found, "there should be committed recordings"
     for path in found:
         one = trace.parse(path.read_text(encoding="utf-8"), source=path.name)

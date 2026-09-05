@@ -16,6 +16,8 @@ node kxbox/web/headless.js sh '...'
 
 is enough to do it by hand. `kxbox` does the same thing from Python, through `box.tape(name)`, and looks the recording up here when there is no emulator.
 
+Two tracers write files into this directory. Anything named `flat-` came off the flat function tracer, which prints one line per call with no nesting and no duration, and everything else came off `function_graph`, which prints the call tree with a time against each frame. The difference is not cosmetic and it decides which questions a file can answer, so it is in the file name rather than only in the metadata.
+
 ## page-fault.txt
 
 One anonymous page, written to for the first time, by `/bin/touchpage`. That program exists because there was no other way to get one fault. Running any busybox applet traces about thirty of them, because a fork copies on write and an exec pages a binary in, and a reader should not have to be told which of thirty faults is theirs.
@@ -49,3 +51,27 @@ Two writes in one window rather than two windows with one write each, which woul
 It corrected two names. The pipe write calls `anon_pipe_write` and not `pipe_write`, which is what it was called for years and what most writing about pipes still says, and S05 and its diagram both had the old name. And there is no `new_sync_write` between `vfs_write` and `shmem_file_write_iter`. The handwritten fixture had one because that is the shape the code used to have.
 
 The two trees are different all the way down and not the same calls under two names. Both allocate a page, and the tmpfs one goes four levels deep to do it while the pipe one calls the allocator itself. Only the pipe one ends with `__wake_up_sync_key` and `kill_fasync`, because a pipe has a reader waiting and a file does not.
+
+## flat-write.txt
+
+The same write as `write-1byte.txt`, by the same `/bin/writebyte`, recorded by the flat function tracer instead. It is here to be read side by side with that file, because the two show the same seven or so functions and disagree about what a trace is for.
+
+`write-1byte.txt` shows the shape. It nests, so you can see that `generic_perform_write` happens inside `shmem_file_write_iter` and not after it, and it puts a duration on every frame. `flat-write.txt` shows the state. It does not nest, so the same seven calls arrive as a flat list in time order, and in exchange every line carries the flags column that says what the machine was doing when the call happened.
+
+The flags column here is `.....` on all seven lines and that is the point of having this file. Nothing ran with interrupts off, nothing was in a handler, the preemption count was zero the whole way down, and so the whole write is `process` context and every rule that applies to sleeping code applies to all of it. That is the ordinary case, and it is worth seeing on its own before reading `flat-interrupt.txt`, where none of it holds.
+
+The file is filtered to six function names. Unfiltered, the flat tracer records every call the kernel makes, and one second of a machine doing nothing is tens of thousands of lines. `set_ftrace_filter` is how the tracer is turned into an answer rather than a log, and the `setup` list in the metadata has the exact six.
+
+The last line is a second `vfs_write` and it is not the byte going in twice. It is the `echo 0 > tracing_on` that stopped the recording, which is a write like any other and therefore matches the filter. The tracer records the act of switching itself off. That is the flat tracer's version of the unclosed brace at the end of every function_graph capture.
+
+## flat-interrupt.txt
+
+One second of an idle machine with the filter set to the interrupt and softirq path. Eight lines, and the flags column changes four times in them.
+
+Read the task name first and then stop trusting it. Every line says `sleep`, and `sleep` did none of this. A timer interrupt runs on whichever task was on the CPU when it arrived and borrows that task's stack and its name, so the comm column answers who got interrupted rather than who ran. On a machine with real work on it, the same interrupt handler shows up under a different name every time it fires. The flags column is the only thing on the line that says which context the code was actually in, and this file exists to make that unavoidable.
+
+Then read the transitions. `d.h2.` and `d.h1.` are the hardware interrupt handler: interrupts off, preemption count raised. `dN.1.` is after `irq_exit_rcu` has noticed there are softirqs waiting, still with interrupts off, with `N` saying something in the handler asked for a reschedule. `.Ns1.` is the softirq itself, interrupts back on, and the `s` naming the context. Four lines, four different sets of rules about what the code on them is allowed to do.
+
+The middle of the file is the thing that is hard to show any other way. `raise_softirq` and `__raise_softirq_irqoff` are the request, `handle_softirqs` three lines later is the service, and the four lines in between are the gap. The interrupt handler did not do the RCU work. It wrote down that the work was needed and got out, and the work ran afterwards with interrupts on. That gap is what deferred work means, and here it is with timestamps on it.
+
+What this file cannot tell you is how long any of it took. The timestamps are the emulator's. Order is true, intervals are not, and the cost of a softirq is a Tier 1 question.
