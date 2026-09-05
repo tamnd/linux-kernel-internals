@@ -16,12 +16,19 @@ Every slot starts empty and says so. What sits in a slot is a fact about a runni
 than about a type, and BTF describes types. Filling them in takes either a dump from a live kernel
 or a read of the instance in the source, and until one of those happens the honest drawing is a
 list of empty slots with their signatures.
+
+There are two drawings of the same table here. The default is one row per slot with the signature
+under it, which is what you want when the question is what a slot does. `compact=True` draws the
+ops plug instead, a row of sockets, which is what you want when the question is how many of them a
+filesystem actually fills. The plug is `kxshapes.OpsPlug`, the same object the animation is handed.
 """
 
 from __future__ import annotations
 
 from kxray.models import OpsTable, Slot
+from kxshapes import OpsPlug
 from kxwidgets.html import BAND, INK, LINE, MONO, MUTED, Widget, card, style, tag, text
+from kxwidgets.shapes import ops_plug
 
 EMPTY = "#e8eef3"
 FULL = "#d9edd2"
@@ -34,15 +41,29 @@ class OpsExplorer(Widget):
     filesystem fills eight of the thirty something and leaves the rest for the defaults.
     """
 
-    def __init__(self, ops: OpsTable, *, only_filled: bool = False) -> None:
+    def __init__(self, ops: OpsTable, *, only_filled: bool = False, compact: bool = False) -> None:
         self.ops = ops
         self.only_filled = only_filled
+        self.compact = compact
 
     @property
     def rows(self) -> list[Slot]:
         return self.ops.filled if self.only_filled else self.ops.slots
 
+    @property
+    def plug(self) -> OpsPlug:
+        """The same table as the shape both renderers draw from."""
+        return OpsPlug.of(self.ops)
+
     def html(self) -> str:
+        if self.compact and self.rows:
+            return card(
+                self._title(),
+                self._subtitle(),
+                ops_plug(self.plug),
+                self._footnote(),
+                fallback=self.text(),
+            )
         if not self.rows:
             body = tag(
                 "div",

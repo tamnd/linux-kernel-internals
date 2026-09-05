@@ -1,4 +1,8 @@
-"""Tests for the four widgets.
+"""Tests for the widgets themselves.
+
+The nine shapes they are built out of are tested in `test_kxshapes.py`, and the HTML renderer for
+each shape is tested in `test_widget_shapes.py`. What is here is the widgets: the composing, the
+titles, the footnotes, and the promises every one of them has to keep.
 
 A widget draws a picture, and a test cannot look at a picture. So these check the three things
 that can be checked: that the numbers behind the drawing are right, that the HTML around them is
@@ -20,7 +24,18 @@ from kxray import btf
 from kxray.layout import place
 from kxray.models import Field, Frame, Layout, OpsTable, Slot, Tape, UnparsedLine
 from kxray.trace import function_graph
-from kxwidgets import OpsExplorer, PredictionGate, StructMap, SyscallTape, Widget
+from kxshapes import ObjectBox, PointerThread
+from kxwidgets import (
+    ContextKey,
+    Descent,
+    MemoryScale,
+    ObjectGraph,
+    OpsExplorer,
+    PredictionGate,
+    StructMap,
+    SyscallTape,
+    Widget,
+)
 from kxwidgets.html import attribute, card, details, page, style, tag, text
 from kxwidgets.structmap import CACHE_LINE
 
@@ -87,10 +102,23 @@ def every_widget(tiny, captured) -> list[Widget]:
     gate = PredictionGate("Which one?", options=["yes", "no"], answer="a", why="Because.")
     return [
         SyscallTape(captured),
+        SyscallTape(captured, by_cpu=True),
         SyscallTape(Tape()),
         StructMap(tiny.layout("demo_task")),
         StructMap(tiny.layout("demo_value")),
         OpsExplorer(tiny.ops("demo_ops")),
+        OpsExplorer(tiny.ops("demo_ops"), compact=True),
+        Descent({"vfs": "vfs_write", "fs": "the filesystem takes it from here"}),
+        Descent({}),
+        ContextKey(),
+        ObjectGraph([ObjectBox.of(tiny.layout("demo_task"), show=["pid", "mm"])]),
+        ObjectGraph([], []),
+        ObjectGraph(
+            [ObjectBox.of(tiny.layout("demo_task"), show=["mm"], locks={"mm": "task.lock"})],
+            [PointerThread.of("demo_task", "mm", "demo_mm", kind="rcu")],
+        ),
+        MemoryScale({"struct file": 232, "a page": 4096}),
+        MemoryScale({}),
         gate,
         gate.check("b"),
     ]

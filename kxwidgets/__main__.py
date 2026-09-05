@@ -1,4 +1,4 @@
-"""Draw all four widgets into one HTML file, so you can look at them without a notebook.
+"""Draw every widget into one HTML file, so you can look at them without a notebook.
 
     python3 -m kxwidgets --preview /tmp/kxwidgets.html
 
@@ -19,7 +19,17 @@ from pathlib import Path
 
 from kxray import btf
 from kxray.trace import function_graph
-from kxwidgets import OpsExplorer, PredictionGate, StructMap, SyscallTape
+from kxshapes import FrameCard, ObjectBox, PointerThread
+from kxwidgets import (
+    ContextKey,
+    Descent,
+    MemoryScale,
+    ObjectGraph,
+    OpsExplorer,
+    PredictionGate,
+    StructMap,
+    SyscallTape,
+)
 from kxwidgets.html import page
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -47,8 +57,48 @@ def gallery() -> str:
         ),
     )
 
+    descent = Descent(
+        {
+            "userspace": "write(fd, buf, 1)",
+            "entry": "one register becomes one function call",
+            "vfs": "the file, without anything knowing what it is stored on",
+            "fs": "the filesystem decides where the byte belongs",
+            "pagecache": "the byte is copied into a folio and the call returns",
+        },
+        cards={
+            "vfs": [FrameCard.of("demo_vfs_write", path="fs/read_write.c")],
+            "fs": [FrameCard.of("demo_shmem_write", path="mm/shmem.c")],
+            "pagecache": [FrameCard.of("demo_copy_folio", path="mm/filemap.c")],
+        },
+        title="A one byte write, drawn from the handwritten fixture",
+    )
+
+    task = tiny.layout("demo_task")
+    graph = ObjectGraph(
+        [ObjectBox.of(task, show=["pid", "comm", "mm", "parent"], locks={"mm": "demo_task.lock"})],
+        [
+            PointerThread.of("demo_task", "mm", "demo_mm"),
+            PointerThread.of("demo_task", "parent", "demo_task", kind="borrowed"),
+        ],
+        title="demo_task, and what it points at",
+    )
+
+    sizes = MemoryScale(
+        {
+            "struct demo_task": task.size or 64,
+            "a page": 4096,
+            "a transparent huge page": 2 * 1024 * 1024,
+        },
+        title="Three sizes a page cache lesson says in one paragraph",
+    )
+
     widgets = [
+        descent,
+        ContextKey(),
         SyscallTape(tape, max_depth=4, title="write-1byte, handwritten fixture"),
+        SyscallTape(tape, max_depth=4, by_cpu=True, title="the same trace, one lane per cpu"),
+        graph,
+        sizes,
         StructMap(tiny.layout("demo_task")),
         StructMap(tiny.layout("demo_flags"), per_row=2),
         StructMap(tiny.layout("demo_value"), per_row=8),
@@ -57,6 +107,12 @@ def gallery() -> str:
             tiny.ops("demo_ops", instance="demo_shmem_ops").with_implementations(
                 {"open": "demo_shmem_open", "write": "demo_shmem_write"}
             )
+        ),
+        OpsExplorer(
+            tiny.ops("demo_ops", instance="demo_shmem_ops").with_implementations(
+                {"open": "demo_shmem_open", "write": "demo_shmem_write"}
+            ),
+            compact=True,
         ),
         gate,
         gate.check("a"),
