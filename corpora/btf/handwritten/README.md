@@ -14,6 +14,8 @@ Every kind in the format appears at least once, so a change to the reader that b
 
 There are three holes in it on purpose. `demo_task` has six bytes of padding in the middle, because `flags` and `waiting` are one byte each and `weight` has to start on an eight byte boundary. `demo_arg` has four bytes of padding at the end, because a struct has to be a multiple of the alignment of its widest member, and a trailing hole is the one people miss. A layout with no padding in it teaches nobody anything about padding.
 
+`demo_annotated` is four pointers, three of them carrying a type tag: `__user`, `__rcu` and `__percpu`. All four are the same size and sit at the offsets you would expect, which is the point of it. An annotation changes nothing about memory, and the only thing separating a pointer you may follow from one that will crash the machine is a tag riding on the type. The fourth pointer is annotated with nothing, because a test where every field matches proves less than one with a control in it.
+
 `demo_flags` holds three bitfields in one byte, written the modern way, with the width in the member record and `kind_flag` set on the struct. There is an older encoding that narrows the int type behind the member instead, and the reader handles both, because both are still in the wild.
 
 ## Rebuilding it

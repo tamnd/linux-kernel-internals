@@ -332,10 +332,21 @@ class Field:
     bit_offset: int
     size: int | None
     bitfield_size: int = 0
+    tags: tuple[str, ...] = ()  # user, rcu, percpu: who is allowed to follow this pointer
 
     @property
     def is_bitfield(self) -> bool:
         return self.bitfield_size > 0
+
+    @property
+    def is_annotated(self) -> bool:
+        """Whether this field carries an annotation about how it may be reached.
+
+        An annotation changes no offset and no size, so it never shows up in the arithmetic. It
+        is the difference between a pointer you may dereference and one that will corrupt memory
+        or crash the machine if you do.
+        """
+        return bool(self.tags)
 
     @property
     def end(self) -> int | None:

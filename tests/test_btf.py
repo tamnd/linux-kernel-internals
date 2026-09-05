@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 
 from kxray import btf
-from kxray.btf import writer
+from kxray.btf import tags, writer
 from kxray.btf.format import BtfError
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -546,3 +546,119 @@ def test_the_fixture_table_prints_offsets_and_holes(tiny):
     assert "comm" in printed
     assert "char[16]" in printed
     assert "6 byte hole" in printed
+
+
+# -- annotations -----------------------------------------------------------------------------
+
+
+def test_a_user_pointer_is_reported_as_annotated(tiny):
+    assert tiny.layout("demo_annotated").offset_of("buf") == 0
+    assert tiny.annotated("user", "demo_annotated")[0].path == "buf"
+
+
+def test_a_plain_pointer_carries_no_annotation(tiny):
+    plain = [one for one in tiny.layout("demo_annotated").fields if one.path == "owner"]
+    assert plain[0].tags == ()
+    assert not plain[0].is_annotated
+
+
+def test_each_annotation_finds_its_own_field(tiny):
+    for tag, path in (("user", "buf"), ("rcu", "next"), ("percpu", "hits")):
+        assert [one.path for one in tiny.annotated(tag, "demo_annotated")] == [path]
+
+
+def test_either_spelling_of_an_annotation_works(tiny):
+    assert tiny.annotated("__rcu", "demo_annotated") == tiny.annotated("rcu", "demo_annotated")
+
+
+def test_an_annotation_changes_no_offset_and_no_size(tiny):
+    """The whole reason the tag has to be asked for. It is invisible in the arithmetic."""
+    fields = tiny.layout("demo_annotated").fields
+    assert [one.byte_offset for one in fields] == [0, 8, 16, 24]
+    assert {one.size for one in fields} == {8}
+
+
+def test_the_annotation_shows_up_in_the_type_the_way_the_kernel_writes_it(tiny):
+    printed = tiny.layout("demo_annotated").table()
+    assert "char __user *" in printed
+    assert "struct demo_task __rcu *" in printed
+    assert "unsigned int __percpu *" in printed
+
+
+def test_the_fixture_has_the_tags_its_metadata_promises(tiny, meta):
+    assert sum(tiny.tag_counts().values()) == meta["tagged_types"]
+
+
+def test_iomem_is_refused_rather_than_answered_empty(tiny):
+    """The honest failure. BTF has no idea about `__iomem`, and an empty list would look like no."""
+    with pytest.raises(BtfError, match="not recorded in BTF"):
+        tiny.annotated("__iomem", "demo_annotated")
+
+
+def test_an_annotation_nobody_has_heard_of_says_which_ones_are_known(tiny):
+    with pytest.raises(KeyError, match="__user"):
+        tiny.annotated("__nonsense", "demo_annotated")
+
+
+def test_a_blob_with_no_tags_refuses_the_question_instead_of_answering_none():
+    """Otherwise a kernel built by a toolchain that emits no tags reads as a kernel with none."""
+    plain = btf.parse(small()[0])
+    with pytest.raises(BtfError, match="no type tags in it at all"):
+        plain.annotated("user", "holder")
+
+
+def test_a_tag_behind_a_typedef_is_still_found():
+    b = writer.Builder()
+    char = b.int_("char", 1, char=True)
+    tagged = b.typedef("user_char_ptr", b.ptr(b.type_tag("user", char)))
+    b.struct("wrapper", 8, [("p", tagged, 0)])
+    one = btf.parse(b.build())
+    assert one.annotated("user", "wrapper")[0].path == "p"
+
+
+def test_a_pointer_to_a_user_pointer_counts():
+    """It is still a field nobody may follow without copying, which is what the question means."""
+    b = writer.Builder()
+    char = b.int_("char", 1, char=True)
+    b.struct("wrapper", 8, [("pp", b.ptr(b.ptr(b.type_tag("user", char))), 0)])
+    one = btf.parse(b.build())
+    assert one.annotated("user", "wrapper")[0].path == "pp"
+
+
+def test_the_counts_say_which_annotations_a_blob_uses(tiny):
+    assert tiny.tag_counts() == {"user": 1, "rcu": 1, "percpu": 1}
+
+
+def test_every_known_annotation_explains_itself():
+    for name in tags.KNOWN:
+        assert len(tags.explain(name)) > 40
+
+
+def test_the_one_annotation_btf_cannot_see_says_where_to_look_instead():
+    assert "sparse" in tags.explain("__iomem")
+    assert "iomem" not in tags.recorded()
+
+
+# -- enums -----------------------------------------------------------------------------------
+
+
+def test_an_enum_reads_as_a_mapping(tiny):
+    assert tiny.enum("demo_state") == {"DEMO_RUNNING": 0, "DEMO_SLEEPING": 1, "DEMO_DEAD": 2}
+
+
+def test_an_enum_keeps_the_order_it_was_declared_in(tiny):
+    assert list(tiny.enum("demo_state")) == ["DEMO_RUNNING", "DEMO_SLEEPING", "DEMO_DEAD"]
+
+
+def test_a_number_reads_back_into_the_name_the_source_uses(tiny):
+    """Which is the direction a lesson needs, because a trace hands you the number."""
+    assert tiny.enum_name("demo_state", 2) == "DEMO_DEAD"
+
+
+def test_a_wide_enum_is_the_same_question(tiny):
+    assert tiny.enum("demo_wide")["DEMO_HIGH"] == 1 << 40
+
+
+def test_a_value_no_constant_has_says_so(tiny):
+    with pytest.raises(KeyError, match="demo_state"):
+        tiny.enum_name("demo_state", 99)

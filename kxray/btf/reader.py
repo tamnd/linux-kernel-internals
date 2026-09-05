@@ -30,6 +30,7 @@ from __future__ import annotations
 import struct
 from pathlib import Path
 
+from kxray.btf import tags as btf_tags
 from kxray.btf.format import (
     FIXED_TAIL,
     FUNC_LINKAGE,
@@ -223,6 +224,64 @@ class Btf:
             return f"{self.type_name(one.type_id)} ({args})"
         return one.name or one.kind
 
+    def tags(self, type_id: int | None) -> tuple[str, ...]:
+        """The annotations on this type: `user`, `rcu`, `percpu` and the rest.
+
+        It walks through pointers as well as through typedefs and const, because of how the
+        annotation is written. `char __user *buf` tags the char and not the pointer, since what
+        lives in user memory is the thing pointed at, and every question anybody asks is about the
+        field rather than about the pointee. So a field is reported as annotated when the tag is
+        anywhere on the chain, and a pointer to a pointer into user memory counts, which is right:
+        it is still a field you may not follow without copying.
+
+        `kxray.btf.tags.explain` says what each one promises.
+        """
+        found: list[str] = []
+        seen: set[int] = set()
+        one = self.get(type_id)
+        while one.kind in WRAPPERS or one.kind == "ptr":
+            if one.id in seen:
+                raise BtfError(f"type {one.id} refers to itself")
+            seen.add(one.id)
+            if one.kind == "type_tag":
+                found.append(one.name)
+            one = self.get(one.type_id)
+        return tuple(found)
+
+    def tag_counts(self) -> dict[str, int]:
+        """How many types carry each annotation, across the whole blob.
+
+        Ask this before you believe an empty answer from `annotated`. A type tag reaches BTF only
+        if the compiler that built the kernel emitted it, and a kernel built by a toolchain that
+        does not gives you BTF with no tags in it anywhere. That looks exactly like a kernel whose
+        structs happen not to be annotated, and it is not the same thing at all.
+        """
+        counts: dict[str, int] = {}
+        for one in self.types:
+            if one.kind == "type_tag":
+                counts[one.name] = counts.get(one.name, 0) + 1
+        return dict(sorted(counts.items(), key=lambda pair: -pair[1]))
+
+    def annotated(self, tag: str, name: str) -> list[Field]:
+        """The fields of one struct carrying this annotation, in offset order.
+
+            for field in vmlinux.annotated("rcu", "task_struct"):
+                print(field.path)
+
+        Takes either spelling, so `rcu` and `__rcu` both work. It refuses an annotation BTF does
+        not record, and it refuses a blob with no tags in it at all, because in both of those
+        cases an empty list would be read as an answer when it is really a shrug.
+        """
+        wanted = btf_tags.check_recorded(tag)
+        if not self.tag_counts():
+            raise BtfError(
+                f"{self.source} has no type tags in it at all, so asking which fields are "
+                f"{wanted.written} would answer nothing for every struct in it. That is almost "
+                "always the toolchain rather than the kernel: type tags reach BTF only when the "
+                "compiler emits them."
+            )
+        return [one for one in self.layout(name).fields if wanted.name in one.tags]
+
     def int_description(self, type_id: int | None) -> str:
         """What an int record says about itself: signedness, and whether it is a char or a bool."""
         one = self.resolve(type_id)
@@ -235,6 +294,32 @@ class Btf:
             parts.append("char")
         parts.append("signed" if one.encoding & INT_SIGNED else "unsigned")
         return " ".join(parts) + f", {one.bits} bits"
+
+    # -- enums --------------------------------------------------------------------------------
+
+    def enum(self, name: str) -> dict[str, int]:
+        """An enum by name, as a mapping from constant to value, in the order it was declared.
+
+        `enum` and `enum64` are two kinds in the file and one idea to a reader, so this takes
+        either. The difference is only whether the values still fit in 32 bits.
+        """
+        try:
+            one = self.named("enum", name)
+        except KeyError:
+            one = self.named("enum64", name)
+        return {value.name: value.value for value in one.values}
+
+    def enum_name(self, name: str, value: int) -> str:
+        """The constant with this value, which is how you read a number back into a word.
+
+        The number is what a trace, a `/proc` file or a crash dump gives you, and the constant is
+        what the source calls it. Two constants can share a value, and this returns the first one
+        declared, which is the one the source usually means.
+        """
+        for constant, held in self.enum(name).items():
+            if held == value:
+                return constant
+        raise KeyError(f"enum {name} has no constant with the value {value}")
 
     # -- what a struct looks like -----------------------------------------------------------
 
@@ -276,6 +361,7 @@ class Btf:
                     bit_offset=bit,
                     size=self.size_of(member.type_id),
                     bitfield_size=self._bitfield_size(member, inner),
+                    tags=self.tags(member.type_id),
                 )
             )
 

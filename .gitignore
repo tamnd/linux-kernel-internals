@@ -41,6 +41,10 @@ modules.order
 scratch/
 *.trace.raw
 
+# `uv run` writes this, and it pins the resolved versions of the development tools rather than
+# anything the project promises. Committing it would freeze CI on whatever a laptop resolved.
+uv.lock
+
 # Editors and OS
 .DS_Store
 .idea/
