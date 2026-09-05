@@ -1,0 +1,8 @@
+            CPU0       
+   0:        316  XT-PIC          timer
+   1:         10  XT-PIC          i8042
+   2:          0  XT-PIC          cascade
+   4:        436  XT-PIC          ttyS0
+  12:        115  XT-PIC          i8042
+ NMI:          0  Non-maskable interrupts
+ TLB:          0  TLB shootdowns

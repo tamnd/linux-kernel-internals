@@ -1,0 +1,39 @@
+source = "tier0"
+evidence = true
+
+describes = "the one line file behind ps and top, for an ordinary process with an ordinary name"
+path = "/proc/self/stat"
+stability = "undocumented"
+
+kernel = "7.2.2"
+arch = "i386"
+profile = "A-full"
+uniprocessor = true
+preempt = true
+captured = "2026-09-05"
+tier = 0
+
+command = "cat /proc/self/stat"
+setup = []
+
+# The boring case, kept so the interesting one has something to be compared against. The command is
+# `cat`, which has no space and no bracket in it, so a whitespace split reads this line correctly
+# and so does a careful parser. odd-comm-stat.txt is the same file for a process where those two
+# disagree.
+#
+# Fifty two fields, which is exactly what Table 1-4 of Documentation/filesystems/proc.rst lists. The
+# table is headed "as of 2.6.30-rc7" and still describes 7.2.2 without an error in it.
+#
+# total_bytes here is vsize, and it is the same number as total_bytes in self-maps.meta.toml. That
+# is not a coincidence and it is worth checking: vsize is the sum of the sizes of the mappings, so
+# the two files are two views of one fact and the tests compare them.
+timings_are_real = false
+
+unparsed_lines = 0
+pid = 37
+comm = "cat"
+state = "R"
+fields = 50
+extra_fields = 0
+trapped_by_naive_split = false
+vsize = 1298432

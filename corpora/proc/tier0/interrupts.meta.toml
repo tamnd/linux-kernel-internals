@@ -1,0 +1,36 @@
+source = "tier0"
+evidence = true
+
+describes = "every interrupt the machine has taken since boot, one column per CPU"
+path = "/proc/interrupts"
+stability = "undocumented"
+
+kernel = "7.2.2"
+arch = "i386"
+profile = "A-full"
+uniprocessor = true
+preempt = true
+captured = "2026-09-05"
+tier = 0
+
+command = "cat /proc/interrupts"
+setup = []
+
+# The column count is the fact worth taking away. There is one column here because the box has one
+# CPU. A laptop prints one per possible CPU, which is not the same as the number online and not the
+# same as the number the hardware has. Only the header knows, which is why kxray.proc.percpu reads
+# the header and refuses to guess.
+#
+# The rows underneath the numbered ones are per architecture and per config. Two here, NMI and TLB.
+# An x86-64 desktop prints around fifteen and an arm64 machine prints a different set. There is no
+# list of them in kxray for that reason.
+#
+# Read this next to softirqs.txt. This file counts the hardware asking. That one counts the work the
+# answering deferred.
+timings_are_real = false
+
+unparsed_lines = 0
+cpus = ["CPU0"]
+rows = 7
+hardware_rows = 5
+named_rows = ["NMI", "TLB"]

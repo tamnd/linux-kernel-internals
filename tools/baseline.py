@@ -45,6 +45,11 @@ from pathlib import Path
 from kxray import kallsyms, lockdep, tracefs
 from kxray.btf import reader as btf
 from kxray.models import Lines
+from kxray.proc import keyed as proc_keyed
+from kxray.proc import maps as proc_maps
+from kxray.proc import percpu as proc_percpu
+from kxray.proc import pidstat as proc_pidstat
+from kxray.proc import version as proc_version
 from kxray.trace import events, formats, parse_file
 from kxray.trace import function as trace_function
 
@@ -68,6 +73,16 @@ ROUTES = (
     ("corpora/proc/*/lockdep_stats.txt", "lockdep-stats"),
     ("corpora/proc/*/lockdep-stats-*.txt", "lockdep-stats"),
     ("corpora/proc/*/ring-overrun.txt", "tracefs-stats"),
+    # The rest of /proc, routed by what the file is rather than by what it is called, which is why
+    # `self-status.txt` and `meminfo.txt` land on the same reader and `self-stat.txt` does not. The
+    # lockdep patterns above have to stay in front of the `*-stat.txt` one.
+    ("corpora/proc/*/version.txt", "proc-version"),
+    ("corpora/proc/*/meminfo.txt", "proc-keyed"),
+    ("corpora/proc/*/self-status.txt", "proc-keyed"),
+    ("corpora/proc/*/interrupts.txt", "proc-percpu"),
+    ("corpora/proc/*/softirqs.txt", "proc-percpu"),
+    ("corpora/proc/*/self-maps.txt", "proc-maps"),
+    ("corpora/proc/*/*-stat.txt", "proc-pidstat"),
     ("corpora/oops/*/*.txt", "lockdep-splat"),
     ("corpora/btf/*/*.btf", "btf"),
     ("corpora/experiments/*/*.txt", "none"),
@@ -123,6 +138,47 @@ def _event_format(path: Path) -> tuple[int, Lines | None]:
     return len(formats.parse_file(path).fields), formats.account(path.read_text(encoding="utf-8"))
 
 
+def _kernel_path(path: Path) -> str:
+    """Which file in /proc this artefact is a copy of, from its own metadata.
+
+    The readers need it, because what a file is called on disk does not decide how it is read or
+    what it is worth. `self-maps.txt` is `/proc/self/maps`, and only the second of those two names
+    reaches the stability ledger.
+    """
+    meta = path.with_suffix(".meta.toml")
+    if not meta.exists():
+        return ""
+    return str(tomllib.loads(meta.read_text(encoding="utf-8")).get("path", ""))
+
+
+def _proc_keyed(path: Path) -> tuple[int, Lines | None]:
+    found = proc_keyed.parse_file(path, _kernel_path(path))
+    return len(found.entries), found.lines
+
+
+def _proc_percpu(path: Path) -> tuple[int, Lines | None]:
+    found = proc_percpu.parse_file(path, _kernel_path(path))
+    return len(found.counters), found.lines
+
+
+def _proc_maps(path: Path) -> tuple[int, Lines | None]:
+    found = proc_maps.parse_file(path, _kernel_path(path))
+    return len(found.regions), found.lines
+
+
+def _proc_pidstat(path: Path) -> tuple[int, Lines | None]:
+    found = proc_pidstat.parse_file(path, _kernel_path(path))
+    # The named fields rather than one, because one line that read is not the number that would
+    # move. A kernel that appends a field puts it in `extra`, and counting the named ones plus the
+    # extras is how that shows up here at all.
+    return len(found.values) + len(found.extra), found.lines
+
+
+def _proc_version(path: Path) -> tuple[int, Lines | None]:
+    found = proc_version.parse_file(path, _kernel_path(path))
+    return len(found.parts), found.lines
+
+
 def _kallsyms(path: Path) -> tuple[int, Lines | None]:
     text = path.read_text(encoding="utf-8")
     return len(kallsyms.parse(text)), kallsyms.account(text)
@@ -168,6 +224,11 @@ READERS = {
     "function": _function_flat,
     "events": _events,
     "event-format": _event_format,
+    "proc-keyed": _proc_keyed,
+    "proc-percpu": _proc_percpu,
+    "proc-maps": _proc_maps,
+    "proc-pidstat": _proc_pidstat,
+    "proc-version": _proc_version,
     "kallsyms": _kallsyms,
     "lockdep-classes": _lockdep_classes,
     "lockdep-stats": _lockdep_stats,

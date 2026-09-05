@@ -7,7 +7,7 @@ linux-kernel-internals/
 ├── kxray/                   # Python: trace, BTF, /proc and dump analysis
 │   ├── btf/                 #   BTF reader: types, fields, offsets, holes, type tags
 │   ├── trace/               #   ftrace function_graph, function and trace_event parsers
-│   ├── proc/                #   /proc and /sys snapshot parsers
+│   ├── proc/                #   /proc and /sys snapshot parsers, and the ABI stability ledger
 │   ├── source/              #   kernel tree navigation, Kconfig, MAINTAINERS
 │   ├── models/              #   the shared model everything else renders
 │   ├── replay/              #   recorded Tier 1 session playback
@@ -74,6 +74,12 @@ Three of the five ride along in BTF as a `type_tag` record. `__iomem` does not, 
 `kxray/trace/events.py` reads event lines through those formats. Pulling `key=value` pairs out of a line is the small half and is not the point. Reading them through the format gives three things a plain split cannot: values arrive as numbers where the format declares numbers, keys the format does not declare are named rather than kept quietly, and a field the format calls a number that arrived as text is recorded as symbolic rather than treated as a failure. That last one is normal. `sched_switch` stores `prev_state` as an integer and prints it as `S` or `R+`, because `print fmt` has already run by the time you read the text, so the record and the line are both correct and are not the same thing.
 
 `kxray/models.py` holds `TraceLog` under all three parsers. The banner at the top of a trace says how many events the kernel produced and how many survived, and a trace where those differ has holes in it that nothing in the body of the file admits to, so it is read rather than skipped. The per tracer subclasses add only what is actually different, which is the list of things on the lines.
+
+`kxray/proc/` is five readers for four file shapes, because `/proc` has fewer shapes in it than it has files. `keyed.py` reads `Key: value`, which is `meminfo` and a process status file. `percpu.py` reads a label and one count per CPU, which is `interrupts` and `softirqs`. `maps.py` reads one record per line with positional columns. `pidstat.py` reads the single line file, which is its own shape only because of what a command name is allowed to contain. `version.py` reads one line of free text with two useful things in it.
+
+`kxray/proc/stability.py` is the reason the package is shaped that way rather than being five loose functions. Every reader returns something carrying a `Promise` saying what the kernel tree says about the file it read, taken from `Documentation/ABI` and citing the file that makes the claim. That matters because of a number: on 7.2.2 there are 685 files under `Documentation/ABI` and six of them describe a path in `/proc`, and not one of those six is a file anybody reads. `meminfo`, `interrupts`, `maps` and `/proc/<pid>/stat` are all undocumented, which is not the same as unstable and is worth telling a reader before they lean on one. Two paths are worse than undocumented and this project reads both: the closing section of that README names Kconfig, calling out `/proc/config.gz`, and kernel symbols, which is `/proc/kallsyms`, as things that must not under any circumstances be considered stable.
+
+`kxray/proc/pidstat.py` is a file of its own for one reason, and the reason is a real capture. The kernel prints the command name in brackets and does not escape it, so a process whose executable is called `od) d ma` prints as `37 (od) d ma) R 1 0 ...`, and a whitespace split puts the state two fields to the left of where it belongs and reports a process as being in a state that does not exist. `corpora/proc/tier0/odd-comm-stat.txt` is that line off the pinned kernel. The parser takes the first opening bracket and the last closing bracket, which is what `procps` has done for decades, and keeps what the naive split would have said so that a lesson can show both answers rather than assert that the trap is real.
 
 `kxray/layout.py` is the arithmetic that turns a tree of frames into rectangles. It is in `kxray` for the same reason. A widget and an animation of the same trace call it and get the same answer, so the wide box is in the same place in both.
 

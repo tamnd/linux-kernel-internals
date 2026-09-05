@@ -1,0 +1,33 @@
+source = "tier0"
+evidence = true
+
+describes = "the deferred half of interrupt handling, counted since boot"
+path = "/proc/softirqs"
+stability = "undocumented"
+
+kernel = "7.2.2"
+arch = "i386"
+profile = "A-full"
+uniprocessor = true
+preempt = true
+captured = "2026-09-05"
+tier = 0
+
+command = "cat /proc/softirqs"
+setup = []
+
+# Ten vectors, and on an idle emulated box seven of them have never fired. The two that have are
+# TIMER and RCU, which is the same pair that corpora/traces/tier0/flat-interrupt.txt catches in the
+# act: raise_softirq inside the hardware handler, then handle_softirqs four lines later with
+# interrupts back on. This file is that gap counted since boot instead of watched once.
+#
+# The counts move every boot, so the tests check the shape and the ordering of the vectors rather
+# than the numbers. The numbers below are what this particular boot had.
+timings_are_real = false
+
+unparsed_lines = 0
+cpus = ["CPU0"]
+rows = 10
+quiet_rows = 7
+rcu = 246
+timer = 26
