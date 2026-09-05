@@ -28,6 +28,7 @@ text = "A report can arrive on a run where no thread ever blocked and nothing ev
 evidence_kind = "oops"
 evidence = "corpora/oops/tier0/lockdep-ab-ba.txt"
 verified = true
+why_not_pinned = "Lockdep is not compiled into profile A, so there is no way to capture a report on the profile this lesson is otherwise written against. D-lockdep is profile A plus the lockdep config fragment on the same tree, so the only difference between the two builds is the thing the lesson is about."
 
 [[claims]]
 id = "C09-03"
@@ -42,6 +43,7 @@ text = "Lockdep switches itself off after its first report of the boot, and from
 evidence_kind = "proc"
 evidence = "corpora/proc/tier0/lockdep-stats-after.txt"
 verified = true
+why_not_pinned = "/proc/lockdep_stats is not there at all unless lockdep is compiled in, so this reading can only come off D-lockdep. It is the same boot and the same tree as the report in C09-02, a moment later."
 
 [[claims]]
 id = "C09-05"
