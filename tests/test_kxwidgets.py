@@ -270,7 +270,7 @@ def test_a_parent_placed_by_counting_keeps_its_children_that_way_too():
 
 def test_max_depth_counts_from_the_outermost_frame(captured):
     drawn = SyscallTape(captured, max_depth=2)
-    assert max(one.frame.depth for one in drawn.spans()[0]) == 2
+    assert max(one.row for one in drawn.scene().lanes[0].steps) == 2
 
 
 def test_a_tape_with_nothing_in_it_says_so_rather_than_drawing_an_empty_box():
@@ -282,7 +282,7 @@ def test_a_tape_with_nothing_in_it_says_so_rather_than_drawing_an_empty_box():
 def test_one_frame_can_be_drawn_on_its_own():
     drawn = SyscallTape(tree())
     assert "outer on cpu 0" in drawn.html()
-    assert len(drawn.spans()) == 1
+    assert len(drawn.scene().lanes) == 1
 
 
 def test_the_hover_text_carries_the_numbers_that_did_not_fit_in_the_box():

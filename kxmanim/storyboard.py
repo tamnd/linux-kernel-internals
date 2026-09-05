@@ -45,6 +45,11 @@ BUDGET_SECONDS = 90
 MIN_CAPTION_WORDS = 5
 MIN_ALT_WORDS = 8
 
+# The two shapes that come out of a function_graph capture and out of nothing else. Every other
+# primitive is drawn from a struct, a Kconfig file or a report, so a trace has nothing to say about
+# whether it is warranted. These two do, and `against` is where that gets checked.
+FROM_A_TRACE = ("trace-cell", "cpu-lane")
+
 
 @dataclass(frozen=True)
 class Beat:
@@ -185,6 +190,29 @@ class Storyboard:
         """Which of the nine primitives appear, in the order the nine are listed in."""
         seen = {name for beat in self.beats for name in beat.shows}
         return [one for one in PRIMITIVES if one in seen]
+
+    def against(self, scene) -> list[str]:
+        """Whether the trace this storyboard names can hold up the shapes it claims to draw.
+
+        Until this existed, `shows` was a list of words in a TOML file with nothing behind it. A
+        beat could say `cpu-lane` over a capture from a uniprocessor emulator, the checker would
+        pass it because `cpu-lane` is one of the nine, and the mistake would only turn up when
+        somebody rendered it and saw one lane.
+
+        Only the two trace shapes are checked, and only when the storyboard names a function_graph
+        capture. `lock-cycle` draws CPU lanes out of a lockdep report on a machine with one
+        processor, and that is the whole point of the beat rather than an error, so a rule that
+        went by the primitive alone would have to be argued with and then switched off.
+        """
+        supported = set(scene.uses())
+        out = []
+        for one in self.uses():
+            if one in FROM_A_TRACE and one not in supported:
+                out.append(
+                    f"a beat shows {one}, and {scene.source or 'the capture it names'} "
+                    f"does not have one in it: {scene.alt()}"
+                )
+        return out
 
     def vtt(self) -> str:
         """The caption track, WebVTT, generated from the same beats as everything else."""

@@ -34,6 +34,11 @@ VERSION = "0.2"
 
 CORPORA = "corpora"
 
+# How deep the scene table in section 5 goes, counting from each outermost call. Four levels of a
+# real write is about a dozen rows and the whole thing is about a hundred, and a hundred row table
+# in the middle of a specification is a table nobody reads. The indented tree above it is uncut.
+SCENE_DEPTH = 4
+
 # BTF records types and not machines, so the same blob describes a different layout on a 32-bit
 # build than on a 64-bit one. The architecture in the header is what decides, and a blueprint that
 # does not say which architecture it means is not saying anything.
@@ -341,7 +346,20 @@ def _artefact_block(one: str, path: Path, meta: dict[str, object], root: Path) -
 
 
 def _function_graph_block(path: Path) -> list[str]:
+    """A capture as a blueprint reads it: the shape of the calls, then the drawing as a table.
+
+    Two blocks, and they are two on purpose. The indented tree says what called what, which is the
+    thing a specification is about. The scene table says what the picture of it looks like, which
+    is the thing a reader is going to see in the notebook and in the animation, and it comes out of
+    `kxshapes.scene` rather than out of anything here. Before that existed a blueprint printed the
+    tree and a notebook drew boxes and nothing anywhere connected the two, so a widget that started
+    placing a box differently would not have shown up in a single generated document.
+
+    The depth is capped. A blueprint is read on a page and a table with two hundred rows in it is
+    not read at all, and the tree above it is uncut, so nothing is hidden, only unlisted.
+    """
     from kxray.trace import parse_file
+    from kxshapes.scene import scene_of
 
     tape = parse_file(path)
     cpus = ", ".join(str(cpu) for cpu in tape.cpus) or "none"
@@ -357,6 +375,22 @@ def _function_graph_block(path: Path) -> list[str]:
         "",
         "```",
         tape.tree(),
+        "```",
+        "",
+    ]
+
+    scene = scene_of(tape, max_depth=SCENE_DEPTH)
+    if scene.empty:
+        return out
+    out += [
+        "Drawn, this is the tape a lesson shows. Same numbers, same order, same widths, because "
+        f"the widget and the animation are handed this arrangement rather than working out one of "
+        f"their own. Cut at {SCENE_DEPTH} levels from each outermost call.",
+        "",
+        f"{scene.alt()} Primitives used: {', '.join(scene.uses())}.",
+        "",
+        "```",
+        scene.table(),
         "```",
         "",
     ]

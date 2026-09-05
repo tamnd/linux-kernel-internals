@@ -16,10 +16,10 @@ position is only the order it was called in. Children are drawn back to back fro
 the gap left at the right hand end of a parent is the time the parent spent in itself. That gap is
 real, and where it sits is a drawing convention.
 
-The arithmetic that turns frames into rectangles lives in `kxray.layout`, and the boxes themselves
-are `kxshapes.TraceCell`, drawn by `kxwidgets.shapes`. That is a longer route than this widget used
-to take, and it is the point: an animation of the same trace is handed the same cells, so the wide
-box is in the same place in both and neither of them worked it out alone.
+This widget works nothing out for itself. It asks `kxshapes.scene` for the arrangement and draws
+what comes back, boxes and hover text both. That is a longer route than this used to take and it is
+the whole point: the animation of the same trace and the table in the blueprint are handed the same
+scene, so the wide box is in the same place in all three and none of them worked it out alone.
 
 `by_cpu=True` draws one lane per CPU instead of one block per outermost call. The trace file
 interleaves every CPU into a single stream, so a reader following the indentation down the page is
@@ -28,11 +28,10 @@ following two call stacks at once with nothing to warn them.
 
 from __future__ import annotations
 
-from kxray.layout import Span, place
-from kxray.models import DURATION_MARKERS, Frame, Tape
-from kxshapes import TraceCell, lanes
-from kxwidgets.html import BAND, MUTED, Widget, card, style, tag
-from kxwidgets.shapes import ROW_GAP, ROW_HEIGHT, cpu_lane, trace_cell
+from kxray.models import Frame, Tape
+from kxshapes.scene import Lane, Scene, scene_of
+from kxwidgets.html import MUTED, Widget, card, style, tag
+from kxwidgets.shapes import scene_lane
 
 
 class SyscallTape(Widget):
@@ -59,15 +58,22 @@ class SyscallTape(Widget):
 
     # -- what gets drawn --------------------------------------------------------------------
 
-    def spans(self) -> list[list[Span]]:
-        """One list of spans per outermost call, already filtered by `max_depth`."""
-        out = []
-        for root in self.roots:
-            placed = place(root)
-            if self.max_depth is not None:
-                placed = [s for s in placed if s.frame.depth - root.depth <= self.max_depth]
-            out.append(placed)
-        return out
+    def scene(self) -> Scene:
+        """The arrangement, which this widget asks for and does not work out.
+
+        Built fresh on each call rather than in `__init__`, because `by_cpu` and `max_depth` are
+        what change it and a reader in a notebook flips those by making a second widget.
+        """
+        return scene_of(
+            self.tape if self.tape is not None else self.roots[0],
+            max_depth=self.max_depth,
+            by_cpu=self.by_cpu,
+            subject=self.title,
+        )
+
+    def lanes(self) -> list[Lane]:
+        """The bands of the scene, which are calls or CPUs depending on `by_cpu`."""
+        return list(self.scene().lanes)
 
     @property
     def subtitle(self) -> str:
@@ -95,61 +101,15 @@ class SyscallTape(Widget):
             )
             return card(self.title, self.subtitle, body, fallback=self.text())
 
-        guessed = any(not span.to_scale for placed in self.spans() for span in placed)
-        if self.by_cpu:
-            body = "".join(cpu_lane(one) for one in self.lanes())
-        else:
-            body = "".join(self._one_tape(placed) for placed in self.spans())
+        scene = self.scene()
+        body = "".join(scene_lane(one, labelled=self.by_cpu) for one in scene.lanes)
         return card(
             self.title,
             self.subtitle,
             body,
-            self._footnote(guessed),
+            self._footnote(not scene.to_scale),
             fallback=self.text(),
         )
-
-    def lanes(self):
-        """The same trace split into one lane per CPU, which is what `by_cpu` draws."""
-        if self.tape is None:
-            return lanes(Tape(roots=self.roots), max_depth=self.max_depth)
-        return lanes(self.tape, max_depth=self.max_depth)
-
-    def _one_tape(self, placed: list[Span]) -> str:
-        root = placed[0].frame
-        rows = max(span.frame.depth - root.depth for span in placed) + 1
-        height = rows * (ROW_HEIGHT + ROW_GAP)
-        boxes = "".join(
-            trace_cell(TraceCell.of(span, root.depth), hover=self._title(span)) for span in placed
-        )
-        return tag(
-            "div",
-            boxes,
-            style_=style(
-                position="relative",
-                height=f"{height}px",
-                margin_bottom="14px",
-                background=BAND,
-                border_radius="3px",
-            ),
-        )
-
-    def _title(self, span: Span) -> str:
-        """The hover text, which is where every number that did not fit in the box goes."""
-        frame = span.frame
-        parts = [f"{frame.name}()", f"cpu {frame.cpu}", f"depth {frame.depth}"]
-        if frame.duration_us is None:
-            parts.append("duration unknown")
-        else:
-            parts.append(f"{frame.duration_us:.3f} us")
-            if frame.self_time_us is not None and frame.children:
-                parts.append(f"{frame.self_time_us:.3f} us in itself")
-        if frame.marker:
-            parts.append(f"marker {frame.marker}, {DURATION_MARKERS[frame.marker]}")
-        if not frame.complete:
-            parts.append("never closed, so the trace was cut off here")
-        if not span.to_scale:
-            parts.append("width is call order, not time")
-        return "\n".join(parts)
 
     def _footnote(self, guessed: bool) -> str:
         note = (
