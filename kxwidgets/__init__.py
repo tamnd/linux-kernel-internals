@@ -3,7 +3,9 @@
     from kxwidgets import SyscallTape, StructMap, OpsExplorer, PredictionGate
     from kxwidgets import Descent, ObjectGraph, MemoryScale, ContextKey
 
-`SyscallTape` draws a trace. `StructMap` draws a struct as its bytes. `OpsExplorer` draws a table
+`SyscallTape` draws a trace. `TapeDiff` draws two of them one above the other, with the functions
+that are only on one side ringed and the verdict from `kxdiff` above them. `StructMap` draws a
+struct as its bytes. `OpsExplorer` draws a table
 of function pointers. `PredictionGate` asks a question and folds the answer away underneath it.
 `Descent` draws the eight layers with the ones a call went through lit up. `LockTimeline` draws
 every lock a trace took, with the wait and the hold beside each other, and will not call a wait
@@ -43,6 +45,7 @@ from kxwidgets.ops import OpsExplorer
 from kxwidgets.shapes import RENDERS, render
 from kxwidgets.structmap import StructMap
 from kxwidgets.tape import SyscallTape
+from kxwidgets.tapediff import TapeDiff
 
 __all__ = [
     "RENDERS",
@@ -55,6 +58,7 @@ __all__ = [
     "PredictionGate",
     "StructMap",
     "SyscallTape",
+    "TapeDiff",
     "Verdict",
     "Widget",
     "card",
