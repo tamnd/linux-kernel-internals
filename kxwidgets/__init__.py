@@ -5,9 +5,15 @@
 
 `SyscallTape` draws a trace. `StructMap` draws a struct as its bytes. `OpsExplorer` draws a table
 of function pointers. `PredictionGate` asks a question and folds the answer away underneath it.
-`Descent` draws the eight layers with the ones a call went through lit up. `ObjectGraph` draws
-structs as boxes with the pointers between them. `MemoryScale` puts sizes six orders of magnitude
-apart on one comparable scale. `ContextKey` is the legend for the six execution contexts.
+`Descent` draws the eight layers with the ones a call went through lit up. `LockTimeline` draws
+every lock a trace took, with the wait and the hold beside each other, and will not call a wait
+contention unless it has been told the clock behind the trace was real. `ObjectGraph` draws structs
+as boxes with the pointers between them. `MemoryScale` puts sizes six orders of magnitude apart on
+one comparable scale. `ContextKey` is the legend for the six execution contexts.
+
+Four of these are the signature artifacts the book is built around: the Syscall Tape, the Layer
+Descent, the Lock Timeline and the Structure Map, which is `StructMap` and `ObjectGraph` between
+them depending on whether the question is about bytes or about pointers.
 
 Under all of them is `kxwidgets.shapes`, which is one HTML renderer per shape in `kxshapes`. The
 shapes work out what a picture is, this package works out what it looks like, and `kxmanim` is
@@ -30,6 +36,7 @@ reader gets, the version a test asserts on, and the version that shows up in a d
 from kxwidgets.descent import ContextKey, Descent
 from kxwidgets.gate import PredictionGate, Verdict
 from kxwidgets.html import Widget, card, page
+from kxwidgets.locks import LockTimeline
 from kxwidgets.memory import MemoryScale
 from kxwidgets.objects import ObjectGraph
 from kxwidgets.ops import OpsExplorer
@@ -41,6 +48,7 @@ __all__ = [
     "RENDERS",
     "ContextKey",
     "Descent",
+    "LockTimeline",
     "MemoryScale",
     "ObjectGraph",
     "OpsExplorer",

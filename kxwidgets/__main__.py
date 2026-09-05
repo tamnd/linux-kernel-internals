@@ -6,10 +6,17 @@ Working on a widget by rebuilding a notebook every time is slow enough that peop
 and a visual thing nobody looks at goes wrong quietly. This writes a page with every widget on it,
 in about a tenth of a second, from the handwritten fixtures in `corpora/`.
 
-Nothing here is evidence. The trace and the BTF blob it draws were both written by hand so the
-parsers had something to work against, both are marked `evidence = false`, and no lesson may cite
-either. The preview is for checking that a box is the right width, not for learning anything about
-a kernel.
+Almost nothing here is evidence. The trace and the BTF blob most of it draws were written by hand
+so the parsers had something to work against, both are marked `evidence = false`, and no lesson may
+cite either. The preview is for checking that a box is the right width, not for learning anything
+about a kernel.
+
+The two lock timelines are the exception, and they have to be. A handwritten trace cannot show
+contention, because contention is a fact about a machine rather than about a format, and writing a
+plausible ten millisecond wait by hand would be inventing the one number the widget exists to show.
+So those two are drawn from real captures in `corpora/traces/`, one from each tier, and the pair is
+the point: the same widget on the same kind of trace says something different depending on whether
+the clock behind it was real.
 """
 
 from __future__ import annotations
@@ -23,6 +30,7 @@ from kxshapes import FrameCard, ObjectBox, PointerThread
 from kxwidgets import (
     ContextKey,
     Descent,
+    LockTimeline,
     MemoryScale,
     ObjectGraph,
     OpsExplorer,
@@ -36,9 +44,17 @@ ROOT = Path(__file__).resolve().parents[1]
 TRACE = ROOT / "corpora" / "traces" / "handwritten" / "write-1byte.txt"
 BLOB = ROOT / "corpora" / "btf" / "handwritten" / "tiny.btf"
 
+# The two real captures, and they are here for the one widget that cannot be shown on a fixture.
+CONTENDED = ROOT / "corpora" / "traces" / "tier1" / "contended-lock.txt"
+EMULATED = ROOT / "corpora" / "traces" / "tier0" / "write-1byte.txt"
+
+
+def _parse(path: Path):
+    return function_graph.parse(path.read_text(encoding="utf-8"), source=str(path))
+
 
 def gallery() -> str:
-    """One of each, built from the handwritten fixtures."""
+    """One of each, built from the handwritten fixtures, plus two lock timelines from captures."""
     tape = function_graph.parse(TRACE.read_text(encoding="utf-8"), source=str(TRACE))
     tiny = btf.parse_file(BLOB)
 
@@ -92,9 +108,22 @@ def gallery() -> str:
         title="Three sizes a page cache lesson says in one paragraph",
     )
 
+    locks = LockTimeline(
+        _parse(CONTENDED),
+        timings_are_real=True,
+        title="Four writers, one file, a real machine",
+    )
+    emulated = LockTimeline(
+        _parse(EMULATED),
+        timings_are_real=False,
+        title="The same widget on a Tier 0 capture, where the clock is not real",
+    )
+
     widgets = [
         descent,
         ContextKey(),
+        locks,
+        emulated,
         SyscallTape(tape, max_depth=4, title="write-1byte, handwritten fixture"),
         SyscallTape(tape, max_depth=4, by_cpu=True, title="the same trace, one lane per cpu"),
         graph,
@@ -120,9 +149,11 @@ def gallery() -> str:
 
     header = (
         "<h1>kxwidgets</h1>"
-        "<p>Every widget, drawn from the handwritten fixtures in corpora. None of this is "
+        "<p>Every widget, drawn from the handwritten fixtures in corpora. None of that is "
         "evidence and no lesson may cite it. It is here so a widget can be looked at without "
-        "building a notebook first.</p>"
+        "building a notebook first. The two lock timelines are the exception, because a "
+        "handwritten trace cannot show a lock somebody waited for, so those two come from real "
+        "captures.</p>"
     )
     return header + "".join(one.html() for one in widgets)
 
