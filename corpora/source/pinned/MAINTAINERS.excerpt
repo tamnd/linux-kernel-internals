@@ -1,0 +1,296 @@
+List of maintainers
+===================
+
+Descriptions of section entries and preferred order
+---------------------------------------------------
+
+	M: *Mail* patches to: FullName <address@domain>
+	R: Designated *Reviewer*: FullName <address@domain>
+	   These reviewers should be CCed on patches.
+	L: *Mailing list* that is relevant to this area
+	S: *Status*, one of the following:
+	   Supported:	Someone is actually paid to look after this.
+	   Maintained:	Someone actually looks after it.
+	   Odd Fixes:	It has a maintainer but they don't have time to do
+			much other than throw the odd patch in. See below..
+	   Orphan:	No current maintainer [but maybe you could take the
+			role as you write your new code].
+	   Obsolete:	Old code. Something tagged obsolete generally means
+			it has been replaced by a better system and you
+			should be using that.
+	W: *Web-page* with status/info
+	Q: *Patchwork* web based patch tracking system site
+	B: URI for where to file *bugs*. A web-page with detailed bug
+	   filing info, a direct bug tracker link, or a mailto: URI.
+	C: URI for *chat* protocol, server and channel where developers
+	   usually hang out, for example irc://server/channel.
+	P: *Subsystem Profile* document for more details submitting
+	   patches to the given subsystem. This is either an in-tree .rst file
+       inside Documentation/, or a URI.
+       See Documentation/maintainer/maintainer-entry-profile.rst for details.
+	T: *SCM* tree type and location.
+	   Type is one of: git, hg, quilt, stgit, topgit
+	F: *Files* and directories wildcard patterns.
+	   A trailing slash includes all files and subdirectory files.
+	   F:	drivers/net/	all files in and below drivers/net
+	   F:	drivers/net/*	all files in drivers/net, but not below
+	   F:	*/net/*		all files in "any top level directory"/net
+	   F:	fs/**/*foo*.c	all *foo*.c files in any subdirectory of fs
+	   One pattern per line.  Multiple F: lines acceptable.
+	X: *Excluded* files and directories that are NOT maintained, same
+	   rules as F:. Files exclusions are tested before file matches.
+	   Can be useful for excluding a specific subdirectory, for instance:
+	   F:	net/
+	   X:	net/ipv6/
+	   matches all files in and below net excluding net/ipv6/
+	N: Files and directories *Regex* patterns.
+	   N:	[^a-z]tegra	all files whose path contains tegra
+	                        (not including files like integrator)
+	   One pattern per line.  Multiple N: lines acceptable.
+	   scripts/get_maintainer.pl has different behavior for files that
+	   match F: pattern and matches of N: patterns.  By default,
+	   get_maintainer will not look at git log history when an F: pattern
+	   match occurs.  When an N: match occurs, git log history is used
+	   to also notify the people that have git commit signatures.
+	K: *Content regex* (perl extended) pattern match in a patch or file.
+	   For instance:
+	   K: of_get_profile
+	      matches patches or files that contain "of_get_profile"
+	   K: \b(printk|pr_(info|err))\b
+	      matches patches or files that contain one or more of the words
+	      printk, pr_info or pr_err
+	   One regex pattern per line.  Multiple K: lines acceptable.
+
+Maintainers List
+----------------
+
+.. note:: This file is an excerpt. See pinned.meta.toml beside it.
+
+ABI/API
+L:	linux-api@vger.kernel.org
+F:	include/linux/syscalls.h
+F:	kernel/sys_ni.c
+X:	arch/*/include/uapi/
+X:	include/uapi/
+
+AUDIT SUBSYSTEM
+M:	Paul Moore <paul@paul-moore.com>
+M:	Eric Paris <eparis@redhat.com>
+L:	audit@vger.kernel.org
+S:	Supported
+W:	https://github.com/linux-audit
+Q:	https://patchwork.kernel.org/project/audit/list
+B:	mailto:audit@vger.kernel.org
+P:	https://github.com/linux-audit/audit-kernel/blob/main/README.md
+T:	git https://git.kernel.org/pub/scm/linux/kernel/git/pcmoore/audit.git
+F:	include/asm-generic/audit_*.h
+F:	include/linux/audit.h
+F:	include/linux/audit_arch.h
+F:	include/uapi/linux/audit.h
+F:	kernel/audit*
+F:	lib/*audit.c
+K:	\baudit_[a-z_0-9]\+\b
+
+DOCUMENTATION
+M:	Jonathan Corbet <corbet@lwn.net>
+R:	Shuah Khan <skhan@linuxfoundation.org>
+L:	linux-doc@vger.kernel.org
+S:	Maintained
+P:	Documentation/doc-guide/maintainer-profile.rst
+T:	git git://git.lwn.net/linux.git docs-next
+F:	Documentation/
+F:	tools/lib/python/
+F:	tools/docs/
+F:	tools/net/ynl/pyynl/lib/doc_generator.py
+X:	Documentation/ABI/
+X:	Documentation/admin-guide/media/
+X:	Documentation/devicetree/
+X:	Documentation/driver-api/media/
+X:	Documentation/firmware-guide/acpi/
+X:	Documentation/i2c/
+X:	Documentation/netlink/
+X:	Documentation/power/
+X:	Documentation/spi/
+X:	Documentation/userspace-api/media/
+
+FILESYSTEMS (VFS and infrastructure)
+M:	Alexander Viro <viro@zeniv.linux.org.uk>
+M:	Christian Brauner <brauner@kernel.org>
+R:	Jan Kara <jack@suse.cz>
+L:	linux-fsdevel@vger.kernel.org
+S:	Maintained
+T:	git https://git.kernel.org/pub/scm/linux/kernel/git/vfs/vfs.git
+F:	fs/*
+F:	include/linux/fs.h
+F:	include/linux/fs_types.h
+F:	include/uapi/linux/fs.h
+F:	include/uapi/linux/openat2.h
+F:	rust/kernel/fs.rs
+F:	rust/kernel/fs/
+F:	rust/kernel/seq_file.rs
+F:	rust/kernel/sync/poll.rs
+F:	Documentation/driver-api/early-userspace/buffer-format.rst
+F:	init/do_mounts*
+F:	init/*initramfs*
+
+LOCKING PRIMITIVES
+M:	Peter Zijlstra <peterz@infradead.org>
+M:	Ingo Molnar <mingo@redhat.com>
+M:	Will Deacon <will@kernel.org>
+M:	Boqun Feng <boqun@kernel.org> (LOCKDEP & RUST)
+R:	Waiman Long <longman@redhat.com>
+L:	linux-kernel@vger.kernel.org
+S:	Maintained
+P:	Documentation/process/maintainer-tip.rst
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/tip/tip.git locking/core
+F:	Documentation/locking/
+F:	arch/*/include/asm/spinlock*.h
+F:	include/linux/local_lock*.h
+F:	include/linux/lockdep*.h
+F:	include/linux/mutex*.h
+F:	include/linux/rwlock*.h
+F:	include/linux/rwsem*.h
+F:	include/linux/seqlock.h
+F:	include/linux/spinlock*.h
+F:	kernel/locking/
+F:	lib/locking*.[ch]
+F:	rust/helpers/mutex.c
+F:	rust/helpers/spinlock.c
+F:	rust/kernel/sync/lock.rs
+F:	rust/kernel/sync/lock/
+F:	rust/kernel/sync/locked_by.rs
+X:	kernel/locking/locktorture.c
+
+MEMORY MANAGEMENT
+M:	Andrew Morton <akpm@linux-foundation.org>
+L:	linux-mm@kvack.org
+S:	Maintained
+W:	http://www.linux-mm.org
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/akpm/mm
+T:	quilt git://git.kernel.org/pub/scm/linux/kernel/git/akpm/25-new
+F:	mm/
+F:	tools/mm/
+
+MEMORY MANAGEMENT - CORE
+M:	Andrew Morton <akpm@linux-foundation.org>
+M:	David Hildenbrand <david@kernel.org>
+R:	Lorenzo Stoakes <ljs@kernel.org>
+R:	Liam R. Howlett <liam@infradead.org>
+R:	Vlastimil Babka <vbabka@kernel.org>
+R:	Mike Rapoport <rppt@kernel.org>
+R:	Suren Baghdasaryan <surenb@google.com>
+R:	Michal Hocko <mhocko@suse.com>
+L:	linux-mm@kvack.org
+S:	Maintained
+W:	http://www.linux-mm.org
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/akpm/mm
+F:	Documentation/admin-guide/sysctl/vm.rst
+F:	include/linux/folio_batch.h
+F:	include/linux/gfp.h
+F:	include/linux/gfp_types.h
+F:	include/linux/highmem.h
+F:	include/linux/leafops.h
+F:	include/linux/memory.h
+F:	include/linux/mm.h
+F:	include/linux/mm_*.h
+F:	include/linux/mmzone.h
+F:	include/linux/mmdebug.h
+F:	include/linux/mmu_notifier.h
+F:	include/linux/pagewalk.h
+F:	include/linux/pgalloc.h
+F:	include/linux/pgtable.h
+F:	include/linux/ptdump.h
+F:	include/linux/vmpressure.h
+F:	include/linux/vmstat.h
+F:	fs/proc/meminfo.c
+F:	kernel/fork.c
+F:	mm/Kconfig
+F:	mm/debug.c
+F:	mm/folio-compat.c
+F:	mm/highmem.c
+F:	mm/init-mm.c
+F:	mm/internal.h
+F:	mm/maccess.c
+F:	mm/memory.c
+F:	mm/mmu_notifier.c
+F:	mm/mmzone.c
+F:	mm/pagewalk.c
+F:	mm/pgtable-generic.c
+F:	mm/ptdump.c
+F:	mm/sparse-vmemmap.c
+F:	mm/sparse.c
+F:	mm/util.c
+F:	mm/vmpressure.c
+F:	mm/vmstat.c
+N:	include\/linux\/page[-_][a-zA-Z]*
+
+PROC FILESYSTEM
+L:	linux-kernel@vger.kernel.org
+L:	linux-fsdevel@vger.kernel.org
+S:	Maintained
+F:	Documentation/filesystems/proc.rst
+F:	fs/proc/
+F:	include/linux/proc_fs.h
+F:	tools/testing/selftests/proc/
+
+TEGRA ARCHITECTURE SUPPORT
+M:	Thierry Reding <thierry.reding@kernel.org>
+M:	Jonathan Hunter <jonathanh@nvidia.com>
+L:	linux-tegra@vger.kernel.org
+S:	Supported
+Q:	http://patchwork.ozlabs.org/project/linux-tegra/list/
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git
+N:	[^a-z]tegra
+
+TRACING
+M:	Steven Rostedt <rostedt@goodmis.org>
+M:	Masami Hiramatsu <mhiramat@kernel.org>
+R:	Mathieu Desnoyers <mathieu.desnoyers@efficios.com>
+L:	linux-kernel@vger.kernel.org
+L:	linux-trace-kernel@vger.kernel.org
+S:	Maintained
+Q:	https://patchwork.kernel.org/project/linux-trace-kernel/list/
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/trace/linux-trace.git
+F:	Documentation/core-api/tracepoint.rst
+F:	Documentation/trace/*
+F:	fs/tracefs/
+F:	include/linux/trace*.h
+F:	include/trace/
+F:	kernel/trace/
+F:	kernel/tracepoint.c
+F:	scripts/tracing/
+F:	scripts/tracepoint-update.c
+F:	tools/testing/selftests/ftrace/
+
+X86 ARCHITECTURE (32-BIT AND 64-BIT)
+M:	Thomas Gleixner <tglx@kernel.org>
+M:	Ingo Molnar <mingo@redhat.com>
+M:	Borislav Petkov <bp@alien8.de>
+M:	Dave Hansen <dave.hansen@linux.intel.com>
+M:	x86@kernel.org
+R:	"H. Peter Anvin" <hpa@zytor.com>
+L:	linux-kernel@vger.kernel.org
+S:	Maintained
+P:	Documentation/process/maintainer-tip.rst
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/tip/tip.git x86/core
+F:	Documentation/arch/x86/
+F:	Documentation/devicetree/bindings/x86/
+F:	arch/x86/
+F:	tools/testing/selftests/x86
+
+X86 MM
+M:	Dave Hansen <dave.hansen@linux.intel.com>
+M:	Andy Lutomirski <luto@kernel.org>
+M:	Peter Zijlstra <peterz@infradead.org>
+L:	linux-kernel@vger.kernel.org
+S:	Maintained
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/tip/tip.git x86/mm
+F:	arch/x86/mm/
+
+THE REST
+M:	Linus Torvalds <torvalds@linux-foundation.org>
+L:	linux-kernel@vger.kernel.org
+S:	Buried alive in reporters
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
+F:	*
+F:	*/

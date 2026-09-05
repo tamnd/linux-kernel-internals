@@ -1,0 +1,44 @@
+source = "pinned"
+evidence = true
+
+describes = "the format block from MAINTAINERS, and thirteen of its sections"
+path = "MAINTAINERS"
+excerpt = true
+
+kernel = "7.2.2"
+tarball_sha256 = "7d0e7ce14f98c43efe880cffbf354a59be45928fdf7170d7333c374ae91c0d83"
+taken = "2026-09-06"
+
+# This is the one file in corpora/source/pinned that is not whole. The real MAINTAINERS on 7.2.2 is
+# 29847 lines and 916 KB, which is nine times the rest of this corpus put together, so what is here
+# is the header block that documents the format, then the sections that cover the paths this
+# repository cites, then three sections chosen for the tags they carry.
+#
+# ABI/API is here because it is the shortest section in the file with an X: line on it, and X: is
+# tested before F:. AUDIT SUBSYSTEM is here for its K: line, which matches on the content of a
+# patch rather than on a path. TEGRA ARCHITECTURE SUPPORT is here for its N: line, which is the
+# same regex the header block uses as its worked example.
+#
+# The `.excerpt` on the filename is load bearing. kxray.source.tree finds it when asked for
+# MAINTAINERS and sets `partial` on what it hands back, so anything that reads it knows a lookup
+# that misses might be missing because of this file rather than because of the kernel.
+
+# The full file, counted at the version above.
+full_lines = 29847
+full_sections = 3293
+full_file_patterns = 9738
+full_excluded_patterns = 100
+full_path_patterns = 105
+full_content_patterns = 66
+
+# This excerpt.
+sections = 13
+catch_all = "THE REST"
+
+# What the lookups come out as, against this excerpt.
+memory_c_sections = ["MEMORY MANAGEMENT", "MEMORY MANAGEMENT - CORE", "THE REST"]
+proc_base_c_sections = ["PROC FILESYSTEM", "THE REST"]
+read_write_c_sections = ["FILESYSTEMS (VFS and infrastructure)", "THE REST"]
+sections_with_no_maintainer = ["ABI/API", "PROC FILESYSTEM"]
+sections_with_no_status = ["ABI/API"]
+audit_content_pattern_matches_audit_log_start = false

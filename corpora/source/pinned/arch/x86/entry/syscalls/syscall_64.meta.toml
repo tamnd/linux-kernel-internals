@@ -1,0 +1,26 @@
+source = "pinned"
+evidence = true
+
+describes = "the x86-64 system call numbers, here so the i386 ones can be compared against them"
+path = "arch/x86/entry/syscalls/syscall_64.tbl"
+excerpt = false
+
+kernel = "7.2.2"
+arch = "x86_64"
+tarball_sha256 = "7d0e7ce14f98c43efe880cffbf354a59be45928fdf7170d7333c374ae91c0d83"
+taken = "2026-09-06"
+
+# The pinned box does not run this table. It is committed anyway, because the reader's laptop
+# almost certainly does, and a number that differs between the two is the fastest way to make the
+# point that a syscall number with no architecture attached is not an identifier.
+#
+# This file has three abis in it where the 32 bit one has a single abi, and the same name turns up
+# under more than one of them. rt_sigaction is 13 under `64` and 512 under `x32`.
+
+rows = 421
+abis = ["common", "64", "x32"]
+reserved_rows = 16
+holes = 127
+write_number = 1
+read_number = 0
+duplicate_names = ["rt_sigaction", "rt_sigreturn", "ioctl", "readv", "writev"]

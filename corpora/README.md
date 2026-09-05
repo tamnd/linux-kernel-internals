@@ -16,6 +16,7 @@ corpora/
 ├── experiments/         # measurements rather than recordings, so far all Tier 1
 ├── oops/                # crash and lockdep text used by the debugging lessons, tier0 and handwritten
 ├── litmus/              # herd7 and klitmus7 output for the memory model lessons
+├── source/pinned/       # five files out of the pinned tarball, not off a running kernel
 └── tier0/               # recipes.toml, the list of what a Tier 0 session can replay
 ```
 
@@ -26,6 +27,14 @@ Almost everything here is Tier 0, off the pinned kernel in a browser tab, becaus
 Tier 0 has exactly two limits that no amount of work removes. It has one CPU, so nothing about more than one CPU can be shown in it. And it has no real clock, so every duration in a Tier 0 trace is a number about v86 rather than about the kernel.
 
 `traces/tier1/` and `experiments/tier1/` are for captures that hit one of those two and nothing else. A Tier 1 capture came off whatever machine somebody had, so its metadata carries the kernel version, the distribution, the architecture and the CPU count in full, and the one in here at the moment is arm64 running 6.8. That is a fine place to demonstrate that the trace file interleaves CPUs, which is true everywhere Linux runs. It would be a terrible place to demonstrate which functions a write calls. Knowing which of those you are doing is the whole job.
+
+## Source files
+
+`source/pinned/` is the one directory here that did not come off a running kernel. It is five files out of the `linux-7.2.2` tarball, checksum verified, so that the parsers in `kxray.source` have something real to run against in CI and in a notebook that has downloaded nothing. `source/pinned/README.md` says what each one is there to show.
+
+The whole tree is 1.6 GB and `./kxbox/kernel/tree.sh` unpacks it, which is what a reader who wants complete answers should do. This is a kernel tree in shape and almost none of one in content, and `Tree.complete` is False on it so that a lookup which misses says the file is not in the corpus rather than saying it is not in the kernel.
+
+One of the five is an excerpt, because MAINTAINERS is 29847 lines. The `.excerpt` on its name is the mechanism rather than a label: a read of `MAINTAINERS` finds it and marks what it hands back as partial, so being a slice travels with the content.
 
 ## Experiments
 

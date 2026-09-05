@@ -32,6 +32,14 @@ The first real run of `--tree` had twenty one problems in it, out of thirty six 
 were files that had moved, and the rest were anchors that matched in more than one place, usually
 a function name that also appears at a call site or in a forward declaration. Both kinds are the
 reason this tool exists, and neither would have been caught by reading.
+
+A confirmed citation also carries a context hash, which covers the failure the anchor cannot. An
+anchor is usually a function signature, the signature is the most stable line in a function, and
+the body underneath it is the part people edit. So a citation supporting a sentence about what a
+function does can go stale without the anchor moving at all. `--confirm` records a hash of the
+lines around the anchor, and a later `--tree` run reports "still there and the lines around it have
+changed", which is a different sentence from "gone" and needs a different answer from a reader.
+`kxray.source.citations` does the hashing and says what it deliberately does not notice.
 """
 
 from __future__ import annotations
@@ -42,6 +50,8 @@ import sys
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
+
+from kxray.source import citations
 
 SCHEMA = 1
 
@@ -100,6 +110,9 @@ MIN_ANCHOR = 12
 # How a blueprint points at its evidence in the middle of a sentence: `[page-fault-R07]`.
 CITATION = re.compile(r"\[([a-z0-9][a-z0-9-]*-R\d+)\]")
 
+# What a recorded context hash looks like. The width comes from `kxray.source.citations`.
+CONTEXT = re.compile(r"[0-9a-f]{" + str(citations.WIDTH) + "}")
+
 
 @dataclass(frozen=True)
 class Finding:
@@ -120,6 +133,7 @@ class Reference:
     kernel: str
     confirmed: bool = False
     line: int = 0
+    context: str = ""
     note: str = ""
     source: str = ""
 
@@ -290,6 +304,7 @@ def read_references(path: Path) -> tuple[list[Reference], list[Finding]]:
                 kernel=str(entry.get("kernel", "")),
                 confirmed=bool(entry.get("confirmed", False)),
                 line=int(entry.get("line", 0) or 0),
+                context=str(entry.get("context", "")),
                 note=str(entry.get("note", "")),
                 source=str(path),
             )
@@ -329,6 +344,11 @@ def check_reference(reference: Reference, lesson: str, versions: set[str]) -> li
     if reference.kernel not in versions:
         findings.append(
             Finding(where, f"names kernel {reference.kernel!r}, which is not a pinned version")
+        )
+
+    if reference.context and not CONTEXT.fullmatch(reference.context):
+        findings.append(
+            Finding(where, f"context is {reference.context!r}, and a context hash is 12 hex digits")
         )
 
     if reference.confirmed and reference.line <= 0:
@@ -403,27 +423,42 @@ def check_blueprint_citations(document: Path, references: list[Reference]) -> li
     return findings
 
 
-def resolve(reference: Reference, tree: Path) -> tuple[int | None, str]:
-    """Find the anchor in a real kernel tree. Returns the line, and what went wrong if it did not.
+def resolve(reference: Reference, tree: Path) -> tuple[int | None, str, str]:
+    """Find the anchor in a real kernel tree, and hash the lines around it.
 
-    The first match wins, and a second match is reported, because an anchor that appears twice is
-    an anchor that will silently point at the wrong one after the next refactor.
+    Returns the line, the context hash, and what went wrong if anything did. The first match wins,
+    and a second match is reported, because an anchor that appears twice is an anchor that will
+    silently point at the wrong one after the next refactor.
+
+    The hash is the part that is new and it exists for a failure the anchor cannot catch. An anchor
+    is usually a function signature, the signature is the most stable line in a function, and the
+    body underneath it is the part people edit. So a citation supporting a sentence about what a
+    function does can go stale without the anchor moving at all, and until this was recorded
+    nothing noticed. `kxray.source.citations` does the hashing and says what it normalises away.
     """
     path = tree / reference.path
     if not path.exists():
-        return None, f"{reference.path} is not in {tree}"
+        return None, "", f"{reference.path} is not in {tree}"
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
     except OSError as problem:
-        return None, f"cannot read {reference.path}: {problem}"
+        return None, "", f"cannot read {reference.path}: {problem}"
 
-    lines = text.splitlines()
-    hits = [number for number, line in enumerate(lines, start=1) if reference.anchor in line]
-    if not hits:
-        return None, f"{reference.anchor!r} is not in {reference.path} any more"
-    if len(hits) > 1:
-        return hits[0], f"{reference.anchor!r} appears {len(hits)} times, so pick a longer anchor"
-    return hits[0], ""
+    hit = citations.resolve(text, reference.anchor)
+    if not hit.found:
+        return None, "", f"{reference.anchor!r} is not in {reference.path} any more"
+    if hit.problem:
+        return hit.line, hit.context, f"{reference.anchor!r} {hit.problem}"
+    if citations.changed(reference.context, hit.context):
+        return (
+            hit.line,
+            hit.context,
+            (
+                f"{reference.anchor!r} is still there and "
+                f"{citations.compare(reference.context, hit.context)}, so go and read it"
+            ),
+        )
+    return hit.line, hit.context, ""
 
 
 # -- putting it together -------------------------------------------------------------------------
@@ -520,37 +555,53 @@ def confirm(root: Path, tree: Path, *, write: bool) -> tuple[list[Finding], int]
 
         text = refs_file.read_text(encoding="utf-8")
         for reference in references:
-            line, problem = resolve(reference, tree)
+            line, context, problem = resolve(reference, tree)
             where = f"{refs_file}#{reference.identifier}"
             if problem:
                 findings.append(Finding(where, problem))
             if line is None:
                 continue
             resolved += 1
-            print(f"{reference.identifier}  {reference.path}:{line}")
+            state = citations.compare(reference.context, context)
+            print(f"{reference.identifier}  {reference.path}:{line}  {context}  {state}")
             if write and not problem:
-                text = _rewrite(text, reference.identifier, line)
+                text = _rewrite(text, reference.identifier, line, context)
         if write:
             refs_file.write_text(text, encoding="utf-8")
     return findings, resolved
 
 
-def _rewrite(text: str, identifier: str, line: int) -> str:
-    """Put the resolved line and the confirmation into one entry, leaving the rest alone.
+def _rewrite(text: str, identifier: str, line: int, context: str = "") -> str:
+    """Put the resolved line, the confirmation and the context hash into one entry.
 
     A rewrite rather than a dump of parsed TOML, because the comments in these files are the part
     a person wrote and a round trip through tomllib would throw all of them away.
+
+    An entry with no `context =` line yet gets one written directly under its `line =`, so that a
+    citation written before context hashes existed picks one up the first time anybody confirms it
+    against a tree, without anybody having to go and edit seventy three entries by hand. Any
+    `context =` already in the entry is dropped and reissued in that same place, which keeps the
+    field where a reader expects it and makes running this twice give the same file.
     """
-    out = []
+    out: list[str] = []
     inside = False
     for row in text.splitlines():
         stripped = row.strip()
         if stripped.startswith("id ="):
             inside = f'"{identifier}"' in stripped
-        if inside and stripped.startswith("line ="):
-            row = f"line = {line}"
-        elif inside and stripped.startswith("confirmed ="):
-            row = "confirmed = true"
+        if not inside:
+            out.append(row)
+            continue
+        if stripped.startswith("context ="):
+            continue
+        if stripped.startswith("line ="):
+            out.append(f"line = {line}")
+            if context:
+                out.append(f'context = "{context}"')
+            continue
+        if stripped.startswith("confirmed ="):
+            out.append("confirmed = true")
+            continue
         out.append(row)
     return "\n".join(out) + "\n"
 
@@ -586,7 +637,12 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     waiting = sum(1 for r in references if not r.confirmed)
+    # Counted rather than failed. Every citation written before context hashes existed has none,
+    # and a rule that turns those into errors on the day it lands gives a wall of red and gets
+    # switched off. The number goes down on its own, one `--confirm` run at a time.
+    bare = sum(1 for r in references if r.confirmed and not r.context)
     tail = f", {waiting} waiting on a kernel tree" if waiting else ""
+    tail += f", {bare} confirmed with no context hash yet" if bare else ""
     print(f"refcheck: paths clean, {len(references)} citation(s){tail}")
     return 0
 

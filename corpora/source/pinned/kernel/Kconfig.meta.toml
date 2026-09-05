@@ -1,0 +1,25 @@
+source = "pinned"
+evidence = true
+
+describes = "the four preemption models, and how choosing one turns on two more symbols"
+path = "kernel/Kconfig.preempt"
+excerpt = false
+
+kernel = "7.2.2"
+tarball_sha256 = "7d0e7ce14f98c43efe880cffbf354a59be45928fdf7170d7333c374ae91c0d83"
+taken = "2026-09-06"
+
+# The pinned kernel is built with CONFIG_PREEMPT=y, and its .config also has CONFIG_PREEMPT_BUILD=y
+# and CONFIG_PREEMPTION=y in it, which nobody asked for. This file is the whole explanation.
+# PREEMPT selects PREEMPT_BUILD, and PREEMPT_BUILD selects PREEMPTION.
+#
+# Six of the fifteen symbols here have a type and no prompt, which means they never appear in
+# menuconfig and cannot be set by hand at all. In a .config they look exactly like something a
+# person chose.
+
+symbols = 15
+hidden_symbols = 6
+choice_prompt = "Preemption Model"
+choice_members = ["PREEMPT_NONE", "PREEMPT_VOLUNTARY", "PREEMPT", "PREEMPT_LAZY"]
+preempt_selects = ["PREEMPT_BUILD"]
+preempt_build_selects = ["PREEMPTION", "UNINLINE_SPIN_UNLOCK"]

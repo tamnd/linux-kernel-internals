@@ -101,6 +101,19 @@ def test_a_confirmed_citation_still_carries_the_line_it_landed_on():
         assert reference.line > 0, f"{reference.identifier} says confirmed with no line"
 
 
+def test_every_confirmed_citation_carries_a_context_hash():
+    """So that a citation whose anchor holds still while the code under it moves gets reported.
+
+    All of them have one now, which is the only reason this can be an assertion rather than a
+    count. A new citation gets its hash from the same `--confirm` run that gets it its line.
+    """
+    _, references = refcheck.check(ROOT)
+    for reference in references:
+        assert refcheck.CONTEXT.fullmatch(reference.context), (
+            f"{reference.identifier} has no context hash, run refcheck --tree --confirm"
+        )
+
+
 # -- paths into this repository ---------------------------------------------------------------
 
 
@@ -345,21 +358,23 @@ def one_reference(anchor: str = "print_graph_entry_leaf") -> refcheck.Reference:
     )
 
 
-def test_an_anchor_is_found_and_gives_back_the_line(tmp_path):
+def test_an_anchor_is_found_and_gives_back_the_line_and_a_hash(tmp_path):
     where = tree(tmp_path, "one\ntwo\nstatic void print_graph_entry_leaf(void)\n")
-    assert refcheck.resolve(one_reference(), where) == (3, "")
+    line, context, problem = refcheck.resolve(one_reference(), where)
+    assert (line, problem) == (3, "")
+    assert refcheck.CONTEXT.fullmatch(context)
 
 
 def test_an_anchor_that_moved_is_found_at_its_new_line(tmp_path):
     """The reason the anchor is text. Ten lines added above it changes nothing."""
     where = tree(tmp_path, "\n" * 10 + "static void print_graph_entry_leaf(void)\n")
-    line, problem = refcheck.resolve(one_reference(), where)
+    line, _, problem = refcheck.resolve(one_reference(), where)
     assert (line, problem) == (11, "")
 
 
 def test_an_anchor_that_is_gone_says_so_with_the_file_and_the_text(tmp_path):
     where = tree(tmp_path, "nothing like it here\n")
-    line, problem = refcheck.resolve(one_reference(), where)
+    line, _, problem = refcheck.resolve(one_reference(), where)
     assert line is None
     assert "print_graph_entry_leaf" in problem
     assert "trace_functions_graph.c" in problem
@@ -367,15 +382,56 @@ def test_an_anchor_that_is_gone_says_so_with_the_file_and_the_text(tmp_path):
 
 def test_an_anchor_that_appears_twice_says_to_pick_a_longer_one(tmp_path):
     where = tree(tmp_path, "print_graph_entry_leaf\nprint_graph_entry_leaf\n")
-    line, problem = refcheck.resolve(one_reference(), where)
+    line, _, problem = refcheck.resolve(one_reference(), where)
     assert line == 1
     assert "appears 2 times" in problem
+
+
+def test_an_anchor_that_stayed_while_its_surroundings_changed_is_a_finding(tmp_path):
+    """The failure the anchor cannot catch on its own.
+
+    A signature is the most stable line in a function and the body under it is the part people
+    edit, so a citation supporting a sentence about behaviour goes stale without moving at all.
+    The wording is part of the test, because "still there and changed" needs a different answer
+    from a reader than "gone".
+    """
+    where = tree(tmp_path, "print_graph_entry_leaf\ndoes one thing\n")
+    _, recorded, _ = refcheck.resolve(one_reference(), where)
+
+    source = where / "kernel" / "trace" / "trace_functions_graph.c"
+    source.write_text("print_graph_entry_leaf\ndoes something else now\n")
+    reference = refcheck.Reference(
+        identifier="Z02-R1",
+        path="kernel/trace/trace_functions_graph.c",
+        anchor="print_graph_entry_leaf",
+        kernel="7.2.2",
+        context=recorded,
+    )
+    line, found, problem = refcheck.resolve(reference, where)
+    assert line == 1
+    assert found != recorded
+    assert "is still there and" in problem
+    assert "so go and read it" in problem
+
+
+def test_a_citation_with_no_recorded_hash_yet_is_not_a_failure(tmp_path):
+    """Counted rather than failed, or the rule could never have been switched on."""
+    where = tree(tmp_path, "print_graph_entry_leaf\n")
+    _, context, problem = refcheck.resolve(one_reference(), where)
+    assert problem == ""
+    assert context
+
+
+def test_a_context_hash_that_is_not_a_hash_is_caught(tmp_path):
+    refs = REFS.replace("line = 0", 'line = 0\ncontext = "not a hash"')
+    root = repo(tmp_path, lesson={"meta.toml": META, "refs.toml": refs})
+    assert "a context hash is 12 hex digits" in check(root)
 
 
 def test_a_file_that_is_not_in_the_tree_says_which_tree(tmp_path):
     where = tree(tmp_path, "anything\n")
     missing = refcheck.Reference("Z02-R1", "mm/memory.c", "handle_mm_fault", "7.2.2")
-    line, problem = refcheck.resolve(missing, where)
+    line, _, problem = refcheck.resolve(missing, where)
     assert line is None
     assert "mm/memory.c is not in" in problem
 
@@ -391,6 +447,38 @@ def test_confirming_writes_the_line_and_the_flag_back_and_keeps_the_comments(tmp
     assert "line = 7" in written
     assert "confirmed = true" in written
     assert "# a comment" in written
+
+
+def test_confirming_writes_a_context_hash_under_the_line(tmp_path):
+    """An entry written before hashes existed picks one up the first time anybody confirms it.
+
+    Which is why this goes in on its own rather than being a field somebody has to add to seventy
+    three entries by hand before the check does anything.
+    """
+    root = repo(tmp_path, lesson={"meta.toml": META, "refs.toml": REFS})
+    where = tree(tmp_path, "\n" * 6 + "print_graph_entry_leaf\n")
+    refcheck.confirm(root, where, write=True)
+
+    path = root / "lessons" / "Z02" / "refs.toml"
+    rows = path.read_text().splitlines()
+    assert rows[rows.index("line = 7") + 1].startswith("context = ")
+
+    references, _ = refcheck.read_references(path)
+    assert refcheck.CONTEXT.fullmatch(references[0].context)
+
+
+def test_confirming_twice_gives_the_same_file(tmp_path):
+    """The rewrite drops any hash it finds and reissues it, so running it again is a no-op."""
+    root = repo(tmp_path, lesson={"meta.toml": META, "refs.toml": "# kept\n" + REFS})
+    where = tree(tmp_path, "\n" * 6 + "print_graph_entry_leaf\n")
+    path = root / "lessons" / "Z02" / "refs.toml"
+
+    refcheck.confirm(root, where, write=True)
+    once = path.read_text()
+    refcheck.confirm(root, where, write=True)
+    assert path.read_text() == once
+    assert once.count("context = ") == 1
+    assert "# kept" in once
 
 
 def test_resolving_without_confirm_changes_nothing(tmp_path):
