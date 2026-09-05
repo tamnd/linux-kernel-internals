@@ -16,18 +16,23 @@ position is only the order it was called in. Children are drawn back to back fro
 the gap left at the right hand end of a parent is the time the parent spent in itself. That gap is
 real, and where it sits is a drawing convention.
 
-The arithmetic that turns frames into rectangles lives in `kxray.layout`, because the animation of
-a trace has to put the wide box in the same place this does.
+The arithmetic that turns frames into rectangles lives in `kxray.layout`, and the boxes themselves
+are `kxshapes.TraceCell`, drawn by `kxwidgets.shapes`. That is a longer route than this widget used
+to take, and it is the point: an animation of the same trace is handed the same cells, so the wide
+box is in the same place in both and neither of them worked it out alone.
+
+`by_cpu=True` draws one lane per CPU instead of one block per outermost call. The trace file
+interleaves every CPU into a single stream, so a reader following the indentation down the page is
+following two call stacks at once with nothing to warn them.
 """
 
 from __future__ import annotations
 
 from kxray.layout import Span, place
 from kxray.models import DURATION_MARKERS, Frame, Tape
-from kxwidgets.html import BAND, INK, MARKERS, MONO, MUTED, Widget, card, style, tag, text
-
-ROW_HEIGHT = 22
-ROW_GAP = 2
+from kxshapes import TraceCell, lanes
+from kxwidgets.html import BAND, MUTED, Widget, card, style, tag
+from kxwidgets.shapes import ROW_GAP, ROW_HEIGHT, cpu_lane, trace_cell
 
 
 class SyscallTape(Widget):
@@ -44,10 +49,12 @@ class SyscallTape(Widget):
         *,
         max_depth: int | None = None,
         title: str = "",
+        by_cpu: bool = False,
     ) -> None:
         self.roots = [tape] if isinstance(tape, Frame) else list(tape.roots)
         self.tape = tape if isinstance(tape, Tape) else None
         self.max_depth = max_depth
+        self.by_cpu = by_cpu
         self.title = title or "Function graph tape"
 
     # -- what gets drawn --------------------------------------------------------------------
@@ -88,24 +95,32 @@ class SyscallTape(Widget):
             )
             return card(self.title, self.subtitle, body, fallback=self.text())
 
-        blocks = []
-        guessed = False
-        for placed in self.spans():
-            guessed = guessed or any(not span.to_scale for span in placed)
-            blocks.append(self._one_tape(placed))
+        guessed = any(not span.to_scale for placed in self.spans() for span in placed)
+        if self.by_cpu:
+            body = "".join(cpu_lane(one) for one in self.lanes())
+        else:
+            body = "".join(self._one_tape(placed) for placed in self.spans())
         return card(
             self.title,
             self.subtitle,
-            "".join(blocks),
+            body,
             self._footnote(guessed),
             fallback=self.text(),
         )
+
+    def lanes(self):
+        """The same trace split into one lane per CPU, which is what `by_cpu` draws."""
+        if self.tape is None:
+            return lanes(Tape(roots=self.roots), max_depth=self.max_depth)
+        return lanes(self.tape, max_depth=self.max_depth)
 
     def _one_tape(self, placed: list[Span]) -> str:
         root = placed[0].frame
         rows = max(span.frame.depth - root.depth for span in placed) + 1
         height = rows * (ROW_HEIGHT + ROW_GAP)
-        boxes = "".join(self._box(span, root.depth) for span in placed)
+        boxes = "".join(
+            trace_cell(TraceCell.of(span, root.depth), hover=self._title(span)) for span in placed
+        )
         return tag(
             "div",
             boxes,
@@ -115,42 +130,6 @@ class SyscallTape(Widget):
                 margin_bottom="14px",
                 background=BAND,
                 border_radius="3px",
-            ),
-        )
-
-    def _box(self, span: Span, base_depth: int) -> str:
-        frame = span.frame
-        row = frame.depth - base_depth
-        colour = MARKERS.get(frame.marker or "", MARKERS[""])
-        border = "#ffffff" if span.to_scale else "#b04040"
-        label = tag(
-            "span",
-            text(_shorten(frame.name)),
-            style_=style(
-                font_family=MONO,
-                font_size="11px",
-                line_height=f"{ROW_HEIGHT}px",
-                padding_left="4px",
-            ),
-        )
-        return tag(
-            "div",
-            label,
-            title=self._title(span),
-            style_=style(
-                position="absolute",
-                left=f"{span.left:.4f}%",
-                width=f"{span.width:.4f}%",
-                top=f"{row * (ROW_HEIGHT + ROW_GAP)}px",
-                height=f"{ROW_HEIGHT}px",
-                min_width="2px",
-                box_sizing="border-box",
-                background=colour,
-                border=f"1px solid {border}",
-                border_radius="2px",
-                overflow="hidden",
-                white_space="nowrap",
-                color=INK,
             ),
         )
 
@@ -184,14 +163,16 @@ class SyscallTape(Widget):
                 " The boxes with a red outline were placed by counting rather than by timing, "
                 "because something in that branch has no duration."
             )
+        if self.by_cpu:
+            note += (
+                " One strip per CPU. The trace file interleaves them into a single stream, so the "
+                "indentation in the raw text can be two call stacks at once."
+            )
         return note
 
     def text(self) -> str:
         if not self.roots:
             return "no frames"
+        if self.by_cpu:
+            return "\n".join(one.alt() for one in self.lanes())
         return "\n\n".join(root.tree(self.max_depth) for root in self.roots)
-
-
-def _shorten(name: str, limit: int = 34) -> str:
-    """Kernel function names get long, and a box is only so wide."""
-    return name if len(name) <= limit else name[: limit - 3] + "..."

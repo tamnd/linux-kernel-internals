@@ -26,7 +26,7 @@ linux-kernel-internals/
 │   └── rootfs/              #   a pinned busybox and a thirty line init
 ├── kxdiff/                  # comparing two traces: policy.py says what, levels.py says how strictly
 ├── kxshapes/                # the nine shapes, as data, drawn by both renderers below
-├── kxwidgets/               # SyscallTape, StructMap, OpsExplorer, PredictionGate
+├── kxwidgets/               # shapes.py draws the nine, the rest compose them into widgets
 ├── kxmanim/                 # storyboards, the budget, the manim adapter
 │   └── storyboards/         #   one toml per animation, checked in CI
 ├── kxdraw/                  # diagrams as code, out to svg and excalidraw
@@ -48,6 +48,8 @@ The line that matters is the tier boundary. `kxray`, `kxwidgets` and the JavaScr
 `kxray` also has to run in Google Colab, which every lesson notebook opens in, so it is installable from the repository with pip and imports without a build step. `kxray.tracefs` is the one module that touches a live machine, and it reads and writes files under `/sys/kernel/tracing` rather than calling anything, which is why it stays in the pure Python half.
 
 That is also why the analysis toolkit is pure Python with no C extensions. It costs some speed and it rules out drgn, which is the tool you would reach for first on a real machine. The trade is worth it, because a reader with no local toolchain can still do the work.
+
+`kxwidgets/shapes.py` is one HTML renderer per shape and it decides nothing. Colours come from `kxray/vocabulary.py`, geometry comes from `kxshapes`, and what is left is tags and inline styling. Everything else in the package composes those fragments into a widget with a title, a footnote and a text fallback. `RENDERS` is the set of shapes that have a renderer, and a test asserts it is all nine, which is the promise that no lesson ever has to be written around a shape that only exists in one medium.
 
 `kxwidgets/` renders the models and never parses anything. It draws plain HTML with the styling written inline, and it ships no JavaScript at all. That is a decision rather than a shortcut. A lesson exists in four places at once: a notebook on somebody's laptop, the same notebook in Colab, the committed output on GitHub, and a page on the published site. A live widget works in the first two and is a blank space in the other two, and most readers read rather than run. The cost is that nothing responds to a click except a fold, so anything interactive is a Python call in the next cell instead.
 
