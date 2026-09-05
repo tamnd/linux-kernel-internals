@@ -55,6 +55,11 @@ print("kxray", kxray.__version__, "ready")""",
     note="Setup. Has to be the first code cell, because everything below imports from it.",
 )
 
+lesson.code(
+    """kxray.banner()""",
+    note="Which kernel, which backend, which runtime. Before any evidence, every time.",
+)
+
 lesson.block("hook")
 lesson.md("""Write one byte to a file on your disk. Write one byte to a pipe. Write one byte to `/dev/null`. Three destinations that have nothing in common: a spinning disk with a journal, a small buffer in memory with a reader waiting on the other end, and a driver whose whole job is to throw the byte away.
 

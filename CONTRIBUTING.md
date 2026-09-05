@@ -39,6 +39,20 @@ The house style above applies to the markdown cells, because `lintprose` reads t
 
 Every lesson has to run in Google Colab from the badge at the top with nothing installed. That means the first code cell installs the toolkit, no cell reads a file by a relative path, and any cell that needs a live kernel says what to do when there is not one. `lessons/README.md` has the details.
 
+## The notebook contract
+
+Seven rules, checked by `just notebook-contract` and printed by `just notebook-rules`.
+
+1. The banner comes first. The cell after the setup cell is `kxray.banner()`, and nothing runs before it, so a reader always knows which kernel the lesson is about and whether anything below came off a running machine.
+2. Nothing a browser cannot finish. No sleeping, no waiting for typing, no installing outside the setup cell, and every `subprocess.run` gets a `timeout`. A cell that hangs looks the same as a cell that is broken.
+3. Every code cell has a one line caption. Pass `note=` in the builder. It becomes the caption under the cell on the site, so a cell with no note is a cell that shows up on the site unexplained.
+4. No printing what a widget draws. If a parser returns something one of the four widgets renders, hand it to the widget. Printing a field off it is fine.
+5. Twenty code cells at most. Markdown does not count, because markdown is not the work. Z02 sits exactly at twenty, so this bites.
+6. Evidence comes through the box or a corpus helper. Use `colab.corpus_text` and friends rather than opening a path under `corpora/`, because a reader in Colab has no checkout and the path resolves to nothing.
+7. Nothing is written outside `colab.scratch(slug)`. A lesson that leaves files in somebody's working tree has been rude to them.
+
+The checker reads the committed `.ipynb` and never runs it, so it cannot time a cell. Rule 2 is enforced as the constructs that break the ten second budget rather than as the budget itself. That is a real gap and worth knowing about when you write a cell that is slow for some other reason.
+
 ## Claims and evidence
 
 Nothing goes in a lesson that the reader cannot watch happen. That is the whole point of the project, and it is the rule most likely to be broken by accident when you are in a hurry.

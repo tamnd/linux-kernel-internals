@@ -97,6 +97,13 @@ jobs:
       - name: Coverage ledger
         run: python3 -m tools.coverage
 
+      # The seven rules a lesson notebook keeps: the banner first, nothing a browser cannot
+      # finish, a caption on every cell, a widget where one exists, twenty code cells at most,
+      # evidence through the box or the corpus, and no writing outside the scratch directory.
+      # It reads the committed notebooks and never runs one, so it belongs here with the prose.
+      - name: Notebook contract
+        run: python3 -m tools.lintnb
+
       # The blueprint shape, the seal on every generated section, and a run of the generator to
       # check that what is committed is still what it produces. The second one is what catches an
       # edit that was resealed afterwards, which the seal on its own cannot.

@@ -106,6 +106,25 @@ def corpus_text(relative: str, *, quiet: bool = False) -> str:
     return corpus_file(relative, quiet=quiet).read_text(encoding="utf-8")
 
 
+def scratch(slug: str) -> Path:
+    """A directory a lesson may write into, made if it is not there.
+
+        path = colab.scratch("C09") / "abba.c"
+
+    A cell that writes to a bare relative path writes wherever the reader happened to start
+    Jupyter, which in a checkout is usually the repository. A lesson that leaves a C file and a
+    Makefile in somebody's working tree has done something rude, and a reader who then runs
+    `git status` gets a confusing answer to a question they asked about something else.
+
+    So writes go here, under the system temporary directory, one directory per lesson. It survives
+    a kernel restart, it is the same path every time so the reader can find what they built, and
+    the operating system clears it eventually without anybody having to remember to.
+    """
+    target = CACHE.parent / f"kxray-scratch-{slug}"
+    target.mkdir(parents=True, exist_ok=True)
+    return target
+
+
 def lesson_module(slug: str, name: str) -> ModuleType:
     """Import a Python file from a lesson directory, by lesson and stem.
 

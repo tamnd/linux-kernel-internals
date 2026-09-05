@@ -35,6 +35,10 @@ grader = colab.lesson_module("Z02", "grader")
 print("kxray", kxray.__version__, "ready")
 ```
 
+```python
+kxray.banner()
+```
+
 <!-- block: hook -->
 
 Open a file, write one byte, close it. Three lines of C. On the way through, the kernel makes something like a hundred function calls, takes and drops several locks, walks a page cache, and decides whether anything needs to hit a disk.

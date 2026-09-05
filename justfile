@@ -5,7 +5,7 @@ default:
     @just --list
 
 # Everything CI runs, in the same order. Run this before you open a pull request.
-check: lint prose diagrams-check claims baseline coverage refs blueprints kconfig tier0 web storyboards notebooks site-check test
+check: lint prose diagrams-check claims baseline coverage refs blueprints kconfig tier0 web storyboards notebooks notebook-contract site-check test
 
 # Install the development dependencies into a local virtual environment.
 setup:
@@ -192,6 +192,14 @@ build-lessons:
 # Fail if a committed notebook or lesson.md is out of date with its builder.
 notebooks:
     python3 -m tools.nbbuild --check
+
+# Check every lesson notebook against the seven rules. Give it a slug to check one lesson.
+notebook-contract lesson="":
+    python3 -m tools.lintnb {{lesson}}
+
+# Print the seven rules a notebook keeps, and what each one is for.
+notebook-rules:
+    python3 -m tools.lintnb --rules
 
 # Rebuild every diagram from its Python source.
 diagrams:
