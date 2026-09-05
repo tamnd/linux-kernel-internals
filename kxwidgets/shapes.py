@@ -342,18 +342,24 @@ def ops_plug(shape: OpsPlug) -> str:
 # -- 6. trace cell and 7. CPU lane ----------------------------------------------------------------
 
 
-def trace_cell(shape: TraceCell, *, hover: str = "") -> str:
+def trace_cell(shape: TraceCell, *, hover: str = "", marked: str = "", faded: bool = False) -> str:
     """One call, as wide as it took, at the depth it was called from.
 
     `left` and `width` are percentages and they come out of `kxshapes`, which got them out of
     `kxray.layout`. Nothing in this file decides where a box goes, which is why an animated tape
     and a drawn tape put the wide box in the same place.
+
+    A cell already spends its fill on the duration marker and its border on whether the width is a
+    measurement, so the two things a comparison needs to add get channels of their own rather than
+    a third meaning stacked onto one of those. `marked` draws a ring around the box in the colour
+    it is given, and puts a dot in front of the name so the ring is not the only way to see it.
+    `faded` dims the whole box, for a frame that is drawn but was not part of the comparison.
     """
     colour = MARKERS.get(shape.marker, MARKERS[""])
     border = "#ffffff" if shape.to_scale else "#b04040"
     label = tag(
         "span",
-        text(_shorten(shape.name)),
+        text(("• " if marked else "") + _shorten(shape.name)),
         style_=style(
             font_family=MONO,
             font_size="11px",
@@ -376,6 +382,8 @@ def trace_cell(shape: TraceCell, *, hover: str = "") -> str:
             background=colour,
             border=f"1px solid {border}",
             border_radius="2px",
+            outline=f"2px solid {marked}" if marked else None,
+            opacity="0.35" if faded else None,
             overflow="hidden",
             white_space="nowrap",
             color=INK,

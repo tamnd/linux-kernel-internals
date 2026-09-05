@@ -11,12 +11,12 @@ so the parsers had something to work against, both are marked `evidence = false`
 cite either. The preview is for checking that a box is the right width, not for learning anything
 about a kernel.
 
-The two lock timelines are the exception, and they have to be. A handwritten trace cannot show
-contention, because contention is a fact about a machine rather than about a format, and writing a
-plausible ten millisecond wait by hand would be inventing the one number the widget exists to show.
-So those two are drawn from real captures in `corpora/traces/`, one from each tier, and the pair is
-the point: the same widget on the same kind of trace says something different depending on whether
-the clock behind it was real.
+The lock timelines and the tape diffs are the exception, and they have to be. A handwritten trace
+cannot show contention, because contention is a fact about a machine rather than about a format,
+and writing a plausible ten millisecond wait by hand would be inventing the one number the widget
+exists to show. A comparison needs two traces that differ in something worth comparing, and writing
+both halves by hand would mean deciding the answer first. So those four are drawn from real
+captures in `corpora/traces/`, and the pairs are the point in both cases.
 """
 
 from __future__ import annotations
@@ -37,6 +37,7 @@ from kxwidgets import (
     PredictionGate,
     StructMap,
     SyscallTape,
+    TapeDiff,
 )
 from kxwidgets.html import page
 
@@ -47,6 +48,7 @@ BLOB = ROOT / "corpora" / "btf" / "handwritten" / "tiny.btf"
 # The two real captures, and they are here for the one widget that cannot be shown on a fixture.
 CONTENDED = ROOT / "corpora" / "traces" / "tier1" / "contended-lock.txt"
 EMULATED = ROOT / "corpora" / "traces" / "tier0" / "write-1byte.txt"
+TWO_WRITES = ROOT / "corpora" / "traces" / "tier0" / "two-writes.txt"
 
 
 def _parse(path: Path):
@@ -119,11 +121,30 @@ def gallery() -> str:
         title="The same widget on a Tier 0 capture, where the clock is not real",
     )
 
+    both = _parse(TWO_WRITES)
+    compared = TapeDiff(
+        _parse(EMULATED),
+        both,
+        labels=("one write", "two writes"),
+        max_depth=3,
+        title="What a second write to a pipe adds to the trace",
+    )
+    side_by_side = TapeDiff(
+        both.roots[1],
+        both.roots[2],
+        labels=("to a file", "to a pipe"),
+        max_depth=2,
+        shared_scale=True,
+        title="One write syscall and another, out of the same trace, on one scale",
+    )
+
     widgets = [
         descent,
         ContextKey(),
         locks,
         emulated,
+        compared,
+        side_by_side,
         SyscallTape(tape, max_depth=4, title="write-1byte, handwritten fixture"),
         SyscallTape(tape, max_depth=4, by_cpu=True, title="the same trace, one lane per cpu"),
         graph,
