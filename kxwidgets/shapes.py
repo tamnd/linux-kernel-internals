@@ -39,6 +39,7 @@ from kxshapes import (
     PointerThread,
     TraceCell,
 )
+from kxshapes.scene import Lane
 from kxwidgets.html import (
     BAND,
     INK,
@@ -418,6 +419,36 @@ def cpu_lane(shape: CpuLane, *, labelled: bool = True) -> str:
         style_=style(font_family=MONO, font_size="11px", color=MUTED, margin_bottom="2px"),
     )
     return tag("div", name + strip, title=shape.alt(), style_=style(margin_bottom="10px"))
+
+
+def scene_lane(lane: Lane, *, labelled: bool = True) -> str:
+    """One band of a `kxshapes.scene.Scene`, which is the same strip with the words attached.
+
+    A `CpuLane` carries cells and nothing else, so `cpu_lane` above can only ever hover a box with
+    what the box itself knows. A scene lane carries a `detail` per step, worked out once in
+    `kxshapes.scene` and shared with the blueprint table and the animation transcript, so the
+    hover text a reader gets here is the same sentence those two print.
+    """
+    height = max(lane.rows, 1) * (ROW_HEIGHT + ROW_GAP)
+    cells = "".join(trace_cell(one.shape, hover=one.detail) for one in lane.steps)
+    strip = tag(
+        "div",
+        cells,
+        style_=style(
+            position="relative",
+            height=f"{height}px",
+            background=BAND,
+            border_radius="3px",
+        ),
+    )
+    if not labelled:
+        return tag("div", strip, style_=style(margin_bottom="10px"))
+    name = tag(
+        "div",
+        text(lane.label),
+        style_=style(font_family=MONO, font_size="11px", color=MUTED, margin_bottom="2px"),
+    )
+    return tag("div", name + strip, title=lane.alt(), style_=style(margin_bottom="10px"))
 
 
 def _shorten(name: str, limit: int = 34) -> str:

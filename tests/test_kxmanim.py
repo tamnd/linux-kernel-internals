@@ -285,6 +285,44 @@ def test_every_storyboard_names_inputs_that_are_really_there():
             assert (ROOT / name).exists(), name
 
 
+def test_the_shows_field_is_checked_against_the_trace_and_not_only_against_the_nine():
+    """`shows` used to be words in a file with nothing behind them, and now it is not.
+
+    A beat can say `cpu-lane` and be one of the nine and still be claiming something the capture
+    it names cannot hold up, because Tier 0 is a uniprocessor emulator. The check compares the two
+    trace shapes against a scene built from the input, so pointing the multi CPU animation at a
+    single CPU capture is caught before anybody renders it and counts the lanes.
+    """
+    from kxray.trace import parse_file
+    from kxshapes.scene import scene_of
+
+    board = next(one for one in load_all(STORYBOARDS) if one.id == "cpu-interleave")
+    assert "cpu-lane" in board.uses()
+
+    real = scene_of(parse_file(ROOT / board.inputs[0]), by_cpu=True)
+    assert board.against(real) == []
+
+    tier0 = scene_of(parse_file(ROOT / "corpora/traces/tier0/two-writes.txt"), by_cpu=True)
+    problems = board.against(tier0)
+    assert len(problems) == 1
+    assert "a beat shows cpu-lane" in problems[0]
+
+
+def test_a_storyboard_drawing_trace_shapes_out_of_something_else_is_left_alone():
+    """`lock-cycle` draws CPU lanes out of a lockdep report on a machine with one processor.
+
+    That mismatch is the subject of the beat rather than a mistake in it, so the check runs off
+    the input the storyboard names and a report is not a tape. A rule that went by the primitive
+    alone would fire on the one animation where the point is that the kernel drew two CPUs that
+    were not there, and a rule that has to be argued with is a rule somebody switches off.
+    """
+    from kxmanim.__main__ import _against_its_trace
+
+    board = next(one for one in load_all(STORYBOARDS) if one.id == "lock-cycle")
+    assert "cpu-lane" in board.uses()
+    assert _against_its_trace(board) == []
+
+
 def test_no_storyboard_claims_evidence_it_does_not_have():
     """Same rule as the corpus and the citations, and it used to be simpler than this.
 

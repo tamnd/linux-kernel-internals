@@ -229,12 +229,16 @@ def test_a_lane_is_labelled_with_its_cpu(captured):
 
 
 def test_the_tape_widget_draws_the_cells_kxshapes_produced(captured):
-    """Same rewiring as the ops plug. There is one implementation of a trace cell now."""
+    """Same rewiring as the ops plug. There is one implementation of a trace cell now.
+
+    The hover text has to be passed in as well, because the widget stopped writing its own. It
+    comes off the step, which is where the blueprint and the animation get the same sentence.
+    """
     widget = SyscallTape(captured, by_cpu=True)
     drawn = widget.html()
     for lane in widget.lanes():
-        for cell in lane.cells:
-            assert trace_cell(cell) in drawn
+        for step in lane.steps:
+            assert trace_cell(step.shape, hover=step.detail) in drawn
 
 
 def test_asking_for_lanes_works_on_a_bare_frame_too(captured):

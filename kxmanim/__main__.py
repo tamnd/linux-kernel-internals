@@ -13,6 +13,7 @@ What it looks at:
     whether the idea is a sentence rather than a label
     whether every beat has a caption and alt text, and whether the alt text says anything more
     whether every shape a beat asks for is one of the nine
+    whether the trace it names can actually hold up the trace shapes it claims to draw
     whether the still exists on disk, because no animation is load-bearing
     whether anything in it can actually be rendered yet
     whether the captions and the alt text pass the same house style rules the lessons pass
@@ -40,12 +41,35 @@ def faults(board: Storyboard) -> list[str]:
     for one in board.inputs:
         if not (ROOT / one).exists():
             out.append(f"the input {one} is not there")
+    out.extend(_against_its_trace(board))
     # The captions and the alt text are prose a reader sees, so they get the same rules the
     # lessons get. The transcript is the convenient thing to check because it is every caption
     # and every piece of alt text in one document, generated from the same beats.
     for finding in check_text(board.transcript(), path=board.source):
         out.append(f"house style, {finding.rule}: {finding.message}")
     return out
+
+
+def _against_its_trace(board: Storyboard) -> list[str]:
+    """Check the trace shapes a storyboard claims against the capture it names.
+
+    A storyboard that names no function_graph capture is left alone. `lock-cycle` draws its trace
+    cells and its CPU lanes out of a lockdep report, and a report is not a tape, so there is
+    nothing here to check it against and pretending otherwise would be a rule that fires on the one
+    animation where the mismatch is the subject.
+    """
+    from kxray.trace import parse_file
+    from kxshapes.scene import scene_of
+
+    for one in board.inputs:
+        path = ROOT / one
+        if not path.exists():
+            continue
+        tape = parse_file(path)
+        if not tape.roots:
+            continue
+        return board.against(scene_of(tape, by_cpu="cpu-lane" in board.uses()))
+    return []
 
 
 def report(boards: list[Storyboard]) -> int:

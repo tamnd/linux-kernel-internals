@@ -26,7 +26,7 @@ files, which is where a symbol with no prompt turns out to be on because somethi
 going through a macro. `citations` is the anchor and the context hash that `tools/refcheck` uses, so
 that a citation whose text still matches but whose surroundings have been rewritten gets noticed.
 
-The models live in the modules rather than in `kxray/models.py`, which is the opposite of what
+The models live in the modules rather than in `kxray/models/`, which is the opposite of what
 `kxray.proc` does. The difference is real: the `/proc` readers hand their results to widgets, to the
 baseline and to each other, so those types are shared and belong in the shared file. A syscall table
 row is only ever a syscall table row, the same way a BTF header is only ever a BTF header, and
