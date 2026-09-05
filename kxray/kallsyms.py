@@ -25,6 +25,8 @@ import platform
 from dataclasses import dataclass
 from pathlib import Path
 
+from kxray.models import READ, SKIPPED, UNPARSED, Lines
+
 PATH = Path("/proc/kallsyms")
 
 # What an ops table instance is called. Not a rule the kernel enforces, just what forty years of
@@ -71,6 +73,23 @@ class Symbol:
         return ""
 
 
+def _read_one(line: str) -> Symbol | None:
+    """One line, or None when it is not a symbol.
+
+    This is a separate function so that `parse` and `account` cannot disagree about what a symbol
+    line is. Two copies of that rule is two answers to the same question.
+    """
+    parts = line.split()
+    if len(parts) < 3 or len(parts[1]) != 1:
+        return None
+    try:
+        address = int(parts[0], 16)
+    except ValueError:
+        return None
+    module = parts[3].strip("[]") if len(parts) > 3 else ""
+    return Symbol(address, parts[1], parts[2], module)
+
+
 def parse(text: str) -> list[Symbol]:
     """Every line that is a symbol, and nothing else.
 
@@ -78,18 +97,23 @@ def parse(text: str) -> list[Symbol]:
     not fit is skipped rather than raising, because this file is read on machines nobody writing
     this has seen and a parser that dies on line four hundred thousand helps nobody.
     """
-    found: list[Symbol] = []
+    found = (_read_one(line) for line in text.splitlines())
+    return [one for one in found if one is not None]
+
+
+def account(text: str) -> Lines:
+    """How every line was treated, for `tools/baseline`.
+
+    Every line of this file is meant to be a symbol, so there is nothing to skip except blank
+    lines. Anything else that does not parse is drift and gets counted as such.
+    """
+    lines = Lines()
     for line in text.splitlines():
-        parts = line.split()
-        if len(parts) < 3 or len(parts[1]) != 1:
-            continue
-        try:
-            address = int(parts[0], 16)
-        except ValueError:
-            continue
-        module = parts[3].strip("[]") if len(parts) > 3 else ""
-        found.append(Symbol(address, parts[1], parts[2], module))
-    return found
+        if not line.strip():
+            lines.count(SKIPPED)
+        else:
+            lines.count(READ if _read_one(line) is not None else UNPARSED)
+    return lines
 
 
 def find(path: Path = PATH) -> Path | None:

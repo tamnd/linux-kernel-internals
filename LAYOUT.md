@@ -37,7 +37,7 @@ linux-kernel-internals/
 ├── conformance/             # graders, KUnit and kselftest drivers
 ├── site/                    # the published book: head.yml, docs/, and the staged copies
 ├── containers/              # the Tier 1 image, devcontainer, CI image
-├── tools/                   # lintprose, claimledger, refcheck, bpc, kconfig, nbbuild, sitebuild
+├── tools/                   # lintprose, claimledger, baseline, refcheck, bpc, kconfig, nbbuild, sitebuild
 └── justfile
 ```
 
@@ -72,6 +72,10 @@ Keeping the two halves apart is worth the extra file. The code started inside `k
 `kxbox/kernel/` is the version and the config, and nothing else. `pin.toml` says which kernel, from which URL, with which checksum, and lists the profiles we build. The `config/` fragments say what each profile turns on. `build.sh` downloads, verifies and builds one profile in a container, and `tools/kconfig` checks the whole lot without a toolchain, so a wrong pin fails CI in seconds instead of an hour into a build.
 
 `tools/bpc.py` and `tools/bpcgen.py` are split for one reason. `bpc` is the checker and it runs on every push, so it has to load in a fraction of a second and must not need a BTF reader or a trace parser to answer a question about the shape of a document. `bpcgen` is the generator, and it does need those, so it imports them lazily inside the functions that use them. `bpc` imports `bpcgen` and not the other way round.
+
+`tools/baseline.py` and `corpora/BASELINE.toml` are one number written down and one tool that checks it did not move. Every parser here is built to survive a line it does not understand, which is right, and which is also what lets a lesson go quietly wrong. So every line of every committed artefact is put in one of three buckets, `read`, `skipped` or `unparsed`, and the three have to add up to the length of the file. The bucket that matters is not the last one. A rise in `unparsed` is loud and the tests already catch it. The failure this exists for is a line sliding from `read` to `skipped`, which is what a regular expression that stopped matching looks like from outside: nothing raises, nothing is logged, and the only evidence is a number that used to be different. The routing table at the top says which reader opens which artefact, and an artefact nothing claims is an error rather than an omission, because a committed file nobody has ever opened is its own kind of lie.
+
+The three counting functions in `kxray` are each built on the same `_read_one` the parser uses, and that is deliberate. A second implementation of "what does a data line look like" would drift from the first, and then the baseline would be measuring the wrong parser.
 
 `tools/claimledger.py` is the only checker that reads two files and compares them to each other. Every lesson says which kernel, architecture, profile and tier its claims are about, and every artefact in `corpora/` says which machine it came off. Until the ledger compared the two, a lesson pinned to 7.2.2 on i386 could cite a capture off 6.8 on aarch64 and nothing anywhere would say a word. The rule is not that the two have to match, because some of those citations are correct and unavoidable: v86 is a uniprocessor with no clock, so anything about a second CPU or about how long something takes has to be measured somewhere else. The rule is that evidence which does not match has to say why, in the claim, in `why_not_pinned`, in a sentence long enough to be one. A reason that has gone stale is caught the same way, because a claim explaining a difference that is no longer there is a wrong explanation, and a reader believes those.
 

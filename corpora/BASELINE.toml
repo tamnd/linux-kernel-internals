@@ -1,0 +1,160 @@
+# How much of every committed artefact the parsers understand, written down so that a change to
+# any of it is a build failure rather than something a reader finds.
+#
+# `read` turned into something, `skipped` was never data, `unparsed` was meant to be data and was
+# not understood. The three add up to `lines` for every reader that accounts for lines. `found` is
+# what the reader got: frames from a trace, symbols from kallsyms, counters from a stats file,
+# complete splats from an oops, types from a BTF blob.
+#
+# Regenerate with `python3 -m tools.baseline --write`, and say in the commit message why a number
+# moved. A number moving on its own is the failure this file exists to catch.
+
+schema = 1
+
+[totals]
+artefacts = 17
+lines = 1736
+read = 1408
+skipped = 159
+unparsed = 0
+
+[[artefact]]
+path = "corpora/btf/handwritten/tiny.btf"
+reader = "btf"
+lines = 0
+found = 39
+
+[[artefact]]
+path = "corpora/experiments/tier1/tracer-cost.txt"
+reader = "none"
+lines = 22
+found = 0
+
+[[artefact]]
+path = "corpora/oops/handwritten/lockdep-ab-ba.txt"
+reader = "lockdep-splat"
+lines = 65
+found = 1
+
+[[artefact]]
+path = "corpora/oops/tier0/lockdep-ab-ba.txt"
+reader = "lockdep-splat"
+lines = 82
+found = 1
+
+[[artefact]]
+path = "corpora/proc/handwritten/kallsyms.txt"
+reader = "kallsyms"
+lines = 24
+found = 24
+read = 24
+skipped = 0
+unparsed = 0
+
+[[artefact]]
+path = "corpora/proc/handwritten/lockdep.txt"
+reader = "lockdep-classes"
+lines = 9
+found = 8
+read = 8
+skipped = 1
+unparsed = 0
+
+[[artefact]]
+path = "corpora/proc/handwritten/lockdep_stats.txt"
+reader = "lockdep-stats"
+lines = 35
+found = 34
+read = 34
+skipped = 1
+unparsed = 0
+
+[[artefact]]
+path = "corpora/proc/tier0/lockdep-stats-after.txt"
+reader = "lockdep-stats"
+lines = 52
+found = 51
+read = 51
+skipped = 1
+unparsed = 0
+
+[[artefact]]
+path = "corpora/proc/tier0/lockdep-stats-before.txt"
+reader = "lockdep-stats"
+lines = 52
+found = 51
+read = 51
+skipped = 1
+unparsed = 0
+
+[[artefact]]
+path = "corpora/proc/tier0/ring-overrun.txt"
+reader = "tracefs-stats"
+lines = 8
+found = 6
+read = 6
+skipped = 2
+unparsed = 0
+
+[[artefact]]
+path = "corpora/traces/handwritten/page-fault.txt"
+reader = "function_graph"
+lines = 29
+found = 13
+read = 23
+skipped = 6
+unparsed = 0
+
+[[artefact]]
+path = "corpora/traces/handwritten/write-1byte.txt"
+reader = "function_graph"
+lines = 31
+found = 17
+read = 27
+skipped = 4
+unparsed = 0
+
+[[artefact]]
+path = "corpora/traces/tier0/page-fault.txt"
+reader = "function_graph"
+lines = 63
+found = 41
+read = 59
+skipped = 4
+unparsed = 0
+
+[[artefact]]
+path = "corpora/traces/tier0/two-writes.txt"
+reader = "function_graph"
+lines = 107
+found = 69
+read = 103
+skipped = 4
+unparsed = 0
+
+[[artefact]]
+path = "corpora/traces/tier0/write-1byte.txt"
+reader = "function_graph"
+lines = 89
+found = 57
+read = 85
+skipped = 4
+unparsed = 0
+
+[[artefact]]
+path = "corpora/traces/tier1/contended-lock.txt"
+reader = "function_graph"
+lines = 763
+found = 405
+read = 645
+skipped = 118
+unparsed = 0
+
+[[artefact]]
+path = "corpora/traces/tier1/multi-cpu-write.txt"
+reader = "function_graph"
+lines = 305
+found = 214
+read = 292
+skipped = 13
+unparsed = 0

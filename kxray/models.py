@@ -143,6 +143,44 @@ class UnparsedLine:
 
 Event = Comment | InterruptEntry | InterruptExit | TaskSwitch
 
+# What a parser did with one line. Every line of every committed artefact gets exactly one of
+# these, which is the point: a line the parser quietly walked past is the one that goes wrong.
+READ = "read"
+SKIPPED = "skipped"
+UNPARSED = "unparsed"
+
+
+@dataclass
+class Lines:
+    """How every line of a file was accounted for.
+
+    `read` turned into something. `skipped` was never data, so a blank line, a separator or a
+    header the kernel prints above the rows. `unparsed` was meant to be data and was not
+    understood.
+
+    The reason all three are counted rather than just the last one is that the interesting drift
+    moves a line between the first two. A parser that starts treating a data line as a header does
+    not report a failure and does not raise, it just returns fewer rows, and the only way to see
+    that from outside is to have written down how many lines were in each bucket beforehand.
+
+    `total` has to equal the number of lines in the file. `tools/baseline` checks that, and a
+    reader that cannot make the three numbers add up is a reader that is guessing.
+    """
+
+    read: int = 0
+    skipped: int = 0
+    unparsed: int = 0
+
+    @property
+    def total(self) -> int:
+        return self.read + self.skipped + self.unparsed
+
+    def count(self, verdict: str) -> None:
+        setattr(self, verdict, getattr(self, verdict) + 1)
+
+    def __str__(self) -> str:
+        return f"{self.read} read, {self.skipped} skipped, {self.unparsed} unparsed"
+
 
 @dataclass
 class Tape:
@@ -153,6 +191,7 @@ class Tape:
     roots: list[Frame] = field(default_factory=list)
     events: list[Event] = field(default_factory=list)
     unparsed: list[UnparsedLine] = field(default_factory=list)
+    lines: Lines = field(default_factory=Lines)
 
     def walk(self) -> Iterator[Frame]:
         for root in self.roots:

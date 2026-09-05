@@ -33,6 +33,9 @@ import re
 from pathlib import Path
 
 from kxray.models import (
+    READ,
+    SKIPPED,
+    UNPARSED,
     Comment,
     Frame,
     InterruptEntry,
@@ -82,7 +85,7 @@ def parse(text: str, source: str = "<text>") -> Tape:
     stacks: dict[int, list[Frame]] = {}
 
     for number, raw in enumerate(text.splitlines(), start=1):
-        _read_line(tape, stacks, number, raw)
+        tape.lines.count(_read_line(tape, stacks, number, raw))
 
     # Whatever is still open ran off the end of the buffer. Say so rather than hiding it.
     for stack in stacks.values():
@@ -97,23 +100,24 @@ def parse_file(path: Path | str) -> Tape:
     return parse(p.read_text(encoding="utf-8"), source=str(p))
 
 
-def _read_line(tape: Tape, stacks: dict[int, list[Frame]], number: int, raw: str) -> None:
+def _read_line(tape: Tape, stacks: dict[int, list[Frame]], number: int, raw: str) -> str:
+    """What this line was: READ, SKIPPED or UNPARSED. Exactly one of the three, every time."""
     line = raw.rstrip("\n")
     stripped = line.strip()
 
     if not stripped or SEPARATOR_RE.match(line):
-        return
+        return SKIPPED
 
     if stripped.startswith("#"):
         tracer = TRACER_RE.match(stripped)
         if tracer:
             tape.tracer = tracer.group("name")
-        return
+        return SKIPPED
 
     head = CPU_RE.match(line)
     if not head:
         tape.unparsed.append(UnparsedLine(number, line, "no CPU column"))
-        return
+        return UNPARSED
 
     cpu = int(head.group("cpu"))
     rest = head.group("rest")
@@ -123,25 +127,25 @@ def _read_line(tape: Tape, stacks: dict[int, list[Frame]], number: int, raw: str
         tape.events.append(
             TaskSwitch(cpu, number, switch.group("previous"), switch.group("following"))
         )
-        return
+        return READ
 
     if "|" not in rest:
         tape.unparsed.append(UnparsedLine(number, line, "no duration column"))
-        return
+        return UNPARSED
 
     task, duration_field, body = _split_columns(rest)
 
     marker_event = _interrupt_marker(duration_field, cpu, number)
     if marker_event is not None:
         tape.events.append(marker_event)
-        return
+        return READ
 
     duration_us, marker, bad_duration = _parse_duration(duration_field)
     if bad_duration:
         tape.unparsed.append(UnparsedLine(number, line, f"duration {duration_field.strip()!r}"))
-        return
+        return UNPARSED
 
-    _read_body(tape, stacks, cpu, number, line, body, task, duration_us, marker)
+    return _read_body(tape, stacks, cpu, number, line, body, task, duration_us, marker)
 
 
 def _split_columns(rest: str) -> tuple[str | None, str, str]:
@@ -186,10 +190,10 @@ def _read_body(
     task: str | None,
     duration_us: float | None,
     marker: str | None,
-) -> None:
+) -> str:
     content = body.strip()
     if not content:
-        return
+        return SKIPPED
 
     stack = stacks.setdefault(cpu, [])
     # ftrace indents by two spaces per level, after two spaces of its own.
@@ -199,13 +203,13 @@ def _read_body(
     comment = COMMENT_RE.match(content)
     if comment:
         tape.events.append(Comment(cpu, number, comment.group("text")))
-        return
+        return READ
 
     close = CLOSE_RE.match(content)
     if close:
         if not stack:
             tape.unparsed.append(UnparsedLine(number, line, "closing brace with no matching call"))
-            return
+            return UNPARSED
         frame = stack.pop()
         frame.duration_us = duration_us
         frame.marker = marker
@@ -220,7 +224,8 @@ def _read_body(
                     number, line, f"closing brace names {named!r}, open frame is {frame.name!r}"
                 )
             )
-        return
+            return UNPARSED
+        return READ
 
     open_call = OPEN_RE.match(content)
     if open_call:
@@ -234,7 +239,7 @@ def _read_body(
         )
         _attach(tape, stack, frame)
         stack.append(frame)
-        return
+        return READ
 
     leaf = LEAF_RE.match(content)
     if leaf:
@@ -249,9 +254,10 @@ def _read_body(
             module=leaf.group("module"),
         )
         _attach(tape, stack, frame)
-        return
+        return READ
 
     tape.unparsed.append(UnparsedLine(number, line, "unrecognised body"))
+    return UNPARSED
 
 
 def _attach(tape: Tape, stack: list[Frame], frame: Frame) -> None:
