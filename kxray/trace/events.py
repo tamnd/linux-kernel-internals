@@ -11,8 +11,8 @@ An event line is the shared six column header, then the event's name, then whate
 
            sleep-38      [000] d..2.     3.049350: sched_switch: prev_comm=sh prev_pid=38 ...
 
-Reading the key and value pairs out of that is the small half and is not the job. The job is knowing what
-the keys mean, and the kernel publishes exactly that, per event, at
+Reading the key and value pairs out of that is the small half and is not the job. The job is
+knowing what the keys mean, and the kernel publishes exactly that, per event, at
 `/sys/kernel/tracing/events/<group>/<event>/format`. So a format is loaded, the line is read
 through it, and three things come out that a plain split cannot give you.
 
