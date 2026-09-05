@@ -1,0 +1,268 @@
+# Which parts of the Linux kernel this project covers, and how well.
+#
+# The kernel is around forty million lines and `drivers/` is roughly two thirds of that, so no book
+# covers it. Every book about the kernel is a book about a chosen slice, and the only real question
+# is whether the author says which slice up front or lets the reader work it out over six months.
+# This file is that declaration, and `python3 -m tools.coverage` holds it to it.
+#
+# Every top-level directory of the kernel tree has an entry here, and so does every subsystem
+# inside the ones in scope. `paths` are prefixes, and the longest matching one owns a file, which
+# is how `mm/page-writeback.c` can belong to writeback while the rest of `mm/` belongs to memory
+# management.
+#
+# `lessons` and `blueprints` are every document that cites into the subsystem, which is not the
+# same as every document about it. The page-fault blueprint is about memory management and cites
+# one tracepoint definition, so it appears under tracing as well. The list answers "who reaches in
+# here", because that is the question you want answered when a file moves.
+#
+# The four statuses:
+#
+#   taught         a lesson and at least one blueprint marked complete
+#   partial        something written, and no complete blueprint yet
+#   mentioned      pointed at, with a pointer outward, and no blueprint owed
+#   out-of-scope   declared, with a reason, and nothing may cite into it
+#
+# Nothing is `taught` today. Both blueprints are `partial`, so the most any subsystem can honestly
+# claim is `partial`, and this says that rather than rounding up.
+#
+# The rule that makes this file worth having: a lesson citing a file in a subsystem with no entry
+# fails the build. That is what stops scope growing one citation at a time, which is how a project
+# like this dies. Nobody ever decides to cover the network stack. Somebody cites `net/core/dev.c`
+# in a lesson about something else, and a year later there are eleven half taught subsystems and no
+# finished ones.
+
+schema = 1
+
+# ---------------------------------------------------------------------------
+# In scope, and being worked on
+# ---------------------------------------------------------------------------
+
+[[subsystem]]
+name = "vfs"
+status = "partial"
+paths = [
+    "fs/file.c",
+    "fs/file_table.c",
+    "fs/inode.c",
+    "fs/namei.c",
+    "fs/open.c",
+    "fs/read_write.c",
+    "include/linux/fs.h",
+]
+lessons = ["S05"]
+blueprints = ["write-path"]
+note = "The layer every file lesson starts at. S05 walks open and write down to the call that leaves it."
+
+[[subsystem]]
+name = "mm"
+status = "partial"
+paths = [
+    "mm/",
+    "include/linux/mm.h",
+    "include/linux/mm_types.h",
+]
+lessons = []
+blueprints = ["page-fault", "write-path"]
+note = "Page faults, the page cache and the OOM killer. Two partial blueprints and no lesson yet."
+
+[[subsystem]]
+name = "writeback"
+status = "partial"
+paths = [
+    "mm/page-writeback.c",
+    "fs/fs-writeback.c",
+    "include/trace/events/writeback.h",
+]
+lessons = []
+blueprints = ["write-path"]
+note = "Where a dirty page turns into disk traffic, and where a writing task gets throttled."
+
+[[subsystem]]
+name = "locking"
+status = "partial"
+paths = [
+    "kernel/locking/",
+    "Documentation/locking/",
+    "include/linux/mutex.h",
+    "include/linux/spinlock.h",
+]
+lessons = ["C09"]
+blueprints = []
+note = "Lockdep is the way in, because it is the part of locking a reader can watch working."
+
+[[subsystem]]
+name = "tracing"
+status = "partial"
+paths = [
+    "kernel/trace/",
+    "Documentation/trace/",
+    "include/trace/",
+]
+lessons = ["Z02"]
+blueprints = ["page-fault"]
+note = "The instrument the rest of the book is read through, so it is taught first and in full."
+
+[[subsystem]]
+name = "procfs"
+status = "partial"
+paths = [
+    "fs/proc/",
+    "Documentation/filesystems/proc.rst",
+]
+lessons = []
+blueprints = ["page-fault", "write-path"]
+note = "Every counter a lesson reads comes out of here, so the format is evidence and gets cited."
+
+[[subsystem]]
+name = "arch-x86"
+status = "partial"
+paths = ["arch/x86/"]
+lessons = []
+blueprints = ["page-fault"]
+note = "The pinned build is 32-bit x86, so this is the only architecture any lesson may assume."
+
+# ---------------------------------------------------------------------------
+# Pointed at, and not taught here
+# ---------------------------------------------------------------------------
+
+[[subsystem]]
+name = "kernel-core"
+status = "mentioned"
+paths = ["kernel/"]
+note = "Scheduling, RCU, workqueues, timers, cgroups. Real subsystems that will get their own entries when a lesson reaches them, and not before."
+
+[[subsystem]]
+name = "filesystems"
+status = "mentioned"
+paths = ["fs/"]
+note = "The filesystem implementations under the VFS. ext4 and btrfs each deserve a book, and this is not it."
+
+[[subsystem]]
+name = "headers"
+status = "mentioned"
+paths = ["include/"]
+note = "The headers not already owned by a subsystem above. Read constantly, taught as part of whatever they describe."
+
+[[subsystem]]
+name = "architectures"
+status = "mentioned"
+paths = ["arch/"]
+note = "Every architecture except x86. Named when a lesson says a thing is architecture specific, never assumed."
+
+[[subsystem]]
+name = "drivers"
+status = "mentioned"
+paths = ["drivers/"]
+note = "About two thirds of the tree. The driver model is worth a lesson one day, the drivers themselves never are."
+
+[[subsystem]]
+name = "networking"
+status = "mentioned"
+paths = ["net/"]
+note = "The network stack is a book of its own. Pointed at from the write path when a page goes to a socket."
+
+[[subsystem]]
+name = "block"
+status = "mentioned"
+paths = ["block/"]
+note = "Where writeback hands off. The boundary is taught, what happens past it is pointed at."
+
+[[subsystem]]
+name = "io-uring"
+status = "mentioned"
+paths = ["io_uring/"]
+note = "The other way into the same VFS calls S05 teaches, so it is named there as a pointer outward."
+
+[[subsystem]]
+name = "ipc"
+status = "mentioned"
+paths = ["ipc/"]
+note = "System V message queues, semaphores and shared memory. Old, small, and not on the path to anything taught here."
+
+[[subsystem]]
+name = "security"
+status = "mentioned"
+paths = ["security/"]
+note = "The LSM hook in the write path shows up in every trace, so it is named and its machinery is not opened."
+
+[[subsystem]]
+name = "crypto"
+status = "mentioned"
+paths = ["crypto/"]
+note = "Reached through the filesystem and network layers, and never on its own."
+
+[[subsystem]]
+name = "sound"
+status = "mentioned"
+paths = ["sound/"]
+note = "A large subsystem with its own rules about latency, and nothing a lesson here needs."
+
+[[subsystem]]
+name = "virt"
+status = "mentioned"
+paths = ["virt/"]
+note = "KVM. Tier 0 runs inside an emulator, so this gets named when the difference between the two matters."
+
+[[subsystem]]
+name = "init"
+status = "mentioned"
+paths = ["init/"]
+note = "Where the first thread starts. A boot lesson will reach it, and no lesson does today."
+
+[[subsystem]]
+name = "lib"
+status = "mentioned"
+paths = ["lib/"]
+note = "The kernel's own data structures and helpers. Read when a lesson lands in one, not taught as a unit."
+
+[[subsystem]]
+name = "documentation"
+status = "mentioned"
+paths = ["Documentation/"]
+note = "The kernel's own documentation, cited as evidence where it is authoritative and quoted rather than taught."
+
+[[subsystem]]
+name = "build"
+status = "mentioned"
+paths = ["scripts/"]
+note = "Kconfig and Kbuild. The pinned config is explained in kxbox, the build system itself is not opened."
+
+[[subsystem]]
+name = "kernel-tools"
+status = "mentioned"
+paths = ["tools/"]
+note = "perf and the formal memory model live here. The memory model matters to the concurrency lessons and is read from outside."
+
+[[subsystem]]
+name = "rust"
+status = "mentioned"
+paths = ["rust/"]
+note = "The Rust abstractions over the C interfaces. Worth watching and not stable enough to pin a lesson to."
+
+# ---------------------------------------------------------------------------
+# Out of scope, on purpose
+# ---------------------------------------------------------------------------
+
+[[subsystem]]
+name = "certs"
+status = "out-of-scope"
+paths = ["certs/"]
+reason = "Module signing keys and certificates. Build plumbing with no runtime behaviour a reader can watch, which is the test everything in this book has to pass."
+
+[[subsystem]]
+name = "licenses"
+status = "out-of-scope"
+paths = ["LICENSES/"]
+reason = "The licence texts themselves. Important to the project and not something anybody learns the kernel by reading."
+
+[[subsystem]]
+name = "samples"
+status = "out-of-scope"
+paths = ["samples/"]
+reason = "Example code shipped with the tree. This project writes its own examples so it can pin what they do, and reading somebody else's would cost that."
+
+[[subsystem]]
+name = "usr"
+status = "out-of-scope"
+paths = ["usr/"]
+reason = "The initramfs packing step. Two makefiles and a cpio archive, which the kxbox rootfs recipe covers from the outside where it is easier to follow."

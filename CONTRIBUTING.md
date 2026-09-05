@@ -81,6 +81,16 @@ The bucket to watch is not the last one. A rise in `unparsed` is loud and the te
 
 If you change a parser or add an artefact, run `just baseline-write` and say in the commit message why a number moved. A number moving on its own is the failure the file exists to catch. Adding an artefact that no reader claims is an error rather than an omission, so add it to the routing table in `tools/baseline.py` at the same time.
 
+## What this project covers
+
+The kernel is around forty million lines, and `drivers/` alone is roughly two thirds of it. Nothing covers all of that, so this project covers a slice and says which one in `coverage.toml`. Every top-level directory of the kernel tree has an entry there, and so does every subsystem inside the ones in scope. Run `just coverage-show` to read it, and `just coverage-cited` to see every kernel path this project cites and which subsystem owns it.
+
+If you cite a file in a subsystem with no entry, CI fails. That is the point of the file. Nobody ever sits down and decides to start covering the network stack. Somebody cites `net/core/dev.c` in a lesson about something else, and a year later there are eleven half taught subsystems and no finished ones.
+
+The ledger is checked in both directions, so an entry has to name every document that cites into it, and every document it names has to cite into it. Widening what a lesson touches means editing `coverage.toml` in the same pull request, which is how the widening gets seen by a reviewer instead of arriving as a citation nobody looked at.
+
+The four statuses have to be earned. `taught` needs a lesson and at least one blueprint marked complete. `partial` needs something written. `mentioned` is for a subsystem you point at on the way past, and it may not name a blueprint. `out-of-scope` needs a reason in a sentence, and nothing may cite into it. Nothing is `taught` yet, because no blueprint is complete yet.
+
 ## Writing a blueprint
 
 A blueprint is `blueprints/<name>.md`, copied from `TEMPLATE.md`, and it specifies one mechanism well enough that somebody could implement it without reading the lesson. It never says to see the lesson, and `bpc` fails the build on the phrases people reach for when they are about to break that rule.
