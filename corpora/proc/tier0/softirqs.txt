@@ -1,0 +1,11 @@
+                    CPU0       
+          HI:          0
+       TIMER:         26
+      NET_TX:          0
+      NET_RX:          0
+       BLOCK:          0
+    IRQ_POLL:          0
+     TASKLET:          1
+       SCHED:          0
+     HRTIMER:          0
+         RCU:        246

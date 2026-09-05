@@ -1,0 +1,42 @@
+source = "tier0"
+evidence = true
+
+describes = "the whole address space of one process, which was cat reading this file"
+path = "/proc/self/maps"
+stability = "undocumented"
+
+kernel = "7.2.2"
+arch = "i386"
+profile = "A-full"
+uniprocessor = true
+preempt = true
+captured = "2026-09-05"
+tier = 0
+
+command = "cat /proc/self/maps"
+setup = []
+
+# Seven lines and four things in them.
+#
+# /bin/busybox appears twice, once r-xp and once rw-p, because a program's text and its data are
+# one file mapped two ways with different permissions. That is not a quirk of busybox, it is what
+# every dynamically linked program on every Linux machine looks like.
+#
+# Line three has no name. That is anonymous memory, and it is what a first write has to go and find
+# a page for, which is the whole subject of blueprints/page-fault.md.
+#
+# Line three also ends in a space. The kernel pads every line out to a fixed column before printing
+# the path, and when there is no path the padding is still there, so the line has five whitespace
+# separated fields and every other line has six. Code that reaches for field six works until it
+# meets this line. Do not let an editor strip the trailing whitespace from this file.
+#
+# The two gaps between the mappings are most of the address space. 0814c000 to b7f8f000 is about
+# 2.7 GiB of nothing, and a fault anywhere in it is a segmentation fault.
+timings_are_real = false
+
+unparsed_lines = 0
+regions = 7
+anonymous_regions = 1
+named_regions = ["[vvar]", "[vvar_vclock]", "[vdso]", "[stack]"]
+gaps = 2
+total_bytes = 1298432

@@ -1,0 +1,34 @@
+source = "tier0"
+evidence = true
+
+describes = "the whole of memory as the kernel accounts for it, on a box given 100 MiB"
+path = "/proc/meminfo"
+stability = "undocumented"
+
+kernel = "7.2.2"
+arch = "i386"
+profile = "A-full"
+uniprocessor = true
+preempt = true
+captured = "2026-09-05"
+tier = 0
+
+command = "cat /proc/meminfo"
+setup = []
+
+# Two things this file is here to show.
+#
+# The unit says kB and means KiB. MemTotal is 102308 kB on a machine given 100 MiB, and 102308
+# times 1024 is a shade under 100 MiB while 102308 times 1000 is nowhere near it. The kernel has
+# spelled it that way since the beginning and every tool on the machine agrees, so kxray keeps the
+# kernel's spelling and does the multiplication by 1024.
+#
+# The key list is per config. There is no HugePages_Total here and there is a GPUActive, and a
+# machine with transparent huge pages configured differently prints a different set again. Nothing
+# in kxray.proc requires a key to be present.
+timings_are_real = false
+
+unparsed_lines = 0
+keys = 47
+mem_total_kb = 102308
+mem_total_bytes = 104763392

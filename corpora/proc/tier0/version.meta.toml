@@ -1,0 +1,30 @@
+source = "tier0"
+evidence = true
+
+describes = "the kernel's own banner, which is the first thing worth reading on a machine you have not seen before"
+path = "/proc/version"
+stability = "undocumented"
+
+kernel = "7.2.2"
+arch = "i386"
+profile = "A-full"
+uniprocessor = true
+preempt = true
+captured = "2026-09-05"
+tier = 0
+
+command = "cat /proc/version"
+setup = []
+
+# One line. The release and the build number are worth pulling out and the middle is not: it holds
+# the user and host that built the kernel, then the whole compiler and linker banner, with brackets
+# inside brackets. Nothing promises its shape.
+#
+# `PREEMPT` in the trailing part is what pin.toml asked for, so this file is also the cheapest
+# confirmation that the running kernel is the one the profile describes.
+timings_are_real = false
+
+unparsed_lines = 0
+release = "7.2.2"
+parts = [7, 2, 2]
+build = "#1"

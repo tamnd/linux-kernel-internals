@@ -1,0 +1,49 @@
+source = "tier0"
+evidence = true
+
+describes = "the same file for a process whose command name has a closing bracket and two spaces in it"
+path = "/proc/self/stat"
+stability = "undocumented"
+
+kernel = "7.2.2"
+arch = "i386"
+profile = "A-full"
+uniprocessor = true
+preempt = true
+captured = "2026-09-05"
+tier = 0
+
+# Why a shell script rather than a renamed binary. busybox dispatches on its own argv[0] and
+# refuses to run under a name that is not one of its applets, so a copy of /bin/sleep called
+# `od) d ma` exits immediately with "applet not found". A script gets its comm from the script's
+# own filename, so the name sticks and the process stays alive long enough to be read.
+command = "cat /proc/$!/stat"
+setup = [
+    "printf '#!/bin/sh\\nsleep 30\\n' > '/tmp/od) d ma'",
+    "chmod +x '/tmp/od) d ma'",
+    "'/tmp/od) d ma' &",
+    "sleep 1",
+]
+
+# This is the file the trap lives in, on a real kernel, with the line the kernel actually printed:
+#
+#   37 (od) d ma) R 1 0 0 0 -1 4194304 37 0 ...
+#
+# The kernel does not escape the command name. `line.split()` gives 37, (od), d, ma), R, and every
+# field after the name has slid two places along. The state, field three, comes back as `d`, which
+# is not a state any process is ever in. Nothing raises and the numbers are all still numbers.
+#
+# The correct parse is the one procps has used for decades: first opening bracket, last closing
+# bracket, and the fields are what is left. kxray.proc.pidstat does that, and keeps what the naive
+# split would have said in `naive` so a lesson can print the two answers next to each other.
+timings_are_real = false
+
+unparsed_lines = 0
+pid = 37
+comm = "od) d ma"
+state = "R"
+naive_state = "d"
+naive_fields = 54
+fields = 50
+extra_fields = 0
+trapped_by_naive_split = true

@@ -12,10 +12,10 @@
 schema = 1
 
 [totals]
-artefacts = 24
-lines = 1856
-read = 1480
-skipped = 207
+artefacts = 32
+lines = 1982
+read = 1604
+skipped = 209
 unparsed = 0
 
 [[artefact]]
@@ -106,6 +106,15 @@ skipped = 1
 unparsed = 0
 
 [[artefact]]
+path = "corpora/proc/tier0/interrupts.txt"
+reader = "proc-percpu"
+lines = 8
+found = 7
+read = 7
+skipped = 1
+unparsed = 0
+
+[[artefact]]
 path = "corpora/proc/tier0/lockdep-stats-after.txt"
 reader = "lockdep-stats"
 lines = 52
@@ -124,12 +133,75 @@ skipped = 1
 unparsed = 0
 
 [[artefact]]
+path = "corpora/proc/tier0/meminfo.txt"
+reader = "proc-keyed"
+lines = 47
+found = 47
+read = 47
+skipped = 0
+unparsed = 0
+
+[[artefact]]
+path = "corpora/proc/tier0/odd-comm-stat.txt"
+reader = "proc-pidstat"
+lines = 1
+found = 50
+read = 1
+skipped = 0
+unparsed = 0
+
+[[artefact]]
 path = "corpora/proc/tier0/ring-overrun.txt"
 reader = "tracefs-stats"
 lines = 8
 found = 6
 read = 6
 skipped = 2
+unparsed = 0
+
+[[artefact]]
+path = "corpora/proc/tier0/self-maps.txt"
+reader = "proc-maps"
+lines = 7
+found = 7
+read = 7
+skipped = 0
+unparsed = 0
+
+[[artefact]]
+path = "corpora/proc/tier0/self-stat.txt"
+reader = "proc-pidstat"
+lines = 1
+found = 50
+read = 1
+skipped = 0
+unparsed = 0
+
+[[artefact]]
+path = "corpora/proc/tier0/self-status.txt"
+reader = "proc-keyed"
+lines = 50
+found = 50
+read = 50
+skipped = 0
+unparsed = 0
+
+[[artefact]]
+path = "corpora/proc/tier0/softirqs.txt"
+reader = "proc-percpu"
+lines = 11
+found = 10
+read = 10
+skipped = 1
+unparsed = 0
+
+[[artefact]]
+path = "corpora/proc/tier0/version.txt"
+reader = "proc-version"
+lines = 1
+found = 3
+read = 1
+skipped = 0
 unparsed = 0
 
 [[artefact]]

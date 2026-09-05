@@ -1,0 +1,37 @@
+source = "tier0"
+evidence = true
+
+describes = "the same process as self-stat.txt, printed for a person to read instead of a program"
+path = "/proc/self/status"
+stability = "undocumented"
+
+kernel = "7.2.2"
+arch = "i386"
+profile = "A-full"
+uniprocessor = true
+preempt = true
+captured = "2026-09-05"
+tier = 0
+
+command = "cat /proc/self/status"
+setup = []
+
+# Fifty keys, separated by tabs rather than by the spaces meminfo uses, and three of them break the
+# idea that a value is a number.
+#
+# Uid has four values on one line: real, effective, saved and filesystem. State has a letter and
+# then the same state spelled out in brackets. Groups is empty, and the kernel still prints the key
+# and the separator.
+#
+# So kxray.proc.keyed keeps a tuple of words and offers a number only when there is exactly one
+# word and it is one. A model with value: int on it would have to throw two of those three away.
+#
+# The key list is per config and per version. untag_mask, THP_enabled and the two Speculation lines
+# are all here because of how this kernel was built, and another machine will differ.
+timings_are_real = false
+
+unparsed_lines = 0
+keys = 50
+uid_values = 4
+state_values = 2
+empty_keys = ["Groups"]
