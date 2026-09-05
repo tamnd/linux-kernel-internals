@@ -22,7 +22,7 @@ unparsed = 0
 path = "corpora/btf/handwritten/tiny.btf"
 reader = "btf"
 lines = 0
-found = 39
+found = 44
 
 [[artefact]]
 path = "corpora/experiments/tier1/tracer-cost.txt"

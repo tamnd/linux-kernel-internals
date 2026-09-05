@@ -6,12 +6,13 @@ format = "BTF"
 version = 1
 endianness = "little"
 pointer_size = 8
-describes = "made up demo_ types, one of every kind in the format, three holes in them on purpose, and an ops table of function pointers"
+describes = "made up demo_ types, one of every kind in the format, three holes in them on purpose, an ops table of function pointers, and four pointers of which three are annotated"
 built_by = "corpora/btf/handwritten/make.py"
 
 # What the reader has to get right, and what CI compares against.
-types = 39
-struct_count = 5
+types = 44
+struct_count = 6
 demo_task_size = 64
 demo_task_padding = 6
 demo_arg_padding = 4
+tagged_types = 3

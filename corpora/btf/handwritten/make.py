@@ -89,6 +89,20 @@ def build() -> bytes:
         ],
     )
 
+    # Four pointers, three of them annotated, all four the same size and the same shape in memory.
+    # That is the whole lesson about annotations: they change no offset and no size, and the only
+    # thing that tells you which of these you may follow is the tag riding on the type.
+    b.struct(
+        "demo_annotated",
+        32,
+        [
+            ("buf", user_ptr, 0 * 8),
+            ("next", b.ptr(b.type_tag("rcu", demo_task)), 8 * 8),
+            ("hits", b.ptr(b.type_tag("percpu", u32)), 16 * 8),
+            ("owner", task_ptr, 24 * 8),
+        ],
+    )
+
     # A struct that holds another struct by value, so flattening has something to flatten.
     b.struct("demo_pair", 128, [("first", demo_task, 0), ("second", demo_task, 64 * 8)])
 
