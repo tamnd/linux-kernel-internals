@@ -37,7 +37,7 @@ linux-kernel-internals/
 ├── conformance/             # graders, KUnit and kselftest drivers
 ├── site/                    # the published book: head.yml, docs/, and the staged copies
 ├── containers/              # the Tier 1 image, devcontainer, CI image
-├── tools/                   # lintprose, claimledger, baseline, refcheck, bpc, kconfig, nbbuild, sitebuild
+├── tools/                   # lintprose, claimledger, baseline, coverage, refcheck, bpc, kconfig, nbbuild, sitebuild
 └── justfile
 ```
 
@@ -78,6 +78,10 @@ Keeping the two halves apart is worth the extra file. The code started inside `k
 The three counting functions in `kxray` are each built on the same `_read_one` the parser uses, and that is deliberate. A second implementation of "what does a data line look like" would drift from the first, and then the baseline would be measuring the wrong parser.
 
 `tools/claimledger.py` is the only checker that reads two files and compares them to each other. Every lesson says which kernel, architecture, profile and tier its claims are about, and every artefact in `corpora/` says which machine it came off. Until the ledger compared the two, a lesson pinned to 7.2.2 on i386 could cite a capture off 6.8 on aarch64 and nothing anywhere would say a word. The rule is not that the two have to match, because some of those citations are correct and unavoidable: v86 is a uniprocessor with no clock, so anything about a second CPU or about how long something takes has to be measured somewhere else. The rule is that evidence which does not match has to say why, in the claim, in `why_not_pinned`, in a sentence long enough to be one. A reason that has gone stale is caught the same way, because a claim explaining a difference that is no longer there is a wrong explanation, and a reader believes those.
+
+`tools/coverage.py` and `coverage.toml` say which parts of the kernel this project covers, and how well. The kernel is about forty million lines and `drivers/` is roughly two thirds of it, so every book about the kernel is a book about a chosen slice, and the only question is whether the author says which slice up front. Every top-level directory of the tree has an entry, and so does every subsystem inside the ones in scope. Paths are prefixes and the longest match owns a file, which is how `mm/page-writeback.c` belongs to writeback while the rest of `mm/` belongs to memory management. The rule the tool exists for is that a document citing a file no entry owns fails the build, and the reason for it is that nobody ever decides to cover the network stack. Somebody cites `net/core/dev.c` in a lesson about something else, and a year later there are eleven half taught subsystems and no finished ones.
+
+The ledger is checked in both directions, which matters more than it sounds. An entry naming a lesson that has stopped citing it is wrong, and a lesson citing a subsystem whose entry has never heard of it is wrong too, so widening coverage means editing the ledger and the widening shows up in the diff. The statuses have to be earned as well: `taught` needs a lesson and a blueprint marked complete, `partial` needs something written, `mentioned` owes no blueprint and may not name one, and `out-of-scope` needs a reason in a sentence and forbids any citation into it. Nothing is `taught` today, because both blueprints are `partial`, and the ledger says so rather than rounding up.
 
 `site/` is MkDocs, and it is mostly generated. `head.yml` and the three pages in `site/docs/` are written by hand. `mkdocs.yml` is `head.yml` with a navigation tree appended, worked out from the lessons and blueprints that are on disk, so a lesson cannot be added and left with no page and cannot be removed and leave a dead entry. `site/docs/stylesheets/vocabulary.css` comes out of `kxray/vocabulary.py`, so the site is painted from the same list the diagrams and the widgets read.
 

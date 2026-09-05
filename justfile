@@ -5,7 +5,7 @@ default:
     @just --list
 
 # Everything CI runs, in the same order. Run this before you open a pull request.
-check: lint prose diagrams-check claims baseline refs blueprints kconfig tier0 web storyboards notebooks site-check test
+check: lint prose diagrams-check claims baseline coverage refs blueprints kconfig tier0 web storyboards notebooks site-check test
 
 # Install the development dependencies into a local virtual environment.
 setup:
@@ -49,6 +49,18 @@ baseline-show:
 # Write down what the readers see now. Say in the commit message why a number moved.
 baseline-write:
     python3 -m tools.baseline --write
+
+# Check that every part of the kernel a document cites has an owner in coverage.toml.
+coverage:
+    python3 -m tools.coverage
+
+# Print the coverage ledger, grouped by status.
+coverage-show:
+    python3 -m tools.coverage --show
+
+# Print every kernel path this project cites, and which subsystem owns it.
+coverage-cited:
+    python3 -m tools.coverage --cited
 
 # Check every reference: paths we write about, and citations into the kernel.
 refs:

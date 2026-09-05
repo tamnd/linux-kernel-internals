@@ -91,6 +91,12 @@ jobs:
       - name: References
         run: python3 -m tools.refcheck
 
+      # Which parts of the kernel this project claims to cover, and how well. Fails when a lesson
+      # cites a file no subsystem in coverage.toml owns, or cites into a subsystem whose entry has
+      # never heard of it. That is what keeps scope from growing one citation at a time.
+      - name: Coverage ledger
+        run: python3 -m tools.coverage
+
       # The blueprint shape, the seal on every generated section, and a run of the generator to
       # check that what is committed is still what it produces. The second one is what catches an
       # edit that was resealed afterwards, which the seal on its own cannot.
