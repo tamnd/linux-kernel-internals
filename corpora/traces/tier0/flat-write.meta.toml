@@ -1,0 +1,53 @@
+source = "tier0"
+evidence = true
+
+describes = "one byte written to a file, recorded by the flat function tracer instead of function_graph, so every line carries the state of the machine at the moment of the call"
+tracer = "function"
+options = []
+
+kernel = "7.2.2"
+arch = "i386"
+profile = "A-full"
+uniprocessor = true
+preempt = true
+captured = "2026-09-05"
+tier = 0
+
+# How to take it again.
+command = "/bin/writebyte --quiet"
+setup = [
+    "echo 0 > /sys/kernel/tracing/tracing_on",
+    "echo nop > /sys/kernel/tracing/current_tracer",
+    "echo > /sys/kernel/tracing/trace",
+    "echo function > /sys/kernel/tracing/current_tracer",
+    "printf 'vfs_write\\nshmem_file_write_iter\\ngeneric_write_checks\\nfile_remove_privs\\ngeneric_perform_write\\nfile_update_time\\n' > /sys/kernel/tracing/set_ftrace_filter",
+]
+
+# Three things about this capture that are not obvious from reading it.
+#
+# It is filtered down to six functions and that is the whole point. The flat tracer records every
+# call the kernel makes, and one unfiltered second of a machine doing nothing is tens of thousands
+# of lines. `set_ftrace_filter` is how the tracer is made to answer a question rather than produce
+# a log, and the six names in it are the write path down to the copy, which is the same path
+# ../tier0/write-1byte.txt shows as a tree.
+#
+# The last line is a second `vfs_write` and it is not the byte being written twice. It is the
+# `echo 0 > tracing_on` that stopped the recording, which is itself a write and therefore lands in
+# the filter. The tracer records the act of switching itself off. Every trace taken this way has
+# that line at the end, and it is left in rather than trimmed, because a reader who does not know
+# it is there will spend a while wondering what wrote twice.
+#
+# The flags column is `.....` on every line, which is what makes this file useful next to
+# flat-interrupt.txt. Nothing here ran with interrupts off, nothing was in an interrupt handler,
+# and the preemption count was zero throughout, so `Flags.context` calls all seven lines `process`.
+# That is the ordinary case and it is worth seeing before the interesting one.
+#
+# The timestamps are emulated. v86 has no real clock, so the order is true and the gaps between
+# the numbers are not, and no claim rests on them.
+timings_are_real = false
+
+# What the parser has to get right, and what the tests compare against.
+unparsed_lines = 0
+calls = 7
+cpus = [0]
+contexts = { process = 7 }

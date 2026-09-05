@@ -6,7 +6,7 @@ What lives where, and why the split falls where it does. Directories appear here
 linux-kernel-internals/
 ├── kxray/                   # Python: trace, BTF, /proc and dump analysis
 │   ├── btf/                 #   BTF reader: types, fields, offsets, holes, type tags
-│   ├── trace/               #   ftrace function_graph and trace_event parsers
+│   ├── trace/               #   ftrace function_graph, function and trace_event parsers
 │   ├── proc/                #   /proc and /sys snapshot parsers
 │   ├── source/              #   kernel tree navigation, Kconfig, MAINTAINERS
 │   ├── models/              #   the shared model everything else renders
@@ -62,6 +62,12 @@ That is also why the analysis toolkit is pure Python with no C extensions. It co
 `kxray/btf/tags.py` is the annotations: `__user`, `__rcu`, `__percpu`, `__kptr` and `__iomem`. They are worth a file of their own because they are the one thing about a struct that a memory layout cannot show. An annotation changes no offset and no size, and the difference between a pointer the kernel may follow and one that will corrupt memory is invisible in the table. So each one carries what it promises and how you are supposed to reach the thing behind it, and `Btf.annotated("rcu", "task_struct")` answers which fields carry it.
 
 Three of the five ride along in BTF as a `type_tag` record. `__iomem` does not, because it is a sparse annotation the compiler drops, so asking for it is refused with the reason rather than answered with an empty list. The same refusal covers a second case that is easier to get wrong: a type tag reaches BTF only when the compiler that built the kernel emits one, so an image built by a toolchain that does not has no tags anywhere in it, and every question answers empty. That looks exactly like a kernel whose structs are not annotated. `Btf.tag_counts()` tells the two apart, and `annotated` refuses outright on a blob with no tags rather than letting somebody read a shrug as a no.
+
+`kxray/trace/common.py` is the six columns every ftrace format prints before it prints anything of its own: task, pid, CPU, flags, timestamp, and then the tracer's own business. It is a file rather than a function because three different formats share it and they should not each grow their own idea of what a task name can contain. The one thing in it worth knowing is that the pid is the anchor of the regular expression rather than the comm, because a comm can hold dashes and slashes and spaces, and `kworker/0:1-9` is one task called `kworker/0:1` with pid 9.
+
+`kxray/trace/function.py` reads the flat function tracer, which is `function` rather than `function_graph` in `current_tracer`. One line per call, no nesting, no duration, and one column function_graph does not print at all, which is the state of the machine at the moment of the call. So the two parsers answer different questions and the project keeps both. function_graph says what called what and how long it took. The flat tracer says what ran and under what rules, across every task, at a fraction of the cost.
+
+`Flags` in `kxray/models.py` is where that column is turned into one of the six contexts in `kxray/vocabulary.py`, and it is deliberately unable to answer one of them. A held spinlock raises the preemption count and so does a bare `preempt_disable()`, the column carries only the count, and nothing in it can tell the two apart, so both come back as `nopreempt` and `atomic` is never returned. That is the honest reading. A parser that guessed there would be right most of the time and wrong in exactly the cases somebody was debugging.
 
 `kxray/layout.py` is the arithmetic that turns a tree of frames into rectangles. It is in `kxray` for the same reason. A widget and an animation of the same trace call it and get the same answer, so the wide box is in the same place in both.
 

@@ -1,0 +1,19 @@
+# tracer: function
+#
+# entries-in-buffer/entries-written: 7/7   #P:1
+#
+#                                _-----=> irqs-off/BH-disabled
+#                               / _----=> need-resched
+#                              | / _---=> hardirq/softirq
+#                              || / _--=> preempt-depth
+#                              ||| / _-=> migrate-disable
+#                              |||| /     delay
+#           TASK-PID     CPU#  |||||  TIMESTAMP  FUNCTION
+#              | |         |   |||||     |         |
+       writebyte-37      [000] .....     7.153411: vfs_write <-ksys_write
+       writebyte-37      [000] .....     7.153440: shmem_file_write_iter <-vfs_write
+       writebyte-37      [000] .....     7.153455: generic_write_checks <-shmem_file_write_iter
+       writebyte-37      [000] .....     7.153471: file_remove_privs <-shmem_file_write_iter
+       writebyte-37      [000] .....     7.153500: file_update_time <-shmem_file_write_iter
+       writebyte-37      [000] .....     7.153521: generic_perform_write <-shmem_file_write_iter
+       writebyte-37      [000] .....     7.153632: vfs_write <-ksys_write

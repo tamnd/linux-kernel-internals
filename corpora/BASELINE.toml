@@ -12,10 +12,10 @@
 schema = 1
 
 [totals]
-artefacts = 17
-lines = 1736
-read = 1408
-skipped = 159
+artefacts = 19
+lines = 1775
+read = 1423
+skipped = 183
 unparsed = 0
 
 [[artefact]]
@@ -112,6 +112,24 @@ lines = 31
 found = 17
 read = 27
 skipped = 4
+unparsed = 0
+
+[[artefact]]
+path = "corpora/traces/tier0/flat-interrupt.txt"
+reader = "function"
+lines = 20
+found = 8
+read = 8
+skipped = 12
+unparsed = 0
+
+[[artefact]]
+path = "corpora/traces/tier0/flat-write.txt"
+reader = "function"
+lines = 19
+found = 7
+read = 7
+skipped = 12
 unparsed = 0
 
 [[artefact]]
