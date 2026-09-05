@@ -12,10 +12,10 @@
 schema = 1
 
 [totals]
-artefacts = 32
-lines = 1982
-read = 1604
-skipped = 209
+artefacts = 38
+lines = 5224
+read = 2779
+skipped = 454
 unparsed = 0
 
 [[artefact]]
@@ -115,6 +115,15 @@ skipped = 1
 unparsed = 0
 
 [[artefact]]
+path = "corpora/proc/tier0/kallsyms-write.txt"
+reader = "kallsyms"
+lines = 8
+found = 8
+read = 8
+skipped = 0
+unparsed = 0
+
+[[artefact]]
 path = "corpora/proc/tier0/lockdep-stats-after.txt"
 reader = "lockdep-stats"
 lines = 52
@@ -202,6 +211,48 @@ lines = 1
 found = 3
 read = 1
 skipped = 0
+unparsed = 0
+
+[[artefact]]
+path = "corpora/source/pinned/MAINTAINERS.excerpt"
+reader = "maintainers"
+lines = 296
+found = 13
+read = 216
+skipped = 80
+unparsed = 0
+
+[[artefact]]
+path = "corpora/source/pinned/arch/x86/entry/syscalls/syscall_32.tbl"
+reader = "syscall-table"
+lines = 479
+found = 461
+read = 461
+skipped = 18
+unparsed = 0
+
+[[artefact]]
+path = "corpora/source/pinned/arch/x86/entry/syscalls/syscall_64.tbl"
+reader = "syscall-table"
+lines = 443
+found = 421
+read = 421
+skipped = 22
+unparsed = 0
+
+[[artefact]]
+path = "corpora/source/pinned/fs/read_write.c"
+reader = "none"
+lines = 1822
+found = 0
+
+[[artefact]]
+path = "corpora/source/pinned/kernel/Kconfig.preempt"
+reader = "kconfig-source"
+lines = 194
+found = 15
+read = 69
+skipped = 125
 unparsed = 0
 
 [[artefact]]

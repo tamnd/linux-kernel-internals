@@ -18,6 +18,7 @@ anchor = "else if (file->f_op->write_iter)"
 kernel = "7.2.2"
 confirmed = true
 line = 686
+context = "3e1a311a08b2"
 note = "The dispatch itself, inside vfs_write. vfs_write does not know how to write to anything, it reads a pointer out of the file and calls whatever is there. The anchor carries the else and the branch, because the bare expression appears nine times in this file."
 
 [[references]]
@@ -27,6 +28,7 @@ anchor = "fops_get(inode->i_fop)"
 kernel = "7.2.2"
 confirmed = true
 line = 918
+context = "1b6b3d3cc6fb"
 note = "Where the pointer comes from. Opening a file copies the ops pointer out of the inode into the file, which is the moment the implementation gets chosen."
 
 [[references]]
@@ -36,4 +38,5 @@ anchor = "if (file->f_op->write)"
 kernel = "7.2.2"
 confirmed = true
 line = 684
+context = "17ee1d46e88e"
 note = "The check before the call. vfs_write tries the write slot, then the write_iter slot, and returns EINVAL when both are empty, which is what makes a missing operation an error rather than a jump through a null pointer. This used to cite the file_operations section of Documentation/filesystems/vfs.rst. That section lists the members and describes each one, but it never says which of them may be left out, so it did not hold up the claim that rests on it. Confirming the citation is what made that obvious."

@@ -50,6 +50,9 @@ from kxray.proc import maps as proc_maps
 from kxray.proc import percpu as proc_percpu
 from kxray.proc import pidstat as proc_pidstat
 from kxray.proc import version as proc_version
+from kxray.source import kconfig as source_kconfig
+from kxray.source import maintainers as source_maintainers
+from kxray.source import syscalls as source_syscalls
 from kxray.trace import events, formats, parse_file
 from kxray.trace import function as trace_function
 
@@ -69,6 +72,7 @@ ROUTES = (
     ("corpora/traces/*/*.txt", "function_graph"),
     ("corpora/events/*/*.format", "event-format"),
     ("corpora/proc/*/kallsyms.txt", "kallsyms"),
+    ("corpora/proc/*/kallsyms-*.txt", "kallsyms"),
     ("corpora/proc/*/lockdep.txt", "lockdep-classes"),
     ("corpora/proc/*/lockdep_stats.txt", "lockdep-stats"),
     ("corpora/proc/*/lockdep-stats-*.txt", "lockdep-stats"),
@@ -83,6 +87,13 @@ ROUTES = (
     ("corpora/proc/*/softirqs.txt", "proc-percpu"),
     ("corpora/proc/*/self-maps.txt", "proc-maps"),
     ("corpora/proc/*/*-stat.txt", "proc-pidstat"),
+    # Files out of the pinned tarball rather than off a running kernel. `read_write.c` has no
+    # reader here on purpose: kxray.source.symbols opens it with a name to look for, so there is no
+    # whole file count to take, and saying so is better than inventing one.
+    ("corpora/source/*/MAINTAINERS*", "maintainers"),
+    ("corpora/source/*/*.tbl", "syscall-table"),
+    ("corpora/source/*/Kconfig*", "kconfig-source"),
+    ("corpora/source/*/*.c", "none"),
     ("corpora/oops/*/*.txt", "lockdep-splat"),
     ("corpora/btf/*/*.btf", "btf"),
     ("corpora/experiments/*/*.txt", "none"),
@@ -179,6 +190,21 @@ def _proc_version(path: Path) -> tuple[int, Lines | None]:
     return len(found.parts), found.lines
 
 
+def _maintainers(path: Path) -> tuple[int, Lines | None]:
+    found = source_maintainers.parse(path.read_text(encoding="utf-8"), source=path.as_posix())
+    return len(found.sections), found.lines
+
+
+def _syscall_table(path: Path) -> tuple[int, Lines | None]:
+    found = source_syscalls.parse(path.read_text(encoding="utf-8"), source=path.as_posix())
+    return len(found.calls), found.lines
+
+
+def _kconfig_source(path: Path) -> tuple[int, Lines | None]:
+    found = source_kconfig.parse(path.read_text(encoding="utf-8"), source=path.as_posix())
+    return len(found.symbols), found.lines
+
+
 def _kallsyms(path: Path) -> tuple[int, Lines | None]:
     text = path.read_text(encoding="utf-8")
     return len(kallsyms.parse(text)), kallsyms.account(text)
@@ -229,6 +255,9 @@ READERS = {
     "proc-maps": _proc_maps,
     "proc-pidstat": _proc_pidstat,
     "proc-version": _proc_version,
+    "maintainers": _maintainers,
+    "syscall-table": _syscall_table,
+    "kconfig-source": _kconfig_source,
     "kallsyms": _kallsyms,
     "lockdep-classes": _lockdep_classes,
     "lockdep-stats": _lockdep_stats,

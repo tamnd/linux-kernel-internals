@@ -1,0 +1,26 @@
+source = "pinned"
+evidence = true
+
+describes = "every system call number the pinned 32 bit kernel answers to"
+path = "arch/x86/entry/syscalls/syscall_32.tbl"
+excerpt = false
+
+kernel = "7.2.2"
+arch = "i386"
+tarball_sha256 = "7d0e7ce14f98c43efe880cffbf354a59be45928fdf7170d7333c374ae91c0d83"
+taken = "2026-09-06"
+
+# Verbatim out of the tarball, because this is the table the pinned box actually uses and every
+# syscall number any lesson prints comes from here. The comparison against the 64 bit table beside
+# it is the point: write is 4 here and 1 there.
+#
+# Nineteen rows have a name and no entry point. Those numbers are reserved forever so that a very
+# old binary making a very old call gets ENOSYS rather than somebody else's system call.
+
+rows = 461
+abis = ["i386"]
+reserved_rows = 19
+holes = 11
+write_number = 4
+read_number = 3
+write_entry = "sys_write"

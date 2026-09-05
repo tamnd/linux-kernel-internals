@@ -1,0 +1,32 @@
+source = "pinned"
+evidence = true
+
+describes = "the file the write path goes through, and where three names for one call live"
+path = "fs/read_write.c"
+excerpt = false
+
+kernel = "7.2.2"
+tarball_sha256 = "7d0e7ce14f98c43efe880cffbf354a59be45928fdf7170d7333c374ae91c0d83"
+taken = "2026-09-06"
+
+# One real kernel source file, whole, so that symbol lookup and citation anchors have something to
+# resolve against in CI and in a notebook that has downloaded nothing. This one rather than another
+# because the write path blueprint already cites it and because it holds the gap between what a
+# symbol is called and what the source calls it.
+#
+# The string sys_write does not appear in this file. SYSCALL_DEFINE3(write, ...) does, and the
+# symbol the running kernel ends up with is __ia32_sys_write on this architecture. Three names.
+#
+# vfs_write is defined here and not exported, so a module cannot call it. rw_verify_area is
+# exported. __kernel_write is exported to exactly one named module. All three are worth seeing
+# together, because "it is in kallsyms" and "a module can call it" are different questions.
+
+lines = 1822
+syscall_definitions = 28
+export_lines = 24
+vfs_write_line = 667
+vfs_write_exported = false
+ksys_write_line = 728
+write_syscall_line = 747
+rw_verify_area_line = 453
+rw_verify_area_exported = true

@@ -1,0 +1,8 @@
+c12354b0 T handle_mm_fault
+c1276650 T vfs_read
+c1276ce0 T vfs_write
+c1277090 T ksys_read
+c1277160 T __ia32_sys_read
+c1277180 T ksys_write
+c1277250 T __ia32_sys_write
+c14b5900 D sys_call_table

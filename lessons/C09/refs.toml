@@ -18,6 +18,7 @@ anchor = "check_noncircular(struct held_lock *src, struct held_lock *target,"
 kernel = "7.2.2"
 confirmed = true
 line = 2149
+context = "0a3e6e13796a"
 note = "The search itself. Before a new edge is added the checker walks the graph looking for a path back, and a path back is a cycle."
 
 [[references]]
@@ -27,6 +28,7 @@ anchor = "The basic object the validator operates upon"
 kernel = "7.2.2"
 confirmed = true
 line = 11
+context = "ab9ac16b28dc"
 note = "The design document, and the place that says the checker's unit is the class rather than the instance. This is the paragraph to read before arguing with a report."
 
 [[references]]
@@ -36,4 +38,5 @@ anchor = "the existing dependency chain (in reverse order) is"
 kernel = "7.2.2"
 confirmed = true
 line = 1973
+context = "0614bdf2cff7"
 note = "Where the report is printed, which is also where the order of the numbered entries is decided. The printing is what makes #0 the lock being acquired."

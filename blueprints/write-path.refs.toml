@@ -34,6 +34,7 @@ anchor = "SYSCALL_DEFINE3(write, unsigned int, fd,"
 kernel = "7.2.2"
 confirmed = true
 line = 747
+context = "537170aed093"
 note = "The system call itself. Three arguments, and the return value is a count of bytes rather than a success flag, which is the fact that makes short writes possible and makes ignoring the return value a bug."
 
 [[references]]
@@ -43,6 +44,7 @@ anchor = "ssize_t ksys_write(unsigned int fd"
 kernel = "7.2.2"
 confirmed = true
 line = 728
+context = "9a573838c189"
 note = "The descriptor lookup and the file position handling, which is everything the system call does that is about the process rather than about the file."
 
 [[references]]
@@ -52,6 +54,7 @@ anchor = "ssize_t vfs_write(struct file *file, const char __user *buf"
 kernel = "7.2.2"
 confirmed = true
 line = 667
+context = "b52d46f97544"
 note = "The VFS entry point and the top of everything this blueprint describes. Four refusals, a dispatch and two counters, in about thirty lines."
 
 [[references]]
@@ -61,6 +64,7 @@ anchor = "int rw_verify_area(int read_write, struct file *file"
 kernel = "7.2.2"
 confirmed = true
 line = 453
+context = "062b4c7ed3f7"
 note = "The position and count checks, plus the two hooks that let something outside the filesystem refuse a write: the security modules and the file notification machinery."
 
 # There is no entry for the line that applies the cap, and that is worth explaining rather than
@@ -77,6 +81,7 @@ anchor = "#define MAX_RW_COUNT (INT_MAX & PAGE_MASK)"
 kernel = "7.2.2"
 confirmed = true
 line = 2424
+context = "4a34c6cbd112"
 note = "What that limit is. A little under two gigabytes on a 32-bit build, rounded down to a page, and it is the same number on 64-bit because the return type is signed and 32 bits wide in the ABI."
 
 [[references]]
@@ -86,6 +91,7 @@ anchor = "static ssize_t new_sync_write(struct file *filp"
 kernel = "7.2.2"
 confirmed = true
 line = 585
+context = "8fe3e9a33540"
 note = "The adapter that turns the old three argument interface into the iterator one. It builds a kiocb and an iov_iter on the stack, which is why neither of them is allocated anywhere in this path."
 
 [[references]]
@@ -95,6 +101,7 @@ anchor = "ret = filp->f_op->write_iter(&kiocb, &iter);"
 kernel = "7.2.2"
 confirmed = true
 line = 595
+context = "c7e77a2e5b18"
 note = "The call into the filesystem, and the line after it is a BUG_ON, because a synchronous write is not allowed to come back saying it will finish later."
 
 [[references]]
@@ -104,6 +111,7 @@ anchor = "static inline void file_start_write(struct file *file)"
 kernel = "7.2.2"
 confirmed = true
 line = 2729
+context = "f8f931d5a68e"
 note = "Taking the filesystem's freeze protection for the duration of the write. This is a lock, it is held across everything below, and it is the reason a frozen filesystem makes writers wait rather than fail."
 
 [[references]]
@@ -113,6 +121,7 @@ anchor = "static ssize_t shmem_file_write_iter(struct kiocb *iocb"
 kernel = "7.2.2"
 confirmed = true
 line = 3408
+context = "dd01c9306283"
 note = "The filesystem half of the path on the machine this project boots. Five calls, in an order that is nearly the same as the generic one, which is what makes it a fair thing to read as an example."
 
 [[references]]
@@ -122,6 +131,7 @@ anchor = "ssize_t generic_file_write_iter(struct kiocb *iocb"
 kernel = "7.2.2"
 confirmed = true
 line = 4498
+context = "160148f683b8"
 note = "The generic version most filesystems use. Take the inode lock, check, write, drop the lock, and then handle O_SYNC outside it."
 
 [[references]]
@@ -131,6 +141,7 @@ anchor = "ssize_t __generic_file_write_iter(struct kiocb *iocb"
 kernel = "7.2.2"
 confirmed = true
 line = 4451
+context = "e5845795c4e6"
 note = "The part inside the inode lock, and the split between direct and buffered writes. Direct writes are a different mechanism from this one and it is worth seeing where they leave."
 
 [[references]]
@@ -140,6 +151,7 @@ anchor = "ssize_t generic_write_checks(struct kiocb *iocb"
 kernel = "7.2.2"
 confirmed = true
 line = 1767
+context = "678b6447f4ae"
 note = "The checks every buffered write goes through, and the place the iterator gets truncated when the write has to be shortened rather than refused."
 
 [[references]]
@@ -149,6 +161,7 @@ anchor = "int generic_write_checks_count(struct kiocb *iocb"
 kernel = "7.2.2"
 confirmed = true
 line = 1737
+context = "d09f62040b76"
 note = "Refusing a write to a swap file, applying O_APPEND, and refusing a non blocking write that the filesystem cannot do without blocking."
 
 [[references]]
@@ -158,6 +171,7 @@ anchor = "iocb->ki_pos = i_size_read(inode);"
 kernel = "7.2.2"
 confirmed = true
 line = 1749
+context = "14b8ed69cd5d"
 note = "O_APPEND, in one line. The position is read here rather than by the caller, and it is read with the inode lock held, which is the whole reason appends from two processes do not overwrite each other."
 
 [[references]]
@@ -167,6 +181,7 @@ anchor = "int generic_write_check_limits(struct file *file"
 kernel = "7.2.2"
 confirmed = true
 line = 1710
+context = "897e7b8a8711"
 note = "The file size limits. Two of them, the filesystem's own maximum and the process resource limit, and going past the second one sends SIGXFSZ as well as returning an error."
 
 [[references]]
@@ -176,6 +191,7 @@ anchor = "int file_remove_privs(struct file *file)"
 kernel = "7.2.2"
 confirmed = true
 line = 2411
+context = "4a44c90c1ea5"
 note = "Dropping setuid and setgid because the file has been modified. It runs on every write to every file, and on the pinned machine it is the most expensive thing in the trace after the allocation."
 
 [[references]]
@@ -185,6 +201,7 @@ anchor = "int file_update_time(struct file *file)"
 kernel = "7.2.2"
 confirmed = true
 line = 2506
+context = "d447b07b7e1a"
 note = "The modification timestamp. It is skipped when the clock has not moved on since the last update, which makes its presence in a trace a fact about when somebody ran it."
 
 [[references]]
@@ -194,6 +211,7 @@ anchor = "ssize_t generic_perform_write(struct kiocb *iocb"
 kernel = "7.2.2"
 confirmed = true
 line = 4336
+context = "8a5fcbf7839b"
 note = "The loop that does the actual work, and the function this whole blueprint is arranged around. Everything above it is checking and everything below it is the filesystem."
 
 [[references]]
@@ -203,6 +221,7 @@ anchor = "size_t chunk = mapping_max_folio_size(mapping);"
 kernel = "7.2.2"
 confirmed = true
 line = 4342
+context = "98884df03f6e"
 note = "How much of the write the loop tries to do in one go. It is the largest folio this mapping supports rather than a page, which is why the loop can run once for a write far larger than a page."
 
 [[references]]
@@ -212,6 +231,7 @@ anchor = "status = a_ops->write_begin(iocb, mapping, pos, bytes,"
 kernel = "7.2.2"
 confirmed = true
 line = 4364
+context = "d87d749d2c77"
 note = "The first of the two calls into the filesystem. It comes back with a folio that is locked and belongs to the caller until write_end."
 
 [[references]]
@@ -221,6 +241,7 @@ anchor = "copied = copy_folio_from_iter_atomic(folio, offset, bytes, i);"
 kernel = "7.2.2"
 confirmed = true
 line = 4382
+context = "a1440b133b09"
 note = "The copy, and the one line in this path that is not allowed to sleep. The comment above it says why: a fault taken here can re-enter the filesystem that is holding the folio lock."
 
 [[references]]
@@ -230,6 +251,7 @@ anchor = "if (mapping_writably_mapped(mapping))"
 kernel = "7.2.2"
 confirmed = true
 line = 4373
+context = "597a4d662d5d"
 note = "The cache flush that only happens when the same file is also mapped into somebody's address space. On architectures with virtually indexed caches, skipping it would let a writer and a mapper see different bytes."
 
 [[references]]
@@ -239,6 +261,7 @@ anchor = "status = a_ops->write_end(iocb, mapping, pos, bytes, copied,"
 kernel = "7.2.2"
 confirmed = true
 line = 4385
+context = "ec5646c53958"
 note = "The second call into the filesystem, and the one that decides how much of the copy counted. Returning less than was copied makes the loop revert the iterator and try again."
 
 [[references]]
@@ -248,6 +271,7 @@ anchor = "if (fatal_signal_pending(current)) {"
 kernel = "7.2.2"
 confirmed = true
 line = 4359
+context = "0873f8dd3835"
 note = "The only place in the loop a signal is looked at, checked once per folio and only for fatal signals. An ordinary signal does not interrupt a write in progress."
 
 [[references]]
@@ -257,6 +281,7 @@ anchor = "void balance_dirty_pages_ratelimited(struct address_space *mapping)"
 kernel = "7.2.2"
 confirmed = true
 line = 2111
+context = "a800f648046a"
 note = "The throttle, called once per folio at the top of the loop. Most calls do nothing, and the one that does not can sleep for as long as it takes writeback to catch up."
 
 [[references]]
@@ -266,6 +291,7 @@ anchor = "int balance_dirty_pages_ratelimited_flags(struct address_space *mappin
 kernel = "7.2.2"
 confirmed = true
 line = 2041
+context = "387daff39a48"
 note = "Where the decision is actually made, from a per CPU counter of how many pages this CPU has dirtied since it last looked."
 
 [[references]]
@@ -275,6 +301,7 @@ anchor = "shmem_write_begin(const struct kiocb *iocb, struct address_space *mapp
 kernel = "7.2.2"
 confirmed = true
 line = 3226
+context = "05c7d5b115b0"
 note = "One filesystem's write_begin. It checks the seals, gets a folio, and refuses a folio with a hardware memory error in it."
 
 [[references]]
@@ -284,6 +311,7 @@ anchor = "int shmem_get_folio(struct inode *inode, pgoff_t index, loff_t write_e
 kernel = "7.2.2"
 confirmed = true
 line = 2615
+context = "856b4f8392c1"
 note = "Finding the folio in the page cache or allocating one. On a first write to a fresh file this is where the allocation happens, and it is most of the time in the capture in section 5."
 
 [[references]]
@@ -293,6 +321,7 @@ anchor = "if (unlikely(info->seals & (F_SEAL_GROW |"
 kernel = "7.2.2"
 confirmed = true
 line = 3237
+context = "6470052105c2"
 note = "Seals, which are the one way a write to a file that is open for writing can be refused with EPERM at this depth. Only tmpfs and memfd have them."
 
 [[references]]
@@ -302,6 +331,7 @@ anchor = "shmem_write_end(const struct kiocb *iocb, struct address_space *mappin
 kernel = "7.2.2"
 confirmed = true
 line = 3264
+context = "69114b775059"
 note = "Growing the file, zeroing the rest of a partly written folio, marking it dirty and unlocking it. The order of those four is the order the rest of the kernel depends on."
 
 [[references]]
@@ -311,6 +341,7 @@ anchor = "bool folio_mark_dirty(struct folio *folio)"
 kernel = "7.2.2"
 confirmed = true
 line = 2778
+context = "6c048781f542"
 note = "The last thing that happens to the data inside the system call. After this the folio is somebody else's problem and the write returns."
 
 [[references]]
@@ -320,6 +351,7 @@ anchor = "static const struct address_space_operations shmem_aops = {"
 kernel = "7.2.2"
 confirmed = true
 line = 5136
+context = "fa5a5d0fa30b"
 note = "The ops table the loop calls through, filled in for tmpfs. Its dirty_folio is noop_dirty_folio, which is the single line that explains why tmpfs never writes anything back."
 
 [[references]]
@@ -329,6 +361,7 @@ anchor = "if (WARN_ON_ONCE(folio_test_dirty(folio) &&"
 kernel = "7.2.2"
 confirmed = true
 line = 211
+context = "4f67432acb9f"
 note = "The warning that fires when a folio leaves the page cache still marked dirty. It is the one message in this area a reader is likely to meet, and it means data was thrown away rather than written."
 
 [[references]]
@@ -338,6 +371,7 @@ anchor = "static inline ssize_t generic_write_sync(struct kiocb *iocb"
 kernel = "7.2.2"
 confirmed = true
 line = 2663
+context = "8bba97b1910f"
 note = "O_SYNC and O_DSYNC, handled after the inode lock is dropped. This is the only path in this blueprint that reaches storage before returning."
 
 [[references]]
@@ -347,6 +381,7 @@ anchor = "DEFINE_EVENT(writeback_folio_template, writeback_dirty_folio,"
 kernel = "7.2.2"
 confirmed = true
 line = 90
+context = "a156fc5e2adb"
 note = "The tracepoint that fires when a folio is dirtied, which is the observable event closest to the end of this path."
 
 [[references]]
@@ -356,6 +391,7 @@ anchor = "TRACE_EVENT(balance_dirty_pages,"
 kernel = "7.2.2"
 confirmed = true
 line = 657
+context = "790619ef11a4"
 note = "The tracepoint for the throttle, and the one that says how long a writer was made to wait and why. Nothing else in the kernel reports that number."
 
 [[references]]
@@ -365,4 +401,5 @@ anchor = "static int do_io_accounting(struct task_struct *task"
 kernel = "7.2.2"
 confirmed = true
 line = 3002
+context = "14b7bac656cb"
 note = "Where the per process byte and call counters vfs_write bumps are read back out. It is behind CONFIG_TASK_IO_ACCOUNTING, and section 8 says what that means for the pinned build."

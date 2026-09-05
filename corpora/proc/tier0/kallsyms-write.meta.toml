@@ -1,0 +1,41 @@
+source = "tier0"
+evidence = true
+
+describes = "the symbols behind a write, off the running pinned kernel"
+path = "/proc/kallsyms"
+stability = "not-abi"
+
+kernel = "7.2.2"
+arch = "i386"
+profile = "A-full"
+uniprocessor = true
+preempt = true
+captured = "2026-09-06"
+tier = 0
+
+command = "grep -E \" (__ia32_sys_write|ksys_write|vfs_write|__ia32_sys_read|ksys_read|vfs_read|sys_call_table|ia32_sys_call_table|handle_mm_fault|do_page_fault)$\" /proc/kallsyms"
+setup = []
+
+# Eight lines out of the 50787 the running kernel had, filtered by the command above rather than
+# edited afterwards. The filter is in the metadata so anybody can take it again.
+#
+# This is the other end of kxray.source.symbols. The source says SYSCALL_DEFINE3(write, ...), the
+# syscall table says the entry point is sys_write, and the running kernel calls it
+# __ia32_sys_write. Grepping the source for the name in a stack trace finds nothing.
+#
+# Two names asked for are not in the answer. There is no ia32_sys_call_table, because a 32 bit
+# kernel has one table and calls it sys_call_table. There is no do_page_fault either, which is a
+# thing several lessons had to learn the hard way in a different context.
+#
+# The stability is not-abi rather than undocumented. The closing section of Documentation/ABI/README
+# names kernel symbols as something that must not under any circumstances be considered stable, so
+# this is the strongest warning the ledger has and it is on the file behind every stack trace.
+timings_are_real = false
+
+unparsed_lines = 0
+symbols = 8
+total_symbols_on_the_box = 50787
+addresses_hidden = false
+text_symbols = 7
+data_symbols = 1
+asked_for_and_absent = ["ia32_sys_call_table", "do_page_fault"]
