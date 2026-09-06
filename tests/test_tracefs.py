@@ -128,6 +128,42 @@ def test_stats_on_a_cpu_that_is_not_there_is_empty_rather_than_an_error(tmp_path
     assert fake_tracefs(tmp_path).stats(7) == {}
 
 
+STATS = """entries: 273
+overrun: 44002
+commit overrun: 0
+bytes: 8264
+oldest event ts: 2.109723
+now ts: 2.116975
+dropped events: 0
+read events: 0
+"""
+
+
+def test_the_clock_lines_are_read_separately_from_the_counters():
+    counters = tracefs.parse_stats(STATS)
+    clocks = tracefs.parse_timestamps(STATS)
+
+    assert "oldest event ts" not in counters
+    assert clocks == {"oldest event ts": 2.109723, "now ts": 2.116975}
+
+
+def test_the_window_is_how_much_history_the_buffer_was_still_holding():
+    assert tracefs.window(STATS) == pytest.approx(0.007252)
+
+
+def test_the_window_is_none_when_the_file_does_not_carry_both_readings():
+    assert tracefs.window("entries: 273\noverrun: 44002\n") is None
+    assert tracefs.window("oldest event ts: 2.109723\n") is None
+
+
+def test_every_line_of_a_stats_file_is_either_read_or_skipped():
+    lines = tracefs.account_stats(STATS)
+
+    assert lines.read == len(tracefs.parse_stats(STATS))
+    assert lines.skipped == len(tracefs.parse_timestamps(STATS))
+    assert lines.unparsed == 0
+
+
 def test_write_one_byte_writes_one_byte(tmp_path):
     target = tmp_path / "one"
     tracefs.write_one_byte(str(target))()

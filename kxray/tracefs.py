@@ -125,6 +125,35 @@ def parse_stats(text: str) -> dict[str, int]:
     return dict(one for one in found if one is not None)
 
 
+def _read_clock(line: str) -> tuple[str, float] | None:
+    """One `oldest event ts:     2.109723` line, or None when it is not one."""
+    if not TIMESTAMP.match(line):
+        return None
+    name, _, value = line.partition(":")
+    return name.strip(), float(value.strip())
+
+
+def parse_timestamps(text: str) -> dict[str, float]:
+    """The clock readings in a per CPU stats file, by name.
+
+    Two lines of that file are readings of the trace clock rather than counts of anything, so
+    `parse_stats` leaves them alone and `account_stats` puts them in the skipped bucket. They are
+    worth having on their own: the distance between them is how much of the machine's history the
+    buffer was still holding at the moment somebody read it, which on a buffer that is overflowing
+    is a much smaller number than anybody expects.
+    """
+    found = (_read_clock(line) for line in text.splitlines())
+    return dict(one for one in found if one is not None)
+
+
+def window(text: str) -> float | None:
+    """Seconds between the oldest event still in the buffer and the clock when it was read."""
+    clocks = parse_timestamps(text)
+    if "oldest event ts" not in clocks or "now ts" not in clocks:
+        return None
+    return clocks["now ts"] - clocks["oldest event ts"]
+
+
 def account_stats(text: str) -> Lines:
     """How every line of a per CPU stats file was treated, for `tools/baseline`.
 

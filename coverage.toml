@@ -110,9 +110,11 @@ paths = [
     "kernel/trace/",
     "Documentation/trace/",
     "include/trace/",
+    "include/linux/ring_buffer.h",
+    "include/linux/ring_buffer_types.h",
 ]
 lessons = ["Z02"]
-blueprints = ["page-fault"]
+blueprints = ["page-fault", "trace-ring-buffer"]
 note = "The instrument the rest of the book is read through, so it is taught first and in full."
 
 [[subsystem]]
