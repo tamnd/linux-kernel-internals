@@ -18,6 +18,12 @@ two: a policy saying which frames a comparison is about, and a level saying how 
 what is left. This file picks one of each, at the top, and that pair is the whole of what this
 comparison means.
 
+All of that is about the recipes that record a trace, which is most of them but not all. A recipe
+can also record the contents of a file, and `banner` does: it captures `/proc/version`, which is
+where the release and the preemption model in every lesson's first cell come from. Those are
+compared by reading the file on both sides and checking the bytes, with no policy and no level,
+because there is nothing here that two honest runs are expected to disagree about.
+
 The level is `sequence`: the calls in order, at the depths they were called at, with the durations
 thrown away, because emulated time is not time and no two runs of anything agree on it.
 
@@ -101,11 +107,16 @@ class Comparison:
     replay: Varies | None = None
     calls: int = 0
     error: str = ""
+    # The files this recipe was compared by, when it was compared by files rather than by a tape.
+    # Empty for every trace recipe, which is what the printer below branches on.
+    files: tuple[str, ...] = ()
 
     def __str__(self) -> str:
         if self.error:
             return f"[error] {self.recipe}: {self.error}"
         mark = "same" if self.same else "DIFFERENT"
+        if self.files:
+            return f"[{mark}] {self.recipe}: {', '.join(self.files)}, read both ways"
         tail = f"{self.calls} call(s), emulator {self.live}, recording {self.replay}"
         return f"[{mark}] {self.recipe}: {tail}"
 
@@ -146,6 +157,35 @@ class Report:
         return "\n".join(lines)
 
 
+def by_file(live: session.Box, replay: session.Box, one) -> Comparison:
+    """A recipe that captured files rather than a tape, checked by reading them both ways.
+
+    Not every recipe is a trace. `banner` records `/proc/version` because what it is about is the
+    contents of a file, and the two lockdep recipes record `/proc/lockdep_stats` for the same
+    reason. Sending one of those through the tape comparison below does not fail cleanly, it hangs:
+    a trace with no function filter is a trace of the whole kernel, and the guest then fills a ring
+    buffer faster than a serial line drains it, which reads as the emulator having died. Twenty
+    seconds later it comes back as a timeout three files from the cause.
+
+    The command runs first and then the files are read, in that order, because that is the order
+    the recording was taken in. It matters for `load-abba`, where the command is the module load
+    and the file is what the load did to the kernel.
+
+    The comparison is exact rather than normalised. There is no equivalent here of a duration that
+    two honest runs disagree about: `/proc/version` is the same bytes on the first read of a boot
+    and the thousandth. A file that does move on its own would show up as a difference and want a
+    reason written down, which is the outcome worth having.
+    """
+    live.sh(one.command, recipe=one.name)
+    differences = []
+    for path in one.files:
+        here = live.read(path, recipe=one.name).strip()
+        there = replay.read(path, recipe=one.name).strip()
+        if here != there:
+            differences.append(f"{path}: emulator {here!r}, recording {there!r}")
+    return Comparison(one.name, not differences, tuple(differences), files=tuple(one.files))
+
+
 def compare(
     live: session.Box,
     replay: session.Box,
@@ -172,6 +212,12 @@ def compare(
 
     out = []
     for one in recipes:
+        if not one.trace:
+            try:
+                out.append(by_file(live, replay, one))
+            except Exception as error:  # noqa: BLE001 - the message is the result here
+                out.append(Comparison(one.name, False, error=f"{type(error).__name__}: {error}"))
+            continue
         try:
             fresh = live.trace(
                 one.name,

@@ -4,6 +4,7 @@
 //     node kxbox/web/measure.js --show               a real visible window instead of headless
 //     node kxbox/web/measure.js --profile A-gzip     time one of the other builds
 //     KXBOX_BROWSER=/path/to/chrome node kxbox/web/measure.js
+//     KXBOX_PORT=8200 node kxbox/web/measure.js         when something else holds the default
 //
 // M0 asks whether the pinned kernel boots in a browser tab in under thirty seconds. Every number
 // this project had before this was node, and node is not a tab: no page to fetch the image over,
@@ -40,8 +41,11 @@ const BROWSERS = [
   "/usr/bin/chromium-browser",
 ].filter(Boolean);
 
-const PORT = 8123;
-const DEBUG_PORT = 9333;
+// Two ports, both overridable, because a developer machine has other things on it. The failure
+// when one is taken is `the server did not come up within 30s`, which points at the emulator and
+// the wheel and everything else before it points at another program holding a socket.
+const PORT = Number(process.env.KXBOX_PORT || 8123);
+const DEBUG_PORT = Number(process.env.KXBOX_DEBUG_PORT || 9333);
 
 function sleep(ms) {
   return new Promise((done) => setTimeout(done, ms));

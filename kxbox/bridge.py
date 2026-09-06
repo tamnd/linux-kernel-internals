@@ -129,10 +129,16 @@ class V86:
         return None if found is None else cls(found, profile)
 
     def describe(self) -> str:
+        """Which image is behind the bridge, and nothing about what is inside it.
+
+        This used to end `uniprocessor, 32 bit, emulated timing`. Two of those three are now read
+        rather than asserted, one off `/proc/version` and one off the config fragments, and the
+        banner prints them on their own lines with where they came from. Saying them here as well
+        meant a reader saw the same claim twice in two voices, and the voice here was the one
+        nothing had checked.
+        """
         one = profiles.get(self.profile)
-        return (
-            f"v86, {one.name} profile built as {one.builds}, uniprocessor, 32 bit, emulated timing"
-        )
+        return f"v86, {one.name} profile built as {one.builds}"
 
     def sh(self, line: str, *, recipe: str = ""):
         from kxbox.session import Command

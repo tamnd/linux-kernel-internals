@@ -27,12 +27,22 @@ from pathlib import Path
 
 from kxbox import bridge, profiles
 from kxbox.corpus import Corpus
+from kxray.models import Version
+from kxray.proc import version
 
 DISABLE = "KXBOX_DISABLE"
 
-# What Tier 0 is, stated in every banner, because a reader who forgets it draws the wrong
-# conclusion from a perfectly good trace.
-LIMITS = "uniprocessor, 32 bit x86, emulated timing"
+# The one file the banner reads, and the recipe a recording answers it with. Every lesson's first
+# cell goes through here, so it is a name rather than a string in the middle of a method.
+VERSION = "/proc/version"
+BANNER_RECIPE = "banner"
+
+# The one thing about Tier 0 that no file in the guest will tell you. The processor count and the
+# architecture used to be spelled out here too, and they are read now, from `/proc/version` and
+# from the fragments. This is what is left: a number of seconds measured inside an emulator is a
+# number about the emulator, and a reader who forgets that draws the wrong conclusion from a
+# perfectly good trace.
+LIMITS = "timing is emulated, so no performance claim can be made from this machine"
 
 
 @dataclass(frozen=True)
@@ -140,16 +150,64 @@ class Box:
             recipe, do, tuple(functions), owns_window=owns_window, max_depth=max_depth
         )
 
+    def running(self) -> Version | None:
+        """What the kernel says about itself, or None when nothing can be read.
+
+        `/proc/version` is one line and it carries two things the banner needs: the release, and
+        the words the build shouted after the build number, which is where the preemption model is
+        written. It is read rather than taken from `pin.toml` on purpose. The pin is what somebody
+        asked to be built, and this project has already had one case of a build quietly not being
+        that, which is the whole of the KASAN story in `kernel/README.md`.
+
+        It never raises. This is called from the banner, the banner is the first cell of every
+        lesson, and a session that cannot say what it is running is still a session worth having.
+        A profile with no recording of this file is the ordinary case rather than a broken one.
+        """
+        try:
+            text = self.read(VERSION, recipe=BANNER_RECIPE)
+        except Exception:  # noqa: BLE001 - any failure here means one fewer line, not a stop
+            return None
+        found = version.parse(text, VERSION, source=f"{self.backend.name}:{BANNER_RECIPE}")
+        return found if found.release else None
+
     def banner(self) -> str:
         """What is behind this session, printed before a reader believes anything it says.
 
         This is the first cell of every lesson. Somebody reading a trace needs to know whether it
         came off a kernel or out of a file before they read a single line of it.
+
+        Every line says where it came from, and that is the part worth keeping. Two of these facts
+        are read off the kernel and two are copied out of a config file, and a banner that printed
+        all four in the same voice would let a reader believe the config file had been checked
+        against something. It has not. `kernel/RESULTS.md` has the case where that mattered.
         """
         lines = [
             f"kxbox: {self.backend.name} backend, {self.profile} profile",
             f"       {self.backend.describe()}",
         ]
+        # The release and the preemption model, in the kernel's own words, or a line saying that
+        # nothing could be read. Never a line quietly filled in from the pin.
+        now = self.running()
+        said = "the kernel says" if self.live else "the recorded kernel said"
+        if now is None:
+            lines.append("       nothing read off a kernel, so no release and no preemption model")
+        else:
+            model = now.preemption or "no preemption model in its banner, so PREEMPT_NONE"
+            lines.append(f"       {said}: Linux {now.release} {now.build}, {model}")
+            lines.append(
+                "       and SMP, so more than one processor"
+                if now.smp
+                else "       and no SMP, so one processor and no true concurrency"
+            )
+            wanted = profiles.pinned_version(self.profile, self.root)
+            if wanted and wanted != now.release:
+                lines.append(f"       which is NOT the {wanted} the pin asks for, so nothing here")
+                lines.append("       backs a claim about the pinned kernel")
+        # Architecture is not in `/proc/version` and there is nowhere else in the guest that says
+        # it plainly, so this one comes off the fragments and says so.
+        lines.append(
+            f"       built for {profiles.arch(self.profile, self.root)}, per its fragments"
+        )
         # What the profile turns on, and what it takes for it. A reader timing something on the
         # lockdep kernel and reporting the number is the mistake this line is here to stop.
         one = profiles.get(self.profile)
@@ -157,7 +215,6 @@ class Box:
         lines.append(f"       and costs {one.costs}")
         if self.live:
             lines.append(f"       {LIMITS}")
-            lines.append("       no performance claim can be made from this machine")
         else:
             lines.append(f"       not a running kernel: {self.why}")
             lines.append(

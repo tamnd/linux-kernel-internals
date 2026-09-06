@@ -46,9 +46,12 @@ Every row says whether the laptop was busy, because that turned out to matter mo
 | `A-full` | M4 laptop, 10 cores, busy | Chrome 152 | headless | 2.2s to 2.8s | 1.4s to 2.0s | 12.3s to 18.8s, 3 of 3 agree | 4.8s to 6.2s | 10 of 10 | 2026-09-02 |
 | `A-gzip` | M4 laptop, 10 cores, busy | Chrome 152 | headless | 2.2s to 2.3s | 2.1s to 2.2s | 22.2s to 22.5s, 3 of 3 agree | 7.3s to 9.1s | 10 of 10 | 2026-09-02 |
 | `B-btf-external` | M4 laptop, 10 cores, busy | Chrome 152 | headless | 3.3s to 3.7s | 2.4s to 2.5s | 22.8s, 3 of 3 agree | 8.0s to 9.1s | 10 of 10 | 2026-09-02 |
+| `A-full` | M4 laptop, 10 cores, idle | Chrome 152 | headless | 3.0s | 1.7s | 17.2s, 4 of 4 agree | 7.1s | 11 of 11 | 2026-09-06 |
 | `C-longterm` | | | | | | | | not measured | |
 
 Every number in this table was taken after the console bug described below was fixed. The rows that were here before it are gone rather than kept for comparison, because they were measuring the page and not the kernel and leaving them in would invite somebody to average them in.
+
+The last row counts four recipes and eleven checks where the rows above it count three and ten. Both are the corpus growing rather than the measurement changing: `strace` went into the rootfs and brought a check with it, and `banner` went into the recipe list so that the release and the preemption model a lesson prints in its first cell are read off a kernel on both backends rather than copied out of the pin. The image it booted is a megabyte larger for the strace and reached a shell in the same three seconds.
 
 Five things came out of this, and the first two replace claims an earlier version of this file made.
 
@@ -61,6 +64,8 @@ Five things came out of this, and the first two replace claims an earlier versio
 **This cannot price the download, and the download is half the question.** Everything here is served from `127.0.0.1`, so a 3.25 MiB image and a 4.36 MiB image cost the same nothing to fetch. The choice between `A-full` and `A-gzip` is a real trade and this measurement does not settle it. What it does settle is that decompression is not the reason to prefer either.
 
 **Python beside the kernel works, and that was never certain.** `kxbox/bridge.py` finds the bridge object, `micropip` installs this project into Pyodide, and `kxray` parses a trace that came out of a kernel running a few metres away in the same tab. Every one of those was written against a test double until now.
+
+**Running the page found two things nothing else could have.** Adding `banner` to the recipe list sent it through the comparison, which traces whatever it is given, and a trace with no function filter is a trace of the whole kernel. The guest filled its ring buffer faster than the serial line drained it and the run came back sixty one seconds later with a timeout on a shell line three files from the cause. Recipes that record a file rather than a tape are compared by reading the file now, and the run went back to seventeen seconds. The other one was that `kxray.replay.record` imports `fcntl`, which Pyodide does not have because a browser has no pseudo terminal, and it was imported eagerly from a package `__init__` that `kxwidgets` reaches through, so the page came up with no toolkit at all. Neither of those can fail on a machine running the test suite, and both fail on the first machine a reader uses.
 
 Not in this table and worth saying: Firefox. The measurement script drives Chrome over the DevTools protocol and Firefox does not speak it, so a Firefox row has to be taken by hand off the same page. Nobody has.
 

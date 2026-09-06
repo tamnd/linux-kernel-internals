@@ -46,9 +46,28 @@ The names, what each one does and which capture answers it are in `corpora/tier0
 
 The first cell of every lesson prints it, because somebody reading a trace needs to know whether it came off a kernel or out of a file before they read a single line of it.
 
-A live session says what Tier 0 is: uniprocessor, 32 bit x86, emulated timing, and no performance claim can be made from it. A recorded session says that it is not a running kernel, why the emulator was not used, and whether what it is handing back is evidence at all. Today it is not, because the two recordings that exist were written by hand so the parser had something to parse.
+Off a live session it looks like this, and this is the real output of a real boot rather than an example somebody typed:
 
-Either way the banner also says what the profile turns on and what it costs, which is the line that stops somebody timing a function on the lockdep kernel and reporting the number.
+```
+kxbox: v86 backend, teaching profile
+       v86, teaching profile built as A-full
+       the kernel says: Linux 7.2.2 #1, PREEMPT
+       and no SMP, so one processor and no true concurrency
+       built for 32 bit x86 (i386), per its fragments
+       teaching gives you ftrace, kprobes, BTF, every /proc file the book reads, and modules
+       and costs nothing beyond its size, which is what makes it the default
+       timing is emulated, so no performance claim can be made from this machine
+```
+
+**Every line says where its fact came from, and that is the part worth keeping.** The release and the preemption model are read out of `/proc/version`, which is the kernel's own one line description of itself, on both backends. The architecture is copied out of the config fragments the kernel was built from, because nothing in the guest says it plainly, and the line says `per its fragments` so that nobody reads it as something a kernel answered. Printing all three in one voice would let a reader believe a config file had been checked against something, and it has not been.
+
+**The release is never filled in from `pin.toml`.** The pin is what somebody asked to be built, and this project has already had one case of a build quietly not being that, which is the whole of the KASAN story in `kernel/README.md`. So the banner reads a kernel, and when the kernel it read disagrees with the version the pin asks for it says so and says that nothing in the session backs a claim about the pinned kernel.
+
+A session that could not read `/proc/version` at all prints one line saying so rather than three lines of guesses. That is the ordinary case for a profile with no recording of it, not a broken one.
+
+A recorded session says `the recorded kernel said` instead of `the kernel says`, then why the emulator was not used and whether what it is handing back is evidence at all. Either way the banner also says what the profile turns on and what it costs, which is the line that stops somebody timing a function on the lockdep kernel and reporting the number.
+
+The live wording only exists on a machine with a kernel behind it, so the test suite cannot see it. `kxbox/web/index.html` prints it under **The banner, off a live kernel**, which is what `node kxbox/web/measure.js` runs, and that is where the block above came from.
 
 ## The three profiles
 

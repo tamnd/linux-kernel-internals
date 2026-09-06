@@ -26,11 +26,13 @@ A request goes to the page as a message, which is queued before the worker goes 
 
 `checks.js` is the list of things a lesson stops working without, and it is one list rather than two because a check that passes under node and is never run in a tab is a check for the wrong machine.
 
-`harness.js` is what the page does: boot, time it, run the checks, wait for Python, run every recipe both ways, take one trace for the picture, and leave everything it learned on `window.kxResults`.
+`harness.js` is what the page does: boot, time it, run the checks, wait for Python, run every recipe both ways, print the banner off the live session, take one trace for the picture, and leave everything it learned on `window.kxResults`.
 
 `both-ways.py` is the comparison. It runs each recipe in the corpus against the live kernel and against its recording and says whether the two agree, which is the one M0 criterion that cannot be checked anywhere but here. Off a page there is no emulator to find, so both halves come back as the recording and every recipe matches itself, which reads as a pass and is not one. `kxbox/bothways.py` is the part of it that is not about the page, and it is where the decision about what counts as agreement lives. That decision took seven attempts and every one of them was a real defect found by running this, so the reasons are written next to the lists rather than summarised here.
 
 `first-tape.py` is the picture: one trace, real Python that a lesson could contain rather than a demo written for this page. It runs after the comparison, so it has to trace a recipe that gives the same answer on a guest that has already been used. Which ones do is written down as `repeatable` in the recipe list.
+
+It also prints `box.banner()`, and this page is the only place that can. The banner is the first cell of every lesson and its live branch says `the kernel says` and names a release that came out of a kernel booted seconds earlier. No machine running the test suite has one, so the recorded branch is what CI sees and the live branch is what a reader sees. Here they are the same code with a real kernel behind it.
 
 `measure.js` runs the whole of that in Chrome and prints the numbers. It drives the browser over the DevTools protocol directly rather than through a driver library, which is one fewer thing to pin for about eighty lines of code. `just web-measure` is the short way to run it.
 
@@ -46,7 +48,7 @@ Running it found two bugs that the tests had been passing over. A write to any t
 
 Everything that can be checked without an emulator still is, because that is what runs in CI. `just web` runs it. Forty one tests, and the useful ones are the parsing of a serial stream that contains the prompt and the echo of the command, a write arriving in pieces and ending up as one file, two commands not interleaving on the one shell, and a blocking call across two real threads with the answer deliberately late.
 
-It also runs in a browser now, which is what M0 was actually asking. `just web-measure` boots the pinned kernel in Chrome on a throwaway profile, runs the same checks, brings Pyodide up in the worker, runs every recipe against its recording, and takes one filtered trace all the way through the bridge and back. A shell in about two and a half seconds on an idle laptop, every check passing, three of three recipes agreeing in about seventeen seconds, and forty one frames of a real tape drawn by the same widget a notebook would use. The numbers and the surprises are in `../kernel/RESULTS.md`.
+It also runs in a browser now, which is what M0 was actually asking. `just web-measure` boots the pinned kernel in Chrome on a throwaway profile, runs the same checks, brings Pyodide up in the worker, runs every recipe against its recording, and takes one filtered trace all the way through the bridge and back. A shell in about three seconds on an idle laptop, every check passing, four of four recipes agreeing in about seventeen seconds, and forty one frames of a real tape drawn by the same widget a notebook would use. The numbers and the surprises are in `../kernel/RESULTS.md`.
 
 Two surprises are worth repeating here. A visible window is about three times slower than a headless one, and almost all of that is sensitivity to what else the machine is doing rather than a fixed cost. Headless boots in 2.2 seconds whether the laptop is idle or has several compiler jobs on it. Visible goes from 2.6 seconds to between 6.4 and 9.1. Every node number this project quoted before is therefore optimistic about what a reader waits for, and none of them was wrong about whether it works.
 

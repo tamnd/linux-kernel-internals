@@ -45,6 +45,24 @@ from pathlib import Path
 
 PIN = Path("kxbox/kernel/pin.toml")
 
+# The same file as it sits after `pip install`, which is how most readers of this book get it. The
+# Colab badge runs `pip install git+https://...` and there is no checkout on that machine at all, so
+# a pin looked up by the path above finds nothing and every question about the kernel behind a
+# profile comes back as a shrug. The wheel carries `pin.toml` and the config fragments next to this
+# file, so there is a real answer sitting right there and it only needed asking for.
+PACKAGED = Path(__file__).resolve().parent / "kernel" / "pin.toml"
+
+
+def pin_file(root: Path | None = None) -> Path:
+    """The `pin.toml` to read, and the directory every fragment path in it hangs off.
+
+    A checkout wins when there is one, because that is the copy somebody might be editing, and the
+    packaged copy is the fallback rather than the other way round. The two are the same file in
+    every normal case: the wheel is built from the checkout.
+    """
+    inside = (root / PIN) if root is not None else PIN
+    return inside if inside.exists() else PACKAGED
+
 
 @dataclass(frozen=True)
 class Profile:
@@ -137,11 +155,12 @@ def for_build(name: str) -> Profile | None:
 def built(name: str, root: Path | None = None) -> dict:
     """What `pin.toml` says about the build behind this boot profile.
 
-    Empty when the pin cannot be found, which happens to a reader who installed the package
-    without a checkout. That is not an error here, it means the banner prints less.
+    Empty only when there is no pin anywhere, which now means the package itself is broken. It used
+    to be the ordinary answer for anybody without a checkout, and the banner went quiet for exactly
+    the readers it was written for.
     """
     one = get(name)
-    pin = (root / PIN) if root is not None else PIN
+    pin = pin_file(root)
     if not pin.exists():
         return {}
     document = tomllib.loads(pin.read_text(encoding="utf-8"))
@@ -149,6 +168,57 @@ def built(name: str, root: Path | None = None) -> dict:
         if profile.get("name") == one.builds:
             return profile
     return {}
+
+
+# Which architecture a config was built for, in the two symbols that settle it. `CONFIG_X86_32`
+# is set by the 32 bit choice and `CONFIG_64BIT` is the choice itself, so a fragment that turns one
+# on and leaves the other alone is still readable. These are not like the symbols in the KASAN
+# story: an architecture is a choice Kconfig either honours or refuses to configure at all, so what
+# the fragment asked for here is what the kernel is.
+ARCH_SYMBOLS = {
+    "CONFIG_X86_32=y": "32 bit x86 (i386)",
+    "CONFIG_64BIT=y": "64 bit x86 (x86_64)",
+}
+UNKNOWN_ARCH = "an architecture nothing in the fragments names"
+
+
+def arch(name: str, root: Path | None = None) -> str:
+    """The architecture the kernel behind this profile was compiled for.
+
+    Read out of the config fragments the profile is built from, which is where the answer lives.
+    There is nothing in `/proc/version` that says it, so unlike the release and the preemption
+    model this cannot be asked of the running kernel, and the banner says so rather than printing
+    it next to the two facts that were read off a kernel as if all three came from the same place.
+    """
+    where = built(name, root)
+    base = pin_file(root).parent
+    for fragment in where.get("fragments", []):
+        path = base / fragment
+        if not path.exists():
+            continue
+        lines = {line.strip() for line in path.read_text(encoding="utf-8").splitlines()}
+        for symbol, said in ARCH_SYMBOLS.items():
+            if symbol in lines:
+                return said
+    return UNKNOWN_ARCH
+
+
+def pinned_version(name: str, root: Path | None = None) -> str:
+    """The kernel release `pin.toml` says this profile is built from, or an empty string.
+
+    A build profile does not name a version, it names a tree, and there are two of them. Five
+    profiles say `kernel = "kernel"` and mean 7.2.2, and `C-longterm` says `kernel = "fallback"`
+    and means 6.18.48. Following that pointer is the difference between checking a running kernel
+    against the version it was meant to be and checking it against whichever version is written
+    highest in the file.
+    """
+    where = built(name, root)
+    pin = pin_file(root)
+    if not where or not pin.exists():
+        return ""
+    document = tomllib.loads(pin.read_text(encoding="utf-8"))
+    tree = document.get(where.get("kernel", "kernel"), {})
+    return str(tree.get("version", ""))
 
 
 def describe(name: str, root: Path | None = None) -> list[str]:

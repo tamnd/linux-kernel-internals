@@ -185,3 +185,52 @@ def test_asking_for_a_recipe_that_is_not_there_compares_nothing():
     """Better than silently comparing everything, which is what a falsy check would have done."""
     replay = corpus.Corpus(ROOT)
     assert bothways.compare(replay, replay, ROOT, only="no-such-recipe") == []
+
+
+# -- recipes that are not traces ------------------------------------------------------------------
+
+
+def test_a_recipe_with_no_trace_is_compared_by_reading_its_files():
+    """`banner` records `/proc/version`, so what it means to agree is that the file agrees.
+
+    Sending it through the tape comparison did not fail cleanly, it hung. A trace with no function
+    filter is a trace of the whole kernel, and in a browser the guest filled its ring buffer faster
+    than the serial line drained it and came back twenty seconds later as a timeout on an unrelated
+    shell line. The fix is that a recipe with no trace never goes near the tracer.
+    """
+    replay = corpus.Corpus(ROOT)
+    found = bothways.compare(replay, replay, ROOT, only="banner")
+    assert [one.recipe for one in found] == ["banner"]
+    assert found[0].same
+    assert found[0].files == ("/proc/version",)
+    assert found[0].live is None, "there is no duration to report about reading a file"
+    assert "read both ways" in str(found[0])
+
+
+def test_a_file_that_disagrees_is_a_difference_with_both_sides_in_it():
+    """The message has to carry what each side said, because that is the whole of the report."""
+    replay = corpus.Corpus(ROOT)
+    one = replay.recipes["banner"]
+
+    class Wrong:
+        def sh(self, line, *, recipe=""):
+            return None
+
+        def read(self, path, *, recipe=""):
+            return "Linux version 6.18.48 (somebody else)\n"
+
+    found = bothways.by_file(Wrong(), replay, one)
+    assert not found.same
+    assert "6.18.48" in found.differences[0]
+    assert "7.2.2" in found.differences[0]
+    assert "/proc/version" in found.differences[0]
+
+
+def test_every_recipe_either_has_a_trace_or_has_files():
+    """One with neither would compare clean without comparing anything.
+
+    `by_file` on a recipe with no files finds no differences and reports agreement, which is the
+    failure mode this whole file exists to keep out.
+    """
+    for one in corpus.load_recipes(ROOT):
+        assert one.trace or one.files, f"{one.name} records nothing, so nothing can be checked"
