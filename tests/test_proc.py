@@ -457,7 +457,36 @@ def test_the_release_comes_out_and_the_compiler_stays_text():
 
 def test_the_running_kernel_is_the_one_the_profile_asked_for():
     banner = version.parse_file(TIER0 / "version.txt", "/proc/version")
-    assert "PREEMPT" in banner.rest
+    got = meta("version.txt")
+    assert banner.preemption == "PREEMPT"
+    assert banner.smp is False
+    # The capture's metadata says the same two things in its own words, and the banner every
+    # lesson prints reads them off the file rather than out of either that or `pin.toml`.
+    assert got["preempt"] is (banner.preemption != "")
+    assert got["uniprocessor"] is (not banner.smp)
+
+
+def test_the_shouted_words_are_the_ones_after_the_build_number():
+    """`GNU` and `ld` are in this line too, in front of the hash, and are not what a kernel is."""
+    banner = version.parse_file(TIER0 / "version.txt", "/proc/version")
+    assert banner.tags == ("PREEMPT",)
+
+
+def test_a_kernel_with_several_of_them_gives_them_all_back():
+    banner = version.parse("Linux version 6.1.0 (a@b) (gcc) #1 SMP PREEMPT_DYNAMIC Debian 6.1.0\n")
+    assert banner.tags == ("SMP", "PREEMPT_DYNAMIC")
+    assert banner.smp is True
+    assert banner.preemption == "PREEMPT_DYNAMIC"
+
+
+def test_a_kernel_that_says_nothing_about_preemption_is_not_guessed_at():
+    """Silence means PREEMPT_NONE and it is reported as silence, because the two are not the same.
+
+    A kernel built before the model was printed at all also says nothing here.
+    """
+    banner = version.parse("Linux version 5.4.0 (a@b) (gcc) #1 SMP Thu Sep 7 12:00:00 UTC 2023\n")
+    assert banner.tags == ("SMP", "UTC")
+    assert banner.preemption == ""
 
 
 def test_versions_compare_as_numbers_and_not_as_strings():

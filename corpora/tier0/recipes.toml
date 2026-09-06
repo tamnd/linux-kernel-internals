@@ -100,6 +100,29 @@ trace = "traces/tier0/page-fault.txt"
 status = 0
 stdout = ""
 
+# What the banner reads, and the only recipe here that exists for something other than a lesson.
+#
+# `box.banner()` names the release and the preemption model of the kernel behind the session, and
+# it will not take either of them from `pin.toml`, because the pin is what somebody asked to be
+# built and this book has already had one case of a build quietly not being that. So the banner
+# reads them off the kernel, and a recorded session reads them off this capture, which came off the
+# same boot as the three traces above.
+#
+# It is `repeatable` in a way none of the others are. Nothing about `/proc/version` changes between
+# the first read of a boot and the thousandth, which is what makes it safe for a call every lesson
+# makes in its first cell.
+[[recipes]]
+name = "banner"
+profile = "teaching"
+describes = "the kernel's own one line description of itself, which is where the release and the preemption model in every banner come from"
+command = "cat /proc/version"
+repeatable = true
+status = 0
+stdout = ""
+
+[recipes.files]
+"/proc/version" = "proc/tier0/version.txt"
+
 # The two below are the `lockdep` profile rather than `teaching`, and they are the first recipes
 # for any profile other than the default. That is the point of them as much as what they show: a
 # lesson that asks for the lockdep kernel now gets recordings instead of an empty session, and

@@ -505,3 +505,48 @@ class Version(ProcFile):
 
     def at_least(self, *wanted: int) -> bool:
         return self.parts[: len(wanted)] >= tuple(wanted)
+
+    @property
+    def tags(self) -> tuple[str, ...]:
+        """The shouted words the build appended after the build number.
+
+        On the pinned kernel `rest` ends `#1 PREEMPT @0` and this is `("PREEMPT",)`. They are the
+        kernel's own summary of how it was configured, they are the only part of `rest` with any
+        shape at all, and they are worth having because two kernels with the same release can
+        differ here in ways that change what every trace in this book means.
+
+        Uppercase words only, and only after the build number, which keeps the compiler banner out.
+        `GNU` and `ld` sit in front of the hash and a rule that swept the whole line would collect
+        them. Anything with a digit in it goes as well, because `@0` is a timestamp the build put
+        there and not a thing the kernel is.
+        """
+        after = self.rest.partition(self.build)[2] if self.build else ""
+        return tuple(
+            word for word in after.split() if word.isupper() and word.replace("_", "").isalpha()
+        )
+
+    @property
+    def smp(self) -> bool:
+        """Whether this kernel was built for more than one processor.
+
+        Absence is the answer here, which is worth saying out loud, because a kernel with no `SMP`
+        in its banner is a uniprocessor build and there is nothing that says so positively.
+        """
+        return "SMP" in self.tags
+
+    @property
+    def preemption(self) -> str:
+        """Which preemption model this kernel was built with, in the kernel's own word.
+
+        Four models, and which one is running decides whether a lesson about a race can be believed
+        at all. On a `PREEMPT_RT` kernel most spinlocks sleep. On a `PREEMPT_NONE` kernel a task in
+        the kernel runs until it gives way, so a whole class of race cannot be reproduced and a
+        reader who tries will conclude the book is wrong.
+
+        A kernel built without preemption says nothing here rather than saying `PREEMPT_NONE`, so
+        silence is the answer and it is reported as such instead of being guessed at.
+        """
+        for tag in self.tags:
+            if tag.startswith("PREEMPT"):
+                return tag
+        return ""

@@ -165,6 +165,12 @@ async function main() {
     results.trace_seconds = seconds(traceClock);
     results.tape = { recipe: answer.recipe, frames: answer.frames, roots: answer.roots, root_count: answer.root_count, unparsed: answer.unparsed };
     results.kernel = answer.kernel;
+    // The banner a lesson prints in its first cell, from a session that is live rather than
+    // replayed. The recorded wording is checked by the test suite on any laptop. This wording
+    // only exists on a machine with a kernel behind it, so this run is where it gets looked at.
+    results.banner = answer.banner;
+    results.banner_live = answer.live;
+    el("banner").textContent = answer.banner;
     // The widget's own markup, from `kxwidgets`, not something this file draws. If it looks right
     // here it looks right in a notebook, because it is the same string.
     el("tape").innerHTML = answer.html;

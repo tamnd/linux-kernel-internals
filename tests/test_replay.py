@@ -13,7 +13,9 @@ they are the ones that would catch this whole file being right about a format no
 
 from __future__ import annotations
 
+import importlib
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -23,6 +25,10 @@ from kxray.replay import cast as castmod
 from kxray.replay import terminal
 from kxray.replay.session import steps_of
 from kxwidgets import SessionPlayer
+
+# Everything the worker in `kxbox/web` imports before it can draw anything. A page gets these out
+# of the wheel and gets nothing else, so this is the list that has to survive a Pyodide runtime.
+PACKAGES = ("kxray", "kxshapes", "kxwidgets", "kxdiff", "kxbox")
 
 ROOT = Path(__file__).resolve().parents[1]
 RECORDING = ROOT / "corpora" / "replays" / "tier1" / "build-and-boot-uml.cast"
@@ -391,3 +397,38 @@ def test_the_booted_kernel_says_it_is_the_pinned_version(recorded):
     """The point of the whole session. The kernel that answered is the one that was built."""
     boot = next(one for one in recorded.steps if one.command.startswith("./linux"))
     assert "Linux version 7.2.2" in "\n".join(boot.rows)
+
+
+def test_a_browser_can_import_the_toolkit_with_no_pseudo_terminal(monkeypatch):
+    """Pyodide has no `fcntl`, and for a while that cost a page the whole toolkit.
+
+    `kxray.replay.record` drives a pseudo terminal, which a browser does not have and never will.
+    It used to be imported by `kxray/replay/__init__.py` at the top, so `import kxwidgets` reached
+    it on the way to the session player, and a page that only wanted to draw a call tree died with
+    `ModuleNotFoundError: No module named 'fcntl'`. It is loaded on demand now.
+
+    The three modules blocked here are the three Pyodide leaves out for the same reason. Nothing
+    imported eagerly anywhere in this project is allowed to want one of them.
+    """
+    missing = ("fcntl", "termios", "pty")
+
+    class Blocked:
+        def find_spec(self, name, path=None, target=None):
+            if name in missing:
+                raise ModuleNotFoundError(f"No module named {name!r}")
+            return None
+
+    monkeypatch.setattr(sys, "meta_path", [Blocked(), *sys.meta_path])
+    for name in [*missing, *[n for n in list(sys.modules) if n.split(".")[0] in PACKAGES]]:
+        monkeypatch.delitem(sys.modules, name, raising=False)
+    for name in PACKAGES:
+        importlib.import_module(name)
+
+
+def test_the_recorder_is_still_reachable_by_name():
+    """Loading on demand is only acceptable if asking for it by name still works."""
+    from kxray import replay as fresh
+
+    assert fresh.record.WIDTH > 0
+    with pytest.raises(AttributeError):
+        getattr(fresh, "nothing_called_this")  # noqa: B009 - the lookup is the thing being tested

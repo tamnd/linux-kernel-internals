@@ -25,7 +25,7 @@ from pathlib import Path
 import pytest
 
 import kxbox
-from kxbox import bridge, corpus
+from kxbox import bridge, corpus, profiles
 from kxbox.__main__ import check
 from kxray.models import Tape
 
@@ -106,6 +106,12 @@ class FakeBridge:
             "/sys/kernel/tracing/max_graph_depth": "0\n",
             "/sys/kernel/tracing/trace_options": "",
             "/sys/kernel/tracing/tracing_on": "0\n",
+            # What a real box answered, byte for byte, because the banner reads this and parses
+            # it. A stand in that returned something tidier here would test a kernel nobody has.
+            "/proc/version": (
+                "Linux version 7.2.2 (kxbox@kxbox) (i686-linux-gnu-gcc (Debian 14.2.0-19) 14.2.0, "
+                "GNU ld (GNU Binutils for Debian) 2.44) #1 PREEMPT @0\n"
+            ),
         }
         # What the ring buffer fills up with once tracing is turned on. Keeping it here rather than
         # in `files` is what makes the buffer behave like one: it starts empty, a write to `trace`
@@ -528,10 +534,56 @@ def test_the_fallback_is_never_silent(tmp_path, monkeypatch):
 
 
 def test_a_live_banner_states_what_tier_0_is():
-    box = kxbox.Box(bridge.V86(FakeBridge()), "teaching")
+    box = kxbox.Box(bridge.V86(FakeBridge()), "teaching", root=ROOT)
     banner = box.banner()
-    assert "uniprocessor, 32 bit x86, emulated timing" in banner
     assert "no performance claim" in banner
+    # The five facts the milestone row asks for, and the backend is the first line.
+    assert "v86 backend" in banner
+    assert "teaching profile" in banner
+    assert "Linux 7.2.2 #1" in banner
+    assert "PREEMPT" in banner
+    assert "32 bit x86 (i386)" in banner
+
+
+def test_the_banner_says_which_facts_it_read_and_which_it_copied():
+    """Two of the five come off the kernel and one comes out of a config file.
+
+    A banner that printed all three in one voice would have a reader believe the config file had
+    been checked against something. It has not, and the KASAN story is what happens then.
+    """
+    banner = kxbox.Box(bridge.V86(FakeBridge()), "teaching", root=ROOT).banner()
+    assert "the kernel says: Linux 7.2.2" in banner
+    assert "built for 32 bit x86 (i386), per its fragments" in banner
+
+
+def test_a_recorded_banner_does_not_claim_a_kernel_said_anything_just_now():
+    """It did say it, once, on the boot the capture came off. That is a different sentence."""
+    banner = kxbox.boot(root=ROOT).banner()
+    assert "the recorded kernel said: Linux 7.2.2" in banner
+    assert "the kernel says" not in banner
+
+
+def test_the_banner_will_not_fill_the_release_in_from_the_pin(monkeypatch):
+    """A profile with no recording of `/proc/version` says nothing rather than saying 7.2.2.
+
+    The pin is what somebody asked to be built. Printing it as though a kernel had been asked is
+    the mistake this whole line exists to avoid, and lockdep is the case that would hit it: the
+    version is in `pin.toml` and there is no capture of that boot's banner.
+    """
+    banner = kxbox.boot("lockdep", root=ROOT).banner()
+    assert "nothing read off a kernel" in banner
+    assert "7.2.2" not in banner
+
+
+def test_the_banner_calls_out_a_kernel_that_is_not_the_pinned_one(monkeypatch):
+    """The case the reading exists for, which no committed capture can show.
+
+    Every capture in this repository came off the pinned kernel, so the disagreement this looks
+    for cannot be demonstrated with one. It can be demonstrated by moving the pin.
+    """
+    monkeypatch.setattr(profiles, "pinned_version", lambda *_, **__: "6.18.48")
+    banner = kxbox.Box(bridge.V86(FakeBridge()), "teaching", root=ROOT).banner()
+    assert "NOT the 6.18.48 the pin asks for" in banner
 
 
 def test_disable_is_off_when_it_is_set_to_zero(monkeypatch):
@@ -600,7 +652,19 @@ def test_a_profile_can_say_which_kernel_is_behind_it():
     box = kxbox.Box(bridge.V86(FakeBridge()), "memcheck", "", ROOT)
     assert box.built()["name"] == "E-memcheck"
     assert "KFENCE" in box.built()["summary"]
-    assert kxbox.profiles.built("memcheck", Path("/nowhere")) == {}
+
+
+def test_a_reader_with_no_checkout_still_gets_the_pin():
+    """This is the Colab reader, and it is most of them.
+
+    The badge on the front page runs `pip install git+https://...` on a machine with nothing else
+    on it, so there is no `kxbox/kernel/pin.toml` under the working directory and there never will
+    be. The wheel carries one next to `profiles.py` and this is the line that finds it. Before it
+    did, every banner on Colab said the architecture was something nothing named.
+    """
+    assert kxbox.profiles.built("memcheck", Path("/nowhere"))["name"] == "E-memcheck"
+    assert kxbox.profiles.pin_file(Path("/nowhere")) == kxbox.profiles.PACKAGED
+    assert kxbox.profiles.PACKAGED.exists()
 
 
 def test_every_profile_says_what_it_gives_and_what_it_takes():
@@ -690,6 +754,19 @@ def test_the_browser_demo_traces_a_recipe_it_is_allowed_to_trace():
     )
 
 
+def test_the_browser_demo_reports_the_banner_off_a_live_session():
+    """The one place the live wording of `banner()` can be looked at by a person.
+
+    Every other path through it runs here, against a stand in, on a machine with no kernel. The
+    live branch says `the kernel says` instead of `the recorded kernel said` and prints a release
+    that came out of a kernel booted seconds earlier, and no test on this laptop can produce that.
+    So the page prints it, and this holds the page to printing it.
+    """
+    program = (ROOT / "kxbox" / "web" / "first-tape.py").read_text(encoding="utf-8")
+    assert "kxbox.boot(" in program, "the demo should build the session the way a lesson does"
+    assert "SESSION.banner()" in program, "the demo should report the banner it booted with"
+
+
 def test_the_browser_demo_asks_for_what_the_recipe_asks_for():
     """Same functions, same window. A demo that traced it differently would show a different tree.
 
@@ -761,3 +838,55 @@ def test_everything_the_image_carries_is_pinned_by_checksum():
         assert len(row["sha256"]) == 64, f"{name} has no usable sha256"
         assert row["url"].startswith("https://"), f"{name} is fetched over {row['url'][:5]}"
         assert row["recorded"], f"{name} does not say when its checksum was taken"
+
+
+def test_the_architecture_comes_off_the_fragments_every_profile_is_built_from():
+    """All three are 32 bit, and the reader that says so has to find it in each one's own list.
+
+    Unlike the symbols in the KASAN story, this is not something a fragment can ask for and not
+    get. An architecture is a choice Kconfig either honours or refuses to configure at all.
+    """
+    for name in profiles.names():
+        assert profiles.arch(name, ROOT) == "32 bit x86 (i386)", name
+
+
+def test_a_profile_with_no_fragment_on_disk_says_so_instead_of_guessing(tmp_path):
+    """A pin that names a fragment nobody shipped gets a shrug, not the last architecture seen.
+
+    The checkout has to be faked rather than pointed somewhere empty, because pointing somewhere
+    empty now finds the pin that came with the package and answers correctly off that.
+    """
+    kernel = tmp_path / "kxbox" / "kernel"
+    kernel.mkdir(parents=True)
+    (kernel / "pin.toml").write_text(
+        '[[profiles]]\nname = "A-full"\nkernel = "kernel"\nfragments = ["config/gone.config"]\n',
+        encoding="utf-8",
+    )
+    assert profiles.arch("teaching", tmp_path) == profiles.UNKNOWN_ARCH
+
+
+def test_the_pinned_version_follows_the_tree_the_profile_names():
+    """Five profiles are on 7.2.2 and `C-longterm` is on 6.18.48, and the row says which by name.
+
+    Reading the version off the top of `pin.toml` instead of following that pointer would hold the
+    longterm build to the wrong number, which is the mistake `tools/claimledger.py` also had to
+    avoid.
+    """
+    pin = tomllib.loads(REAL_PIN.read_text(encoding="utf-8"))
+    assert profiles.pinned_version("teaching", ROOT) == pin["kernel"]["version"]
+    longterm = next(one for one in pin["profiles"] if one["name"] == "C-longterm")
+    assert longterm["kernel"] == "fallback"
+    assert pin["fallback"]["version"] != pin["kernel"]["version"]
+
+
+def test_the_banner_recipe_is_repeatable_because_every_first_cell_runs_it():
+    """`/proc/version` does not change between the first read of a boot and the thousandth.
+
+    That matters more here than for any other recipe. The others are run once by a lesson that
+    wants them. This one is run by `banner()`, which is the first cell of every lesson and of the
+    browser harness, so a recipe marked not repeatable would be wrong on the second page a reader
+    opens.
+    """
+    one = corpus.Corpus(ROOT).recipes["banner"]
+    assert one.repeatable
+    assert one.files["/proc/version"] == "proc/tier0/version.txt"
