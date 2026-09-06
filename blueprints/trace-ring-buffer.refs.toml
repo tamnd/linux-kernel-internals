@@ -775,3 +775,33 @@ confirmed = true
 line = 75
 context = "b85c7a9ac9c7"
 note = "The event header layout is printed to userspace by hand from this function, so a tool reading the raw pages gets the field widths from the kernel rather than from a header file."
+
+[[references]]
+id = "trace-ring-buffer-R76"
+path = "kernel/trace/trace.c"
+anchor = "entries-in-buffer/entries-written: %lu/%lu"
+kernel = "7.2.2"
+confirmed = true
+line = 2903
+context = "88777f889ebd"
+note = "The one place the trace file admits to losing anything. Two numbers in the header, how many are here and how many were written, and no mark anywhere in the body."
+
+[[references]]
+id = "trace-ring-buffer-R77"
+path = "kernel/trace/trace.c"
+anchor = "ring_buffer_overrun_cpu(buf->buffer, cpu);"
+kernel = "7.2.2"
+confirmed = true
+line = 2839
+context = "779961ff472b"
+note = "The second of those two numbers is kept events plus overrun, added up when the header is printed, so it is a total worked out at read time rather than a counter the writer keeps."
+
+[[references]]
+id = "trace-ring-buffer-R78"
+path = "kernel/trace/trace.c"
+anchor = "if (!(trace_flags & TRACE_ITER(CONTEXT_INFO)))"
+kernel = "7.2.2"
+confirmed = true
+line = 3262
+context = "3c123b9d6973"
+note = "The header is a display option rather than part of the format, so turning context-info off removes the only admission the trace file makes."
