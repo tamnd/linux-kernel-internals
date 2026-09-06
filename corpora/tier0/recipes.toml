@@ -7,10 +7,18 @@ schema = 1
 # the recording filed under that name and hands it back. Both give you a `kxray.models.Tape`.
 #
 # Adding a recipe means capturing it on a real Tier 0 session and committing the capture with its
-# `.meta.toml`. It does not mean writing one. All three recipes here are captures. The handwritten
+# `.meta.toml`. It does not mean writing one. All five recipes here are captures. The handwritten
 # files they used to point at are still in `traces/handwritten/`, still marked `evidence = false`,
 # and still doing the job they were written for, which is giving the parser something to test
 # against on a machine with no kernel built.
+#
+# A recipe is filed under a profile and a session only sees the recipes for the profile it booted.
+# The first three are `teaching`. The last two are `lockdep`, and until they were added a lesson
+# asking for the lockdep kernel got a session that knew how to do nothing at all.
+#
+# What a recipe can record is a trace, the standard output and exit status of a command, and a
+# snapshot of any file the command read. A module load is a command like any other and says so
+# with a `module` field, which is what `box.insmod` matches on.
 #
 # `owns_window` says the command opens and closes the tracer window itself, from inside, around
 # the one system call it exists to show. All three of these do, which is what keeps a first trace
@@ -91,3 +99,44 @@ functions = ["lock_mm_and_find_vma", "handle_mm_fault"]
 trace = "traces/tier0/page-fault.txt"
 status = 0
 stdout = ""
+
+# The two below are the `lockdep` profile rather than `teaching`, and they are the first recipes
+# for any profile other than the default. That is the point of them as much as what they show: a
+# lesson that asks for the lockdep kernel now gets recordings instead of an empty session, and
+# `box.insmod` has something real behind it on both backends rather than only on a live one.
+#
+# Both come off one boot of `D-lockdep` with the module load between them, which is the same boot
+# that produced `corpora/oops/tier0/lockdep-ab-ba.txt`. Two boots would differ in fifteen places
+# for reasons unrelated to the module and nothing in the two files would let a reader rule that
+# out. The setup that produced them is written down in each capture's `.meta.toml`.
+
+[[recipes]]
+name = "lockdep-before"
+profile = "lockdep"
+describes = "/proc/lockdep_stats read on a fresh boot, before anything has loaded a module, with debug_locks still 1"
+command = "cat /proc/lockdep_stats"
+repeatable = false
+status = 0
+stdout = ""
+
+[recipes.files]
+"/proc/lockdep_stats" = "proc/tier0/lockdep-stats-before.txt"
+
+[[recipes]]
+name = "load-abba"
+profile = "lockdep"
+describes = "loading a module that takes two locks in two orders, which lockdep reports without either thread ever blocking"
+command = "insmod /lib/modules/abba.ko"
+# What `box.insmod(...)` matches on. The path a lesson writes is the path the rootfs build put the
+# file at, and only the last part of it is the same question on both backends.
+module = "abba.ko"
+# insmod returned zero. A lockdep report is not a load failure. The module goes in, stays in, and
+# rmmod takes it back out normally, which is claim C09-02 seen from the caller's side.
+status = 0
+stdout = ""
+# Not repeatable, and the reason is the whole of C09-04. `debug_locks` is 0 from the first report
+# onward, so a second load in the same boot is not reported at all.
+repeatable = false
+
+[recipes.files]
+"/proc/lockdep_stats" = "proc/tier0/lockdep-stats-after.txt"

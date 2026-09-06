@@ -19,6 +19,16 @@ globalThis.kxbox = {
 
 `sh` runs one line in the guest's shell and waits for it to finish. `read` and `write` are file operations inside the guest, which is how everything under `/proc` and `/sys/kernel/tracing` is reached. `insmod` loads a module and is separate from `sh` only because the failure modes are worth reporting differently.
 
+## What a lesson sees, which is not quite these four
+
+These four are what the page owes Python. What a lesson writes is `boot`, `sh`, `read`, `trace` and `insmod` on a `Box`, and the two lists differ in two places worth knowing about.
+
+`trace` is not a protocol call. It is a dozen writes and two reads in a fixed order, all through the four above, and it lives in `kxbox/bridge.py` rather than in the page because getting that order wrong is a real failure and it should be wrong in one place at most. It is also the reason `write` is on the list at all.
+
+`write` is deliberately not on a `Box`. A recording can hand back what a file said and can do nothing whatever about a lesson writing to that file, and a lesson whose effect quietly does not happen on most readers' machines is worse than one that cannot be written in the first place. So writing into the guest stays inside the tracer plumbing, where the live backend does it and the recorded one has nothing to do.
+
+Everything else has to exist on both backends with the same arguments, and a test compares the two signatures rather than trusting that. An argument one backend takes and the other does not is a lesson that raises `TypeError` on whichever machine the reader is on rather than on the machine it was written on.
+
 ## The calls are synchronous
 
 This is the part that constrains where the book can be hosted, so it is written down here rather than found out later.
