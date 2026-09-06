@@ -3,10 +3,11 @@
 #
 #     ./kxbox/rootfs/build.sh
 #
-# The result is kxbox/rootfs/build/initrd.gz, which is one busybox, one init script and four empty
-# directories. It is about half a megabyte and it is not committed, the same as the kernel.
+# The result is kxbox/rootfs/build/initrd.gz, which is one busybox, one strace, three small
+# programs, one init script and four empty directories. It is not committed, the same as the
+# kernel.
 #
-# This one needs no container and no root. Everything in it is a regular file, a directory or a
+# This one needs no root. Everything in it is a regular file, a directory or a
 # symlink, and the device nodes the kernel needs are made by devtmpfs before init runs, which is
 # what CONFIG_DEVTMPFS_MOUNT in the teaching fragment is for. A rootfs that needed mknod would need
 # root, and asking a reader for root to build a teaching image is a bad trade.
@@ -18,54 +19,50 @@ OUT="$HERE/build"
 STAGE="$OUT/root"
 PIN="$HERE/pin.toml"
 
+# One reader for the whole pin file, called as `read_pin <section> <key>`. There were three of
+# these, one per section, identical apart from the name in the middle, and a fourth was about to be
+# written for strace. A list comes back space separated because that is what a shell loop wants.
 read_pin() {
-    python3 - "$PIN" "$1" <<'PY'
+    python3 - "$PIN" "$1" "$2" <<'PY'
 import sys, tomllib
-pin = tomllib.load(open(sys.argv[1], "rb"))["busybox"]
-value = pin[sys.argv[2]]
+value = tomllib.load(open(sys.argv[1], "rb"))[sys.argv[2]][sys.argv[3]]
 print(" ".join(value) if isinstance(value, list) else value)
 PY
 }
 
-read_programs() {
-    python3 - "$PIN" "$1" <<'PY'
-import sys, tomllib
-pin = tomllib.load(open(sys.argv[1], "rb"))["programs"]
-value = pin[sys.argv[2]]
-print(" ".join(value) if isinstance(value, list) else value)
-PY
-}
-
-read_modules() {
-    python3 - "$PIN" "$1" <<'PY'
-import sys, tomllib
-pin = tomllib.load(open(sys.argv[1], "rb"))["modules"]
-value = pin[sys.argv[2]]
-print(" ".join(value) if isinstance(value, list) else value)
-PY
-}
-
-VERSION=$(read_pin version)
-URL=$(read_pin url)
-SHA=$(read_pin sha256)
-APPLETS=$(read_pin required_applets)
-BUSYBOX="$OUT/busybox-$VERSION"
-
-mkdir -p "$OUT"
-
-if [ ! -f "$BUSYBOX" ]; then
-    echo "fetching $URL"
-    curl -fL --progress-bar -o "$BUSYBOX.part" "$URL"
-    mv "$BUSYBOX.part" "$BUSYBOX"
-fi
-
-python3 - "$BUSYBOX" "$SHA" <<'PY'
+# Fetch a file once and check it against the sha256 the pin records. Both things this image
+# downloads come through here, and neither is used before the checksum has matched.
+fetch() {
+    url=$1
+    into=$2
+    want=$3
+    if [ ! -f "$into" ]; then
+        echo "fetching $url"
+        curl -fL --progress-bar -o "$into.part" "$url"
+        mv "$into.part" "$into"
+    fi
+    python3 - "$into" "$want" <<'PY'
 import hashlib, sys
 digest = hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest()
 if digest != sys.argv[2]:
     sys.exit(f"checksum mismatch, refusing to build a rootfs\n  wanted {sys.argv[2]}\n  got    {digest}")
-print("checksum ok")
+print(f"checksum ok: {sys.argv[1].rsplit('/', 1)[-1]}")
 PY
+}
+
+read_programs() { read_pin programs "$1"; }
+read_modules() { read_pin modules "$1"; }
+read_strace() { read_pin strace "$1"; }
+
+VERSION=$(read_pin busybox version)
+URL=$(read_pin busybox url)
+SHA=$(read_pin busybox sha256)
+APPLETS=$(read_pin busybox required_applets)
+BUSYBOX="$OUT/busybox-$VERSION"
+
+mkdir -p "$OUT"
+
+fetch "$URL" "$BUSYBOX" "$SHA"
 
 # What the binary says it can do, checked against what the bridge needs. The list of applets is in
 # the binary itself, so this is asking it rather than trusting the version number.
@@ -114,6 +111,40 @@ if command -v docker >/dev/null 2>&1; then
 else
     echo "no docker, so none of $SOURCES in this image"
     echo "  without them: a page fault trace is thirty faults and a write trace is nine writes"
+fi
+
+# strace, built from the release tarball rather than downloaded as a binary, because nobody
+# publishes a static i686 one and this project is not going to be the first.
+#
+# The result is cached beside busybox and reused, which matters more here than anywhere else in
+# this file. The build is a configure and a make, it took thirty seven minutes the first time it
+# ran on an arm laptop, and almost all of that is qemu translating x86 instructions one at a time.
+# On an x86 machine it is a couple of minutes. Either way it happens once.
+STRACE_VERSION=$(read_strace version)
+STRACE="$OUT/strace-$STRACE_VERSION-i686"
+if command -v docker >/dev/null 2>&1; then
+    if [ ! -f "$STRACE" ]; then
+        TARBALL="$OUT/strace-$STRACE_VERSION.tar.xz"
+        fetch "$(read_strace url)" "$TARBALL" "$(read_strace sha256)"
+        echo "building strace $STRACE_VERSION, which takes a while and then never happens again"
+        docker run --rm -v "$OUT:/out" "$(read_strace image)" sh -eu -c "
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update -qq >/dev/null
+            apt-get install -y -qq --no-install-recommends $(read_strace packages) >/dev/null
+            cd /tmp && tar xf /out/strace-$STRACE_VERSION.tar.xz && cd strace-$STRACE_VERSION
+            ./configure $(read_strace configure) LDFLAGS=-static >/tmp/configure.log 2>&1 \
+                || { tail -30 /tmp/configure.log; exit 1; }
+            make -j4 >/tmp/make.log 2>&1 || { tail -40 /tmp/make.log; exit 1; }
+            $(read_strace strip) src/strace
+            cp src/strace /out/strace-$STRACE_VERSION-i686
+        "
+    fi
+    cp "$STRACE" "$STAGE/bin/strace"
+    chmod 755 "$STAGE/bin/strace"
+    echo "strace: $STRACE_VERSION, $(wc -c < "$STRACE") bytes"
+else
+    echo "no docker, so no strace in this image"
+    echo "  without it: nothing shows which system calls a program made, only what they did inside"
 fi
 
 # Any module somebody has built, copied in as it is. Nothing here compiles one, because a module

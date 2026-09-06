@@ -23,7 +23,7 @@ linux-kernel-internals/
 │   ├── web/                 #   the browser half: the channel, the shell protocol, the page
 │   ├── web/vendor/v86/      #   pinned upstream by commit and sha256, BSD-2-Clause, not committed
 │   ├── kernel/              #   pin.toml, config fragments, build.sh, results
-│   └── rootfs/              #   a pinned busybox and a thirty line init
+│   └── rootfs/              #   busybox, strace, three small programs, a thirty line init
 ├── kxdiff/                  # comparing two traces: policy.py says what, levels.py says how strictly
 ├── kxshapes/                # the nine shapes, as data, drawn by both renderers below
 ├── kxwidgets/               # shapes.py draws the nine, the rest compose them into widgets
@@ -167,7 +167,7 @@ There is no profile called kasan and the milestone asked for one. `arch/x86/Kcon
 
 `kxbox/web/headless.js` boots the same kernel under node instead of on a page, which is what makes a boot something CI and a bisect can do rather than something a person has to click through. It shares `serialFor` and `waitForBoot` with `page.js` and everything below them, so the two ways in can disagree about the machine but not about us.
 
-`kxbox/rootfs/` is the userland the kernel boots into: a pinned busybox and a thirty line init that mounts four filesystems and prints one marker. It stops there on purpose. An init that turns a tracer on behind the reader's back makes every lesson about that tracer a lie.
+`kxbox/rootfs/` is the userland the kernel boots into: a pinned busybox, a pinned strace built from source because nobody publishes a static 32-bit one, three small programs that each put one system call inside the tracer window so a trace of one has one thing in it, and a thirty line init that mounts four filesystems and prints one marker. The init stops there on purpose. An init that turns a tracer on behind the reader's back makes every lesson about that tracer a lie.
 
 `kxbox/web/serve.py` is there because a blocking worker needs a `SharedArrayBuffer`, a useful `SharedArrayBuffer` needs the page to be cross origin isolated, and that needs two response headers `python3 -m http.server` does not send. Getting it wrong does not look like a header problem, it looks like the emulator hanging, so the headers have a test.
 

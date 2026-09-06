@@ -90,7 +90,20 @@ A boot that reaches a shell and cannot trace is a failure for this project even 
 | `B-btf-external` | yes | yes | yes | yes | yes | no, and that is the point |
 | `C-longterm` | not measured | not measured | not measured | not measured | not measured | not measured |
 
-The `A-full` row is what `headless.js smoke` checks, nine checks, each one named after a lesson that stops working without it. Alongside those: 50787 symbols in `/proc/kallsyms`, 16755 functions in `available_filter_functions`, and a real filtered `function_graph` tape came back through the four call protocol in 3.2 seconds.
+The `A-full` row is what `headless.js smoke` checks, eleven checks, each one named after a lesson that stops working without it. Alongside those: 50787 symbols in `/proc/kallsyms`, 16755 functions in `available_filter_functions`, and a real filtered `function_graph` tape came back through the four call protocol in 3.2 seconds.
+
+## What the rootfs costs
+
+The kernel is one of two things a reader downloads and the initramfs is the other, so its size belongs in the same table as the image sizes above.
+
+| What is in it | Compressed | Measured |
+| --- | --- | --- |
+| busybox, three small programs, `abba.ko` | 712410 bytes (696 KiB) | 2026-09-02 |
+| the same plus strace 7.2 | 1737376 bytes (1.66 MiB) | 2026-09-06 |
+
+strace more than doubles the initramfs and adds a quarter to what a reader fetches in total, which goes from 3.93 MiB to 4.91 MiB alongside `A-full`. That is the same kind of trade `B-btf-external` was built to price and it has the same answer: everything measured here is served from `127.0.0.1`, so a megabyte costs nothing on this machine and this cannot settle it. What it does settle is the other half. A boot with the larger image still reaches a shell under node in 6.3 seconds and all eleven checks pass, so the extra megabyte does not slow the boot down in any way this can detect. Whether it is worth a quarter of the download is a question for a real network.
+
+Both numbers move by a few bytes between runs, because the cpio carries the modification time of every file in it and gzip compresses those times along with everything else. The strace binary itself does not move at all: two builds from the same tarball in two fresh containers came out with the same sha256, which is the part worth being able to say.
 
 The `no` in the `B-btf-external` row is the profile working. `/sys/kernel/btf` is not there at all, tracing and kallsyms are untouched, and the type information a blueprint needs has to come down as a second file. What that costs a reader is one more download and one more thing that can be missing, which is exactly the trade this profile exists to price.
 
