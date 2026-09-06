@@ -29,6 +29,7 @@ from kxbox.__main__ import check
 from kxray.models import Tape
 
 ROOT = Path(__file__).resolve().parents[1]
+REAL_PIN = ROOT / "kxbox" / "kernel" / "pin.toml"
 
 TRACE = """\
 # tracer: function_graph
@@ -407,6 +408,84 @@ def test_a_live_banner_states_what_tier_0_is():
 def test_disable_is_off_when_it_is_set_to_zero(monkeypatch):
     monkeypatch.setenv("KXBOX_DISABLE", "0")
     assert kxbox.disabled() is False
+
+
+# -- the three profiles --------------------------------------------------------------------------
+#
+# A boot profile is a name a lesson asks for and a build profile is a row in pin.toml, and these
+# tests are mostly about the two staying joined up.
+
+
+def test_a_profile_nobody_builds_is_refused_rather_than_carried(tmp_path):
+    """`boot("lockdpe")` used to work, and gave a teaching kernel calling itself a lockdep one.
+
+    Nothing after that would have failed. The lesson would boot, run, find no lock ordering
+    problem, and a reader would conclude the code has none. A clean wrong answer is worse than a
+    crash, so this raises at the door.
+    """
+    with pytest.raises(kxbox.Unknown) as raised:
+        kxbox.boot("lockdpe", root=repo(tmp_path))
+
+    said = str(raised.value)
+    assert "lockdpe" in said
+    for name in ("teaching", "lockdep", "memcheck"):
+        assert name in said
+
+
+def test_every_boot_profile_names_a_kernel_somebody_built():
+    """The join between `kxbox/profiles.py` and `kxbox/kernel/pin.toml`, checked both ways.
+
+    Renaming a profile in the pin without touching the registry is otherwise a change nothing
+    notices until a lesson boots.
+    """
+    pinned = tomllib.loads(REAL_PIN.read_text(encoding="utf-8"))
+    built = {one["name"]: one for one in pinned["profiles"]}
+
+    for one in kxbox.PROFILES.values():
+        assert one.builds in built, one.name
+        assert one.fragment in built[one.builds]["fragments"], one.name
+
+
+def test_the_default_is_the_one_a_lesson_gets_without_asking():
+    assert kxbox.profiles.DEFAULT == "teaching"
+    assert kxbox.profiles.get("teaching").default
+    assert not kxbox.profiles.get("lockdep").default
+    assert kxbox.boot(root=ROOT).profile == "teaching"
+
+
+def test_there_is_no_kasan_profile_and_the_reason_is_written_down():
+    """The milestone asked for one. 32 bit x86 cannot have it, so the name would be a lie."""
+    assert "kasan" not in kxbox.PROFILES
+    assert "KFENCE" in kxbox.profiles.get("memcheck").gives
+
+
+def test_the_banner_says_what_the_profile_costs():
+    """Somebody timing something on the lockdep kernel is the mistake this line is here for."""
+    box = kxbox.Box(bridge.V86(FakeBridge()), "lockdep")
+    banner = box.banner()
+    assert "lockdep gives you" in banner
+    assert "timings mean nothing" in banner
+
+
+def test_a_profile_can_say_which_kernel_is_behind_it():
+    box = kxbox.Box(bridge.V86(FakeBridge()), "memcheck", "", ROOT)
+    assert box.built()["name"] == "E-memcheck"
+    assert "KFENCE" in box.built()["summary"]
+    assert kxbox.profiles.built("memcheck", Path("/nowhere")) == {}
+
+
+def test_every_profile_says_what_it_gives_and_what_it_takes():
+    """A profile with no cost written down is one somebody will reach for by default."""
+    for one in kxbox.PROFILES.values():
+        assert len(one.gives.split()) >= 4, one.name
+        assert len(one.costs.split()) >= 4, one.name
+        assert one.wanted_by
+
+
+def test_the_table_lines_up_and_has_a_row_each():
+    printed = kxbox.profiles.table().splitlines()
+    assert len(printed) == len(kxbox.PROFILES) + 1
+    assert printed[0].startswith("profile")
 
 
 # -- the recipe list -------------------------------------------------------------------------------

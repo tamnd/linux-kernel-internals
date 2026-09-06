@@ -65,11 +65,17 @@ KXBOX_PROFILE=D-lockdep node kxbox/web/headless.js sh 'cat /proc/lockdep_stats'
 
 - `teaching.config`, everything the book needs the kernel to be able to say about itself. Tracing, kprobes, `KALLSYMS_ALL`, BTF, `/proc`, `/sys`, debugfs, modules.
 - `v86.config`, the shape of the emulated machine. 32-bit, uniprocessor, serial console, initramfs, and a list of things switched off because a browser pays for every byte twice.
-- `btf-external.config`, `gzip.config` and `lockdep.config`, the deltas that make the other profiles.
+- `btf-external.config`, `gzip.config`, `lockdep.config` and `memcheck.config`, the deltas that make the other profiles.
+
+`memcheck.config` is the one the milestone called the kasan profile, and the name changed because KASAN cannot be built here. `arch/x86/Kconfig` selects `HAVE_ARCH_KASAN` only under `X86_64` and selects `HAVE_ARCH_KFENCE` under nothing, and this is a 32 bit kernel because v86 is a 32 bit emulator. There is a second reason on top of the architecture: KASAN also depends on `!SLUB_TINY`, and the base here is `tinyconfig`, which sets it. So the profile is built out of KFENCE, page poisoning, `DEBUG_PAGEALLOC` and the slab debugger, which is what a 32 bit kernel can actually do. Those two lines of the architecture file are committed at `corpora/source/pinned/arch/x86/Kconfig.excerpt` and `tools/kconfig` reads the condition off them.
+
+`lockdep.config` used to set `CONFIG_KASAN=y` and `CONFIG_KASAN_GENERIC=y`, and no kernel this project has built has ever had them. The generated config for `D-lockdep` has no `CONFIG_KASAN` line in it at all. The only thing in it with KASAN in the name is `CONFIG_CC_HAS_KASAN_GENERIC=y`, which says the compiler could have done it if the architecture had asked. That is what a quietly dropped symbol looks like from the outside, which is to say it looks like nothing.
 
 `just kconfig` checks all of it. The list with teeth is `REQUIRED` in `tools/kconfig.py`: every symbol the book stops working without, each with a line saying what breaks. A profile is allowed to drop one, because profile B exists to drop BTF, but it has to declare the drop in `pin.toml` and give a reason. Turning off a requirement is a decision. Turning one off quietly is how a project ends up with lessons that cannot run and nobody knowing which change did it.
 
 There is a second check for after a build. A fragment says what was asked for, and a `.config` says what Kconfig did with it once every dependency was resolved. A symbol whose dependencies are unmet gets dropped with no error at all, so `build.sh` runs `tools.kconfig --verify` on the generated config before it believes the build.
+
+There is now a third, which runs without a toolchain and catches the same class of mistake earlier. `tools/kconfig` knows which symbols the architecture gates, reads the conditions off the committed excerpt of `arch/x86/Kconfig`, and fails a 32 bit profile that asks for one of them. That check is what the KASAN lines above would have run into, and it is why they are gone.
 
 ## The kill criterion
 

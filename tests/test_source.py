@@ -352,6 +352,57 @@ def test_asking_about_a_symbol_that_is_somewhere_else_says_so(preempt):
         preempt["MMU"]
 
 
+@pytest.fixture
+def kfence(corpus):
+    return kconfig.load(corpus, "lib/Kconfig.kfence")
+
+
+def test_a_symbol_can_depend_on_something_it_never_mentions(kfence):
+    """Seven of the eight KFENCE symbols have no `depends on` line and all seven depend on KFENCE.
+
+    The dependency is on the `if KFENCE` wrapped round them. A reader looking at
+    KFENCE_SAMPLE_INTERVAL alone sees a symbol with no conditions on it at all, and then cannot
+    explain why it is missing from a build. This is the case the `within` stack exists for.
+    """
+    assert kfence.unparsed == ()
+    assert len(kfence.symbols) == 8
+
+    interval = kfence["KFENCE_SAMPLE_INTERVAL"]
+    assert interval.depends == ()
+    assert interval.within == ("KFENCE",)
+    assert interval.conditions == ("KFENCE",)
+
+    inside = [one for one in kfence.symbols if "KFENCE" in one.within]
+    assert len(inside) == 6
+    assert kfence["KFENCE"].within == ()
+
+    # The one symbol in the block that does have its own `depends on` keeps both, block first,
+    # because the block is the outer condition and reads that way on the page.
+    unit = kfence["KFENCE_KUNIT_TEST"]
+    assert unit.conditions == ("KFENCE", "TRACEPOINTS && KUNIT")
+
+
+def test_the_only_place_the_kernel_says_what_a_number_may_be(kfence):
+    """`range 1 65535` is not written anywhere else, and a fragment setting 0 gets no complaint."""
+    objects = kfence["KFENCE_NUM_OBJECTS"]
+    assert objects.type == "int"
+    assert objects.ranges == ("1 65535",)
+    assert objects.defaults == ("255",)
+
+
+def test_the_architecture_says_which_checkers_a_32_bit_build_may_have(corpus):
+    """Two lines of arch/x86/Kconfig are the whole reason there is no kasan profile.
+
+    KASAN is selected only under X86_64 and KFENCE is selected under nothing, and Tier 0 is i386.
+    Kconfig drops a symbol whose dependencies are unmet without printing anything, so a fragment
+    asking for CONFIG_KASAN on this build produces a config without it and no error.
+    """
+    arch = kconfig.load(corpus, "arch/x86/Kconfig")
+    under = {one.symbol: one.condition for one in arch["X86"].selects}
+    assert under["HAVE_ARCH_KASAN"] == "X86_64"
+    assert under["HAVE_ARCH_KFENCE"] == ""
+
+
 # -- symbols -------------------------------------------------------------------------------------
 
 

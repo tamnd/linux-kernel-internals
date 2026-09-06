@@ -50,6 +50,15 @@ DEFAULT_RE = re.compile(r"^default\s+(.*)$")
 PROMPT_RE = re.compile(r'^prompt\s+"(?P<prompt>(?:[^"\\]|\\.)*)"\s*(?P<tail>.*)$')
 CHOICE_RE = re.compile(r"^(choice|endchoice)\b")
 HELP_RE = re.compile(r"^(help|---help---)\s*$")
+RANGE_RE = re.compile(r"^range\s+(.+)$")
+
+# `if COND` around a run of symbols, and the `endif` that closes it. This is a condition and not a
+# menu, which is why it is read here and `menu` is not: every symbol between the two carries the
+# condition whether or not it says so itself, and a reader asking why a symbol is on needs it. In
+# `lib/Kconfig.kfence` the entire body sits inside `if KFENCE`, so not one of the seven symbols in
+# there has a `depends on` line and every one of them depends on KFENCE.
+IF_RE = re.compile(r"^if\s+(.+)$")
+ENDIF_RE = re.compile(r"^endif\b")
 
 
 @dataclass(frozen=True)
@@ -73,6 +82,8 @@ class Symbol:
     selects: tuple[Select, ...] = ()
     implies: tuple[Select, ...] = ()
     defaults: tuple[str, ...] = ()
+    ranges: tuple[str, ...] = ()
+    within: tuple[str, ...] = ()
     help: str = ""
     choice: str = ""
     line: int = 0
@@ -90,6 +101,16 @@ class Symbol:
     @property
     def config(self) -> str:
         return f"CONFIG_{self.name}"
+
+    @property
+    def conditions(self) -> tuple[str, ...]:
+        """Everything this symbol depends on, whether it said so itself or an `if` said it.
+
+        `KFENCE_SAMPLE_INTERVAL` has no `depends on` line of its own and cannot be set unless
+        KFENCE is on, because the whole block is inside `if KFENCE`. Reading the symbol without
+        reading the block it sits in gives the wrong answer.
+        """
+        return self.within + self.depends
 
     def __str__(self) -> str:
         shown = self.prompt or "no prompt, so it cannot be set by hand"
@@ -178,6 +199,7 @@ def parse(text: str, source: str = "<text>") -> KconfigFile:
     unparsed: list[tuple[int, str]] = []
     counted = Lines()
     current: Symbol | None = None
+    within: list[str] = []
     choices: list[Choice] = []
     choice: Choice | None = None
     in_help = False
@@ -211,6 +233,20 @@ def parse(text: str, source: str = "<text>") -> KconfigFile:
             counted.count(SKIPPED)
             continue
 
+        opened = IF_RE.match(body)
+        if opened is not None:
+            close()
+            within.append(opened.group(1).strip())
+            counted.count(READ)
+            continue
+
+        if ENDIF_RE.match(body):
+            close()
+            if within:
+                within.pop()
+            counted.count(READ)
+            continue
+
         found = CONFIG_RE.match(body)
         if found is not None:
             close()
@@ -218,6 +254,7 @@ def parse(text: str, source: str = "<text>") -> KconfigFile:
                 name=found.group(2),
                 kind=found.group(1),
                 choice=choice.prompt if choice is not None else "",
+                within=tuple(within),
                 line=number,
                 source=source,
             )
@@ -260,9 +297,9 @@ def parse(text: str, source: str = "<text>") -> KconfigFile:
                     choice.depends = choice.depends + (depends.group(1).strip(),)
                     counted.count(READ)
                     continue
-            # Outside any `config` and outside any `choice`. `menu`, `if`, `endif` and `comment`
-            # all land here. This parser answers questions about symbols and does not model menus,
-            # so those are counted as unread rather than quietly passed over.
+            # Outside any `config` and outside any `choice`. `menu`, `endmenu` and `comment` land
+            # here. Those are presentation, this parser answers questions about symbols and does
+            # not model menus, so they are counted as unread rather than quietly passed over.
             unparsed.append((number, line))
             counted.count(UNPARSED)
             continue
@@ -293,6 +330,15 @@ def parse(text: str, source: str = "<text>") -> KconfigFile:
         default = DEFAULT_RE.match(body)
         if default is not None:
             current.defaults = current.defaults + (default.group(1).strip(),)
+            counted.count(READ)
+            continue
+
+        ranged = RANGE_RE.match(body)
+        if ranged is not None:
+            # `range 1 65535` on an int. It is the only place the kernel says out loud what a
+            # number symbol is allowed to be, and a config fragment setting one outside its range
+            # is a mistake nothing else would report.
+            current.ranges = current.ranges + (ranged.group(1).strip(),)
             counted.count(READ)
             continue
 
