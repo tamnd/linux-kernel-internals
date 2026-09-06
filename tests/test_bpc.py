@@ -443,6 +443,40 @@ def test_a_before_and_after_pair_is_drawn_as_one_table_with_the_change_in_it():
     assert "which is the checker off" in rendered.text
 
 
+def test_a_ring_buffer_stats_file_is_drawn_with_the_arithmetic_already_done():
+    """The ratio is the point, and a reader who has to work it out by hand does not.
+
+    Six counters and two clock readings, in a file that answers no question anybody has on its
+    own. What was written is not in it, the share that was thrown away is not in it, and neither
+    is the length of history the buffer was holding. All three are addition and division on
+    numbers that are, so the generator does them.
+    """
+    request = bpcgen.Request(pin="v7.2.2", arch="i386", artefacts=("proc/tier0/ring-overrun",))
+    rendered = bpcgen.render(5, request, root=ROOT)
+
+    assert rendered.problems == []
+    assert rendered.source.evidence is True
+    assert "| `overrun` | 44002 |" in rendered.text
+    assert "44275 event(s) were written into this buffer" in rendered.text
+    assert "99.4% of everything the tracer recorded" in rendered.text
+    assert "0.007252 second(s) older" in rendered.text
+
+
+def test_the_clock_lines_of_a_stats_file_are_named_rather_than_counted_as_a_loss():
+    """The skipped lines in the accounting are the two clock readings and nothing else.
+
+    Line accounting says two lines of this file were skipped, and a bare number invites the
+    reading that the parser gave up on something. Saying which two, in the output, turns it from
+    an unexplained gap into a fact about the file.
+    """
+    request = bpcgen.Request(pin="v7.2.2", arch="i386", artefacts=("proc/tier0/ring-overrun",))
+    rendered = bpcgen.render(5, request, root=ROOT)
+
+    assert "2 line(s) skipped, 0 line(s) the parser could not read" in rendered.text
+    assert "The skipped ones are the 2 clock reading(s)" in rendered.text
+    assert "| `now ts` | 2.116975 |" in rendered.text
+
+
 # -- the regeneration pass ----------------------------------------------------------------------
 
 

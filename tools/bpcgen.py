@@ -602,6 +602,63 @@ def _lockdep_stats_block(path: Path, partner: Path | None = None) -> list[str]:
     return out
 
 
+def _tracefs_stats_block(path: Path, partner: Path | None = None) -> list[str]:
+    """The per CPU ring buffer counters, and the arithmetic that is already in them.
+
+    The three derived lines below are addition and division on numbers that are in the file, and
+    nothing is chosen here about which counters matter. They are worked out rather than typed
+    because the whole point of this artefact is a ratio, and a reader who has to do the sum by hand
+    is a reader who takes the file at face value and reads the trace as if it were complete.
+    """
+    from kxray.tracefs import account_stats, parse_stats, parse_timestamps, window
+
+    text = path.read_text(encoding="utf-8")
+    stats = parse_stats(text)
+    lines = account_stats(text)
+    clocks = parse_timestamps(text)
+
+    out = [
+        f"{len(stats)} counter(s) read, {lines.skipped} line(s) skipped, "
+        f"{lines.unparsed} line(s) the parser could not read. The skipped ones are the "
+        f"{len(clocks)} clock reading(s) in this file, which are not counts of anything and are "
+        "read separately.",
+        "",
+        "| Counter | Value |",
+        "|---|---|",
+    ]
+    for name, value in stats.items():
+        out.append(f"| `{name}` | {value} |")
+    for name, reading in clocks.items():
+        out.append(f"| `{name}` | {reading:.6f} |")
+    out.append("")
+
+    kept = stats.get("entries")
+    lost = stats.get("overrun")
+    read = stats.get("read events", 0)
+    if kept is not None and lost is not None:
+        written = kept + lost + read
+        out.append(
+            f"{written} event(s) were written into this buffer. {kept} are still in it, {lost} "
+            f"were thrown away to make room, and {read} have been read out."
+        )
+        if kept:
+            out.append(
+                f"That is {lost / kept:.0f} event(s) discarded for every one kept, and "
+                f"{lost / written * 100:.1f}% of everything the tracer recorded."
+            )
+        out.append("")
+
+    held = window(text)
+    if held is not None:
+        out += [
+            f"The oldest event still in the buffer is {held:.6f} second(s) older than the clock "
+            "reading taken as the file was read, so that is the whole of the machine's history "
+            "this buffer was holding.",
+            "",
+        ]
+    return out
+
+
 def _ceiling(stats, name: str) -> str:
     """The build time limit on a counter, when the file prints one, as a fraction used.
 
@@ -622,6 +679,7 @@ def _ceiling(stats, name: str) -> str:
 READERS = {
     "lockdep-splat": _lockdep_splat_block,
     "lockdep-stats": _lockdep_stats_block,
+    "tracefs-stats": _tracefs_stats_block,
 }
 
 

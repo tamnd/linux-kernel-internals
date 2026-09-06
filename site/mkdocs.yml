@@ -88,4 +88,5 @@ nav:
       - Notation: blueprints/NOTATION.md
       - "The lock ordering checker": blueprints/lock-ordering.md
       - "The page fault path": blueprints/page-fault.md
+      - "The trace ring buffer": blueprints/trace-ring-buffer.md
       - "The buffered write path": blueprints/write-path.md

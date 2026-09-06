@@ -1,0 +1,777 @@
+schema = 1
+
+# Citations for the trace ring buffer blueprint.
+#
+# Every sentence in `trace-ring-buffer.md` that states something about Linux points at one of these
+# by writing its id in square brackets, and `refcheck` fails the build on a marker with no entry
+# here and on an entry nothing points at.
+#
+# These are confirmed against the pinned tree. Confirming one means running:
+#
+#     ./kxbox/kernel/tree.sh
+#     python3 -m tools.refcheck --tree kxbox/kernel/build/tree/linux-7.2.2 --confirm
+#
+# which finds the anchor, writes down the line it landed on and flips the flag. The tree that gets
+# unpacked is the pristine tarball from kernel.org, checked against the same sha256 the build
+# checks.
+#
+# The anchor is a piece of text to find, never a line number. The line numbers below are output
+# rather than input, and running the command again after a version bump is what finds the ones
+# that moved.
+#
+# Two notes on this set. Most of it is one file, `kernel/trace/ring_buffer.c`, which is a little
+# over eight thousand lines and holds the whole mechanism apart from the `/proc` style files that
+# print its counters. And several anchors are the long comments in that file rather than the code
+# under them, because this is a lockless algorithm whose correctness argument is written in prose
+# and nowhere else. Deleting one of those comments is exactly the change a reader of this
+# blueprint would want to hear about.
+
+[[references]]
+id = "trace-ring-buffer-R1"
+path = "kernel/trace/ring_buffer.c"
+anchor = "allocated for each CPU. A writer may only write to a buffer that is"
+kernel = "7.2.2"
+confirmed = true
+line = 98
+context = "e7403f2d65a7"
+note = "The rule the whole design rests on. One writer per buffer, because there is one buffer per processor and a writer only ever writes to its own."
+
+[[references]]
+id = "trace-ring-buffer-R2"
+path = "kernel/trace/ring_buffer.c"
+anchor = "The reader is special. For each per cpu buffer, the reader has its own"
+kernel = "7.2.2"
+confirmed = true
+line = 102
+context = "91d72dbfa8cb"
+note = "The reader page. A page that is out of the ring is a page the writer will not touch, which is what lets a reader on another processor work without stopping anything."
+
+[[references]]
+id = "trace-ring-buffer-R3"
+path = "kernel/trace/ring_buffer.c"
+anchor = "struct buffer_page {"
+kernel = "7.2.2"
+confirmed = true
+line = 341
+context = "d8b5a560b6ea"
+note = "The management structure for one sub buffer. It is not the data, it points at the data, which is why the sizes in section 2 do not add up to the memory cost."
+
+[[references]]
+id = "trace-ring-buffer-R4"
+path = "kernel/trace/ring_buffer.c"
+anchor = "/* real end of data */"
+kernel = "7.2.2"
+confirmed = true
+line = 346
+context = "8169817f0b5c"
+note = "Where the data on a page actually stopped, as against how far the write index got. The two differ when a write ran off the end of a page and was moved to the next."
+
+[[references]]
+id = "trace-ring-buffer-R5"
+path = "include/linux/ring_buffer_types.h"
+anchor = "#define BUF_PAGE_HDR_SIZE offsetof(struct buffer_data_page, data)"
+kernel = "7.2.2"
+confirmed = true
+line = 19
+context = "4b1e6eb5ce7c"
+note = "The twelve bytes at the top of every page that are not yours. This is the whole reason the size you ask for and the size you get back are different numbers."
+
+[[references]]
+id = "trace-ring-buffer-R6"
+path = "kernel/trace/ring_buffer.c"
+anchor = "buffer->subbuf_size = subbuf_size - BUF_PAGE_HDR_SIZE;"
+kernel = "7.2.2"
+confirmed = true
+line = 2734
+context = "322886258611"
+note = "The usable bytes in a sub buffer, which on this machine is 4096 minus 12, or 4084. Every size arithmetic in this blueprint uses this number and not the page size."
+
+[[references]]
+id = "trace-ring-buffer-R7"
+path = "kernel/trace/ring_buffer.c"
+anchor = "* Always succeed at resizing a non-existent buffer:"
+kernel = "7.2.2"
+confirmed = true
+line = 3218
+context = "426a72e5ded4"
+note = "The top of the resize, which is where a request in bytes turns into a count of sub buffers."
+
+[[references]]
+id = "trace-ring-buffer-R8"
+path = "kernel/trace/ring_buffer.c"
+anchor = "return buffer->subbuf_size * buffer->buffers[cpu]->nr_pages;"
+kernel = "7.2.2"
+confirmed = true
+line = 6466
+context = "39043f783519"
+note = "The size read back. Usable bytes times sub buffers, which counts neither the per page headers nor the reader page, so it is smaller than the memory taken."
+
+[[references]]
+id = "trace-ring-buffer-R9"
+path = "kernel/trace/trace.c"
+anchor = "* we use the size that was given, and we can forget about"
+kernel = "7.2.2"
+confirmed = true
+line = 4726
+context = "eb90bf82cd4e"
+note = "Writing to buffer_size_kb also turns off the lazy growth the tracer does on its own, which is a second effect of a write that looks like it only sets a size."
+
+[[references]]
+id = "trace-ring-buffer-R10"
+path = "kernel/trace/trace.c"
+anchor = "/* check if all cpu sizes are same */"
+kernel = "7.2.2"
+confirmed = true
+line = 5691
+context = "d4106d949852"
+note = "Reading buffer_size_kb back. It reports what the kernel has, in kilobytes, rounded down, and prints X when the per processor buffers do not match."
+
+[[references]]
+id = "trace-ring-buffer-R11"
+path = "Documentation/trace/ftrace.rst"
+anchor = "making the actual allocation bigger than requested or shown."
+kernel = "7.2.2"
+confirmed = true
+line = 209
+context = "2b2150c62732"
+note = "The kernel's own documentation saying the number is a request rather than a setting, and that the allocation can be larger than either the request or the readback."
+
+[[references]]
+id = "trace-ring-buffer-R12"
+path = "include/linux/ring_buffer.h"
+anchor = "#define ring_buffer_alloc(size, flags)"
+kernel = "7.2.2"
+confirmed = true
+line = 105
+context = "62e1eea83171"
+note = "A name that is not a function. The macro exists so that every ring buffer in the kernel gets its own lock class, which is the lock ordering blueprint reaching into this one."
+
+[[references]]
+id = "trace-ring-buffer-R13"
+path = "include/linux/ring_buffer.h"
+anchor = "__ring_buffer_alloc(unsigned long size, unsigned flags, struct lock_class_key *key);"
+kernel = "7.2.2"
+confirmed = true
+line = 90
+context = "f599e261297e"
+note = "The function the macro above calls, and the one with a symbol in the build. Section 7 finds this and not the name everybody writes."
+
+[[references]]
+id = "trace-ring-buffer-R14"
+path = "kernel/trace/ring_buffer.c"
+anchor = "cpu_buffer->reader_page = bpage;"
+kernel = "7.2.2"
+confirmed = true
+line = 2517
+context = "e5ea0f5e0a1d"
+note = "The reader page is allocated on top of the sub buffers asked for, so a buffer of three sub buffers holds four pages of memory."
+
+[[references]]
+id = "trace-ring-buffer-R15"
+path = "kernel/trace/ring_buffer.c"
+anchor = "ring_buffer_lock_reserve - reserve a part of the buffer"
+kernel = "7.2.2"
+confirmed = true
+line = 4944
+context = "09df2401ee5f"
+note = "The way in. Everything that records an event in the kernel arrives here, and the name is misleading because no lock is taken."
+
+[[references]]
+id = "trace-ring-buffer-R16"
+path = "kernel/trace/ring_buffer.c"
+anchor = "if (unlikely(atomic_read(&buffer->record_disabled)))"
+kernel = "7.2.2"
+confirmed = true
+line = 4968
+context = "904f2ab3da65"
+note = "The first of four cheap refusals at the top of the reserve. Each one returns a null pointer, and a null pointer here is a dropped event that nothing counts."
+
+[[references]]
+id = "trace-ring-buffer-R17"
+path = "kernel/trace/ring_buffer.c"
+anchor = "if (unlikely(val & (1 << (bit + cpu_buffer->nest)))) {"
+kernel = "7.2.2"
+confirmed = true
+line = 4406
+context = "2f158c30a4ea"
+note = "The recursion guard. One bit per execution context per processor, tested and set on the way in."
+
+[[references]]
+id = "trace-ring-buffer-R18"
+path = "kernel/trace/ring_buffer.c"
+anchor = "bit = RB_CTX_NORMAL - bit;"
+kernel = "7.2.2"
+confirmed = true
+line = 4404
+context = "295fb83de8a2"
+note = "Which bit, worked out from the interrupt nesting level rather than from anything the caller passes in."
+
+[[references]]
+id = "trace-ring-buffer-R19"
+path = "kernel/trace/ring_buffer.c"
+anchor = "is set when a recursion is detected at the current context, and if"
+kernel = "7.2.2"
+confirmed = true
+line = 4374
+context = "319f067e20f7"
+note = "The transition bit, which buys one extra level of nesting to cover the window where the context has changed and the preempt count has not caught up yet."
+
+[[references]]
+id = "trace-ring-buffer-R20"
+path = "kernel/trace/ring_buffer.c"
+anchor = "/* The recursive locking above uses 5 bits */"
+kernel = "7.2.2"
+confirmed = true
+line = 4432
+context = "be8fea080231"
+note = "Five contexts, so five bits, and a nested tracer shifts the whole set by five."
+
+[[references]]
+id = "trace-ring-buffer-R21"
+path = "kernel/trace/ring_buffer.c"
+anchor = "ring buffer does cmpxchg as well as atomic64 operations"
+kernel = "7.2.2"
+confirmed = true
+line = 4873
+context = "c89d8fbf1ad2"
+note = "The one architecture question in the whole mechanism. On a machine without an NMI safe compare and swap, every event from an NMI is dropped."
+
+[[references]]
+id = "trace-ring-buffer-R22"
+path = "kernel/trace/ring_buffer.c"
+anchor = "static void rb_start_commit(struct ring_buffer_per_cpu *cpu_buffer)"
+kernel = "7.2.2"
+confirmed = true
+line = 4160
+context = "c95bc73f0612"
+note = "Two counters go up before anything is reserved. They are what tells the outermost writer that it owns the commit."
+
+[[references]]
+id = "trace-ring-buffer-R23"
+path = "kernel/trace/ring_buffer.c"
+anchor = "info.length = rb_calculate_event_length(length);"
+kernel = "7.2.2"
+confirmed = true
+line = 4901
+context = "3e8987c3ab42"
+note = "The length the caller asked for, rounded and given a header. The reserve works in this number and not in the caller's."
+
+[[references]]
+id = "trace-ring-buffer-R24"
+path = "kernel/trace/ring_buffer.c"
+anchor = "if (RB_WARN_ON(cpu_buffer, ++nr_loops > 1000))"
+kernel = "7.2.2"
+confirmed = true
+line = 4925
+context = "38655d785603"
+note = "The retry loop has a ceiling. A thousand retries in a row is taken as a bug rather than as bad luck."
+
+[[references]]
+id = "trace-ring-buffer-R25"
+path = "kernel/trace/ring_buffer.c"
+anchor = "/* Don't let the compiler play games with cpu_buffer->tail_page */"
+kernel = "7.2.2"
+confirmed = true
+line = 4727
+context = "ca880165c341"
+note = "Step A of the four labelled steps. Read the tail page once, into a local, because the value can change under you."
+
+[[references]]
+id = "trace-ring-buffer-R26"
+path = "kernel/trace/ring_buffer.c"
+anchor = "write = local_add_return(info->length, &tail_page->write);"
+kernel = "7.2.2"
+confirmed = true
+line = 4762
+context = "32bad353ab35"
+note = "Step C, and the only step that matters for space. One atomic add claims the bytes, and after it two writers cannot own the same bytes."
+
+[[references]]
+id = "trace-ring-buffer-R27"
+path = "kernel/trace/ring_buffer.c"
+anchor = "if (likely(tail == w)) {"
+kernel = "7.2.2"
+confirmed = true
+line = 4775
+context = "4420705ac288"
+note = "How a writer finds out whether anything interrupted it between step A and step C. If the write index moved by exactly its own length, nothing did."
+
+[[references]]
+id = "trace-ring-buffer-R28"
+path = "kernel/trace/ring_buffer.c"
+anchor = "/* Nothing interrupted us between A and C */"
+kernel = "7.2.2"
+confirmed = true
+line = 4776
+context = "a4ad4d142ff1"
+note = "The fast path, which is the only path that gets to write a small delta rather than a full timestamp."
+
+[[references]]
+id = "trace-ring-buffer-R29"
+path = "kernel/trace/ring_buffer.c"
+anchor = "info->add_timestamp |= RB_ADD_STAMP_FORCE | RB_ADD_STAMP_EXTEND;"
+kernel = "7.2.2"
+confirmed = true
+line = 4749
+context = "f0a43a41075c"
+note = "The recovery when something did interrupt. The event grows by a timestamp extension, which is why an event's size on the page is not a function of its data alone."
+
+[[references]]
+id = "trace-ring-buffer-R30"
+path = "include/linux/ring_buffer_types.h"
+anchor = "We need to fit the time_stamp delta into 27 bits."
+kernel = "7.2.2"
+confirmed = true
+line = 12
+context = "1f6581a5cff5"
+note = "The 27 bit delta in the event header, and the reason a gap of more than about 134 milliseconds costs an extra event on the page."
+
+[[references]]
+id = "trace-ring-buffer-R31"
+path = "kernel/trace/ring_buffer.c"
+anchor = 'The "absolute" timestamp in the buffer is only 59 bits.'
+kernel = "7.2.2"
+confirmed = true
+line = 43
+context = "8094685e0625"
+note = "Even the escape hatch is not a full clock reading. The top five bits are saved and put back rather than stored."
+
+[[references]]
+id = "trace-ring-buffer-R32"
+path = "kernel/trace/ring_buffer.c"
+anchor = "if (unlikely(write > cpu_buffer->buffer->subbuf_size)) {"
+kernel = "7.2.2"
+confirmed = true
+line = 4770
+context = "c993a4893cfc"
+note = "The reservation ran off the end of the page. Everything interesting in this blueprint is downstream of this one comparison."
+
+[[references]]
+id = "trace-ring-buffer-R33"
+path = "kernel/trace/ring_buffer.c"
+anchor = "return rb_move_tail(cpu_buffer, tail, info);"
+kernel = "7.2.2"
+confirmed = true
+line = 4772
+context = "7b005ab9f3c1"
+note = "Where a write that did not fit goes."
+
+[[references]]
+id = "trace-ring-buffer-R34"
+path = "kernel/trace/ring_buffer.c"
+anchor = "* We are also fighting against interrupts coming in and"
+kernel = "7.2.2"
+confirmed = true
+line = 3868
+context = "0ed68a9a64f3"
+note = "The two races the tail move has to survive, stated by the code itself: a reader on another processor and an interrupt on this one."
+
+[[references]]
+id = "trace-ring-buffer-R35"
+path = "kernel/trace/ring_buffer.c"
+anchor = "if (unlikely(next_page == commit_page)) {"
+kernel = "7.2.2"
+confirmed = true
+line = 3856
+context = "f1f88fc8daa5"
+note = "The tail came all the way around to a commit that is still open. This is the commit overrun case, and it means a nested writer filled the buffer inside one event."
+
+[[references]]
+id = "trace-ring-buffer-R36"
+path = "kernel/trace/ring_buffer.c"
+anchor = "it all the way around the buffer, bail, and warn"
+kernel = "7.2.2"
+confirmed = true
+line = 3853
+context = "c60c59ed524f"
+note = "What the code thinks of that case, which is that it should not happen."
+
+[[references]]
+id = "trace-ring-buffer-R37"
+path = "kernel/trace/ring_buffer.c"
+anchor = "* the buffer, unless the commit page is still on the"
+kernel = "7.2.2"
+confirmed = true
+line = 3872
+context = "c84251d07e7b"
+note = "The test for a full buffer: the next page is the head page, which is the oldest one."
+
+[[references]]
+id = "trace-ring-buffer-R38"
+path = "kernel/trace/ring_buffer.c"
+anchor = "if (!(buffer->flags & RB_FL_OVERWRITE)) {"
+kernel = "7.2.2"
+confirmed = true
+line = 3886
+context = "055030276bab"
+note = "The fork in the road. In overwrite mode the oldest events go, and in the other mode the newest event goes."
+
+[[references]]
+id = "trace-ring-buffer-R39"
+path = "kernel/trace/ring_buffer.c"
+anchor = "local_inc(&cpu_buffer->dropped_events);"
+kernel = "7.2.2"
+confirmed = true
+line = 3887
+context = "cf51e175e654"
+note = "The counter for the mode this project does not use. It is zero in the artefact, and a reader who confuses it with overrun concludes nothing was lost."
+
+[[references]]
+id = "trace-ring-buffer-R40"
+path = "kernel/trace/ring_buffer.c"
+anchor = "rb_handle_head_page - writer hit the head page"
+kernel = "7.2.2"
+confirmed = true
+line = 3591
+context = "ceab11905bce"
+note = "The function that throws a page of events away, and the only place in the mechanism where data is deliberately lost."
+
+[[references]]
+id = "trace-ring-buffer-R41"
+path = "kernel/trace/ring_buffer.c"
+anchor = "NORMAL - an interrupt already moved it for us"
+kernel = "7.2.2"
+confirmed = true
+line = 3619
+context = "01b3d7586cda"
+note = "Four outcomes of one compare and swap, listed in the code, and the whole lockless argument is which of the four each caller is allowed to see."
+
+[[references]]
+id = "trace-ring-buffer-R42"
+path = "kernel/trace/ring_buffer.c"
+anchor = "local_add(entries, &cpu_buffer->overrun);"
+kernel = "7.2.2"
+confirmed = true
+line = 3635
+context = "8279d41a6740"
+note = "The 44002 in the artefact is this line, run once per page thrown away, adding the whole page's worth of events at a time."
+
+[[references]]
+id = "trace-ring-buffer-R43"
+path = "kernel/trace/ring_buffer.c"
+anchor = "local_sub(rb_page_commit(next_page), &cpu_buffer->entries_bytes);"
+kernel = "7.2.2"
+confirmed = true
+line = 3636
+context = "3fcecca7b71d"
+note = "The bytes on the discarded page come back off the byte count, which is why the bytes line of the stats file describes what is there rather than what was written."
+
+[[references]]
+id = "trace-ring-buffer-R44"
+path = "kernel/trace/ring_buffer.c"
+anchor = "rb_tail_page_update(cpu_buffer, tail_page, next_page);"
+kernel = "7.2.2"
+confirmed = true
+line = 3919
+context = "03aedfcc29d1"
+note = "The tail finally moves to the next page, after the head has been dealt with."
+
+[[references]]
+id = "trace-ring-buffer-R45"
+path = "kernel/trace/ring_buffer.c"
+anchor = "/* fail and let the caller try again */"
+kernel = "7.2.2"
+confirmed = true
+line = 3930
+context = "daf8a37fb27b"
+note = "Moving the tail does not reserve anything. It returns a retry, and the caller goes round the loop and reserves on the new page."
+
+[[references]]
+id = "trace-ring-buffer-R46"
+path = "kernel/trace/ring_buffer.c"
+anchor = "Making the ring buffer lockless makes things tricky."
+kernel = "7.2.2"
+confirmed = true
+line = 1156
+context = "5f5e55a5a149"
+note = "The design comment. It is the specification of the pointer tagging scheme and there is no other written statement of it."
+
+[[references]]
+id = "trace-ring-buffer-R47"
+path = "kernel/trace/ring_buffer.c"
+anchor = "We use cmpxchg to help prevent this race. We also do something"
+kernel = "7.2.2"
+confirmed = true
+line = 1176
+context = "a9c7f350f82c"
+note = "The two low bits of a list pointer carry which page is the head and whether somebody is in the middle of moving it."
+
+[[references]]
+id = "trace-ring-buffer-R48"
+path = "kernel/trace/ring_buffer.c"
+anchor = "/* PAGE_MOVED is not part of the mask */"
+kernel = "7.2.2"
+confirmed = true
+line = 1231
+context = "b8661e9827c9"
+note = "Three states fit in two bits and the fourth is a return value rather than a state, which is a distinction worth keeping straight when reading the switch."
+
+[[references]]
+id = "trace-ring-buffer-R49"
+path = "kernel/trace/ring_buffer.c"
+anchor = "* the reader page). But if the next page is a header page,"
+kernel = "7.2.2"
+confirmed = true
+line = 1249
+context = "024936a36d54"
+note = "Why the head pointer cannot be trusted and the tag on the page before it can."
+
+[[references]]
+id = "trace-ring-buffer-R50"
+path = "kernel/trace/ring_buffer.c"
+anchor = "static bool rb_is_reader_page(struct buffer_page *page)"
+kernel = "7.2.2"
+confirmed = true
+line = 1272
+context = "aa1998fb8883"
+note = "How a page is recognised as the reader's, which is by a property of the list rather than by a flag."
+
+[[references]]
+id = "trace-ring-buffer-R51"
+path = "kernel/trace/ring_buffer.c"
+anchor = "/* serialize readers */"
+kernel = "7.2.2"
+confirmed = true
+line = 507
+context = "a1dce376b987"
+note = "The reader lock. There is no writer lock, and the asymmetry is the point."
+
+[[references]]
+id = "trace-ring-buffer-R52"
+path = "kernel/trace/ring_buffer.c"
+anchor = "Splice the empty reader page into the list around the head."
+kernel = "7.2.2"
+confirmed = true
+line = 5858
+context = "7090fd99c943"
+note = "The swap. The reader gives its empty page to the ring and takes the oldest page out, which is how it reads without copying."
+
+[[references]]
+id = "trace-ring-buffer-R53"
+path = "kernel/trace/ring_buffer.c"
+anchor = "ret = rb_head_page_replace(reader, cpu_buffer->reader_page);"
+kernel = "7.2.2"
+confirmed = true
+line = 5899
+context = "113422f902d5"
+note = "The compare and swap that makes the swap real. Failing it means a writer moved the head, and the answer is to start the swap again."
+
+[[references]]
+id = "trace-ring-buffer-R54"
+path = "kernel/trace/ring_buffer.c"
+anchor = "overwrite = local_read(&(cpu_buffer->overrun));"
+kernel = "7.2.2"
+confirmed = true
+line = 5886
+context = "ac12dc0524be"
+note = "The reader reads the overrun counter while it holds the page it is about to take."
+
+[[references]]
+id = "trace-ring-buffer-R55"
+path = "kernel/trace/ring_buffer.c"
+anchor = "cpu_buffer->last_overrun = overwrite;"
+kernel = "7.2.2"
+confirmed = true
+line = 5930
+context = "1d55d14014b1"
+note = "The difference between the counter now and the counter at the last swap is how many events were lost between two reads. This is the only place that subtraction is done."
+
+[[references]]
+id = "trace-ring-buffer-R56"
+path = "kernel/trace/ring_buffer.c"
+anchor = "if (!cpu_buffer->lost_events)"
+kernel = "7.2.2"
+confirmed = true
+line = 5974
+context = "5f7fb248e8b6"
+note = "Where that difference is left for a consumer to find."
+
+[[references]]
+id = "trace-ring-buffer-R57"
+path = "kernel/trace/trace.c"
+anchor = "ring_buffer_consume(iter->array_buffer->buffer, iter->cpu, &iter->ts,"
+kernel = "7.2.2"
+confirmed = true
+line = 2687
+context = "6a796126494c"
+note = "The consuming read, used by trace_pipe. It takes the lost count with it, which is why trace_pipe can tell you what it missed."
+
+[[references]]
+id = "trace-ring-buffer-R58"
+path = "kernel/trace/trace.c"
+anchor = "*lost_events = ring_buffer_iter_dropped(buf_iter) ?"
+kernel = "7.2.2"
+confirmed = true
+line = 2351
+context = "c6aa3aa68154"
+note = "The other read, the one the trace file uses. It asks the iterator instead, and the iterator answers from a flag rather than from a count."
+
+[[references]]
+id = "trace-ring-buffer-R59"
+path = "kernel/trace/ring_buffer.c"
+anchor = "ring_buffer_iter_dropped - report if there are dropped events"
+kernel = "7.2.2"
+confirmed = true
+line = 6280
+context = "e74bd4a76d1c"
+note = "What that flag is."
+
+[[references]]
+id = "trace-ring-buffer-R60"
+path = "kernel/trace/ring_buffer.c"
+anchor = "if (rb_page_commit(iter->head_page) & RB_MISSED_EVENTS)"
+kernel = "7.2.2"
+confirmed = true
+line = 3536
+context = "f6ad43a6a0bd"
+note = "The only place the iterator's flag is ever set, and it is set from a bit in a page's commit field."
+
+[[references]]
+id = "trace-ring-buffer-R61"
+path = "kernel/trace/ring_buffer.c"
+anchor = "the main write buffer does not set these bits and it needs"
+kernel = "7.2.2"
+confirmed = true
+line = 7242
+context = "52075e4396e3"
+note = "The kernel stating plainly that the writer never sets that bit on an ordinary buffer. This one comment is the whole reason the trace file goes quiet about lost events."
+
+[[references]]
+id = "trace-ring-buffer-R62"
+path = "kernel/trace/ring_buffer.c"
+anchor = "may have been set in the main buffer via the verification code."
+kernel = "7.2.2"
+confirmed = true
+line = 7239
+context = "b32112b6ae48"
+note = "The one case where the bit does appear in the write buffer, which is a persistent buffer being recovered across a boot."
+
+[[references]]
+id = "trace-ring-buffer-R63"
+path = "kernel/trace/trace.c"
+anchor = 'trace_seq_printf(&iter->seq, "CPU:%d [LOST %lu EVENTS]\n",'
+kernel = "7.2.2"
+confirmed = true
+line = 3201
+context = "99dc9467fe60"
+note = "The line a reader hopes to see when events were lost. It is printed from the count that only the consuming read carries."
+
+[[references]]
+id = "trace-ring-buffer-R64"
+path = "kernel/trace/ring_buffer.c"
+anchor = "(local_read(&cpu_buffer->overrun) + cpu_buffer->read);"
+kernel = "7.2.2"
+confirmed = true
+line = 5164
+context = "bb272f732ccc"
+note = "The entries number is written minus thrown away minus read, so the three counters in the artefact add back up to everything the tracer ever recorded."
+
+[[references]]
+id = "trace-ring-buffer-R65"
+path = "kernel/trace/trace.c"
+anchor = "cnt = ring_buffer_entries_cpu(trace_buf->buffer, cpu);"
+kernel = "7.2.2"
+confirmed = true
+line = 7499
+context = "6d8158e902d2"
+note = "The top of the function that prints the stats file, which prints eight fixed lines in a fixed order and nothing else."
+
+[[references]]
+id = "trace-ring-buffer-R66"
+path = "Documentation/trace/ftrace.rst"
+anchor = "The number of events that are still in the buffer."
+kernel = "7.2.2"
+confirmed = true
+line = 796
+context = "f5bd964e601e"
+note = "What entries means, in the kernel's own words. Still in, not written."
+
+[[references]]
+id = "trace-ring-buffer-R67"
+path = "Documentation/trace/ftrace.rst"
+anchor = "The number of lost events due to overwriting when"
+kernel = "7.2.2"
+confirmed = true
+line = 799
+context = "cec13d9c96ee"
+note = "What overrun means. This is the number that matters and it is the one nothing else tells you."
+
+[[references]]
+id = "trace-ring-buffer-R68"
+path = "Documentation/trace/ftrace.rst"
+anchor = "Should always be zero."
+kernel = "7.2.2"
+confirmed = true
+line = 803
+context = "f481492e1133"
+note = "What commit overrun means, which is that seeing anything other than zero is a report about the tracer rather than about the thing being traced."
+
+[[references]]
+id = "trace-ring-buffer-R69"
+path = "Documentation/trace/ftrace.rst"
+anchor = "Events lost due to overwrite option being off."
+kernel = "7.2.2"
+confirmed = true
+line = 818
+context = "8e9491f2add9"
+note = "What dropped events means, and the sentence that separates it from overrun."
+
+[[references]]
+id = "trace-ring-buffer-R70"
+path = "kernel/trace/ring_buffer.c"
+anchor = "static void rb_commit(struct ring_buffer_per_cpu *cpu_buffer)"
+kernel = "7.2.2"
+confirmed = true
+line = 4271
+context = "e051d3e2ef26"
+note = "The commit, which is one counter increment and a call to move the commit pointer forward."
+
+[[references]]
+id = "trace-ring-buffer-R71"
+path = "kernel/trace/ring_buffer.c"
+anchor = "local_inc(&cpu_buffer->entries);"
+kernel = "7.2.2"
+confirmed = true
+line = 4273
+context = "3271afc37340"
+note = "The event count goes up on commit rather than on reserve, so an event that was reserved and never committed is not counted anywhere."
+
+[[references]]
+id = "trace-ring-buffer-R72"
+path = "kernel/trace/ring_buffer.c"
+anchor = "are in stack format (they finish before they come"
+kernel = "7.2.2"
+confirmed = true
+line = 4175
+context = "c6acee80d68d"
+note = "Why the outermost writer can commit everything that interrupted it. Interrupts nest like a stack, so the outer one finishes last."
+
+[[references]]
+id = "trace-ring-buffer-R73"
+path = "kernel/trace/ring_buffer.c"
+anchor = "max_count = cpu_buffer->nr_pages * 100;"
+kernel = "7.2.2"
+confirmed = true
+line = 4180
+context = "4c1b4b54d184"
+note = "Even the commit loop has a ceiling, because it is walking a structure that other writers are changing underneath it."
+
+[[references]]
+id = "trace-ring-buffer-R74"
+path = "kernel/trace/ring_buffer.c"
+anchor = "static __always_inline void rb_end_commit(struct ring_buffer_per_cpu *cpu_buffer)"
+kernel = "7.2.2"
+confirmed = true
+line = 4226
+context = "db5691dd3162"
+note = "The other half of the pair started before the reserve, and the place the outermost writer is identified."
+
+[[references]]
+id = "trace-ring-buffer-R75"
+path = "kernel/trace/ring_buffer.c"
+anchor = "The ring buffer header is special. We must manually up keep it."
+kernel = "7.2.2"
+confirmed = true
+line = 75
+context = "b85c7a9ac9c7"
+note = "The event header layout is printed to userspace by hand from this function, so a tool reading the raw pages gets the field widths from the kernel rather than from a header file."
