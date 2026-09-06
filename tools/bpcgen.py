@@ -321,19 +321,69 @@ def section_5(request: Request, root: Path, btf_path: Path | None) -> Rendered:
     )
     out.append("")
 
+    partners, hidden = _pair_up(real, metas)
     for one, path in real:
-        out.extend(_artefact_block(one, path, metas[one], root))
+        if one in hidden:
+            continue
+        out.extend(_artefact_block(one, path, metas[one], root, partners.get(one)))
 
     return Rendered("\n".join(out).rstrip() + "\n", source, problems)
 
 
-def _artefact_block(one: str, path: Path, meta: dict[str, object], root: Path) -> list[str]:
-    relative = path.relative_to(root) if path.is_relative_to(root) else path
-    out = [f"### `{relative}`", ""]
+def _pair_up(
+    real: list[tuple[str, Path]], metas: dict[str, dict]
+) -> tuple[dict[str, tuple[str, Path]], set[str]]:
+    """Which artefacts are two readings of one thing, so they get drawn beside each other.
 
-    tracer = str(meta.get("tracer", "unknown"))
+    A `/proc` file read before something happened and again after it is two files whose numbers
+    only mean anything next to each other. Fifty counters in one column and fifty in another,
+    pages apart, is not a specification of what changed, it is homework.
+
+    Which two go together is not worked out from the file names here. A capture that is half of a
+    pair says so in its own metadata under `pair`, because that is a fact about how it was taken.
+    Which of the two is the before is the order the blueprint lists them in, so the author decides
+    it and nothing here guesses from a word in a filename.
+    """
+    by_name = {path.name: (one, path) for one, path in real}
+    partners: dict[str, tuple[str, Path]] = {}
+    hidden: set[str] = set()
+    for one, _path in real:
+        if one in hidden:
+            continue
+        named = str(metas[one].get("pair", ""))
+        found = by_name.get(named)
+        if found is None or found[0] == one:
+            continue
+        partners[one] = found
+        hidden.add(found[0])
+    return partners, hidden
+
+
+def _artefact_block(
+    one: str,
+    path: Path,
+    meta: dict[str, object],
+    root: Path,
+    partner: tuple[str, Path] | None = None,
+) -> list[str]:
+    relative = path.relative_to(root) if path.is_relative_to(root) else path
+    heading = f"### `{relative}`"
+    if partner is not None:
+        other = partner[1].relative_to(root) if partner[1].is_relative_to(root) else partner[1]
+        heading = f"### `{relative}` and `{other}`"
+    out = [heading, ""]
+
     describes = str(meta.get("describes", "not described"))
-    out.append(f"Tracer `{tracer}`, recording {describes}.")
+    tracer = str(meta.get("tracer", ""))
+    if tracer:
+        out.append(f"Tracer `{tracer}`, recording {describes}.")
+    else:
+        # Nothing traced this one. Somebody read a file, or copied what the kernel printed, and
+        # the command that did it is in the metadata, so say that rather than printing the word
+        # `unknown` next to a capture whose provenance is written down two lines away.
+        how = str(meta.get("command", "")).strip()
+        taken = f"`{how}`" if how else "no command recorded"
+        out.append(f"Not a trace. Taken by {taken}, recording {describes}.")
     out.append("")
 
     if not meta.get("evidence"):
@@ -342,7 +392,29 @@ def _artefact_block(one: str, path: Path, meta: dict[str, object], root: Path) -
 
     if tracer == "function_graph":
         out.extend(_function_graph_block(path))
+        return out
+
+    body = READERS.get(_route(path, root))
+    if body is not None:
+        out.extend(body(path, partner[1] if partner else None))
     return out
+
+
+def _route(path: Path, root: Path) -> str:
+    """Which reader in `kxray` opens this artefact, by the same table the corpus tools use.
+
+    Dispatching on the reader rather than on a new key in the metadata means a parser and the
+    blueprints that quote it never disagree about what a file is. `kxray/corpus/index.py` already
+    has to know, because `tools/baseline` accounts every line of every artefact through it, and a
+    second table here would be a second thing to keep in step.
+    """
+    from kxray.corpus import index
+
+    base = root / CORPORA
+    try:
+        return index.route(path, base) or ""
+    except ValueError:
+        return ""
 
 
 def _function_graph_block(path: Path) -> list[str]:
@@ -395,6 +467,162 @@ def _function_graph_block(path: Path) -> list[str]:
         "",
     ]
     return out
+
+
+def _lockdep_splat_block(path: Path, partner: Path | None = None) -> list[str]:
+    """A lock ordering report as a blueprint reads it: who, the cycle, and the stacks behind it.
+
+    The report is very nearly the whole of what this mechanism lets you observe. No counter goes up
+    when a cycle is found, no tracepoint fires, and the function that finds it returns into code
+    that carries on as if nothing happened. So printing the report back in the shape the parser
+    understood it is the section, and it doubles as proof that the shape is understood rather than
+    the words being quoted.
+    """
+    from kxray.lockdep import parse_splat
+
+    splat = parse_splat(path.read_text(encoding="utf-8"))
+    cycle = " -> ".join(f"`{name}`" for name in splat.cycle)
+    out = [
+        f"`{splat.task}` at pid {splat.pid} on kernel {splat.kernel}, holding "
+        f"`{splat.holding.name}` and asking for `{splat.acquiring.name}`. "
+        f"A cycle of {splat.length}: {cycle}.",
+        "",
+        "| | Class | Usage | Wait type | Address | Where the report caught it |",
+        "|---|---|---|---|---|---|",
+    ]
+    for role, ref in (("holding", splat.holding), ("acquiring", splat.acquiring)):
+        out.append(
+            f"| {role} | `{ref.name}` | `{ref.usage}` | `{ref.wait}` | `{ref.address}` "
+            f"| `{ref.where}` |"
+        )
+    out += [
+        "",
+        "The addresses are printed by the kernel and are not what the report is about. The checker "
+        "works in classes, and a class is a line of source rather than an object, so two locks at "
+        "two addresses initialised on the same line are one class here.",
+        "",
+        "The chain, highest number first, which is the order the kernel prints it in. `#0` is the "
+        "one being taken at the moment the report is printed.",
+        "",
+        "| Link | Class | Usage | First recorded at | Frames |",
+        "|---|---|---|---|---|",
+    ]
+    for link in splat.chain:
+        where = link.stack[0] if link.stack else "no stack recorded"
+        out.append(
+            f"| #{link.index} | `{link.name}` | `{link.usage}` | `{where}` | {len(link.stack)} |"
+        )
+    out.append("")
+
+    if splat.scenario.steps:
+        columns = splat.scenario.columns
+        out += [
+            f"The interleaving the kernel says would deadlock, over {len(columns)} processor(s), "
+            f"rebuilt here from the parse rather than copied out of the file.",
+            "",
+            "```",
+        ]
+        width = 20
+        out.append("".join(name.ljust(width) for name in columns).rstrip())
+        out.append("".join(("-" * len(name)).ljust(width) for name in columns).rstrip())
+        for column, step in splat.scenario.steps:
+            out.append((" " * width * column + step).rstrip())
+        out += ["```", ""]
+
+    for link in splat.chain:
+        if not link.stack:
+            continue
+        out += [f"Where `{link.name}` was taken, as `#{link.index}` records it.", "", "```"]
+        out += list(link.stack)
+        out += ["```", ""]
+    return out
+
+
+def _lockdep_stats_block(path: Path, partner: Path | None = None) -> list[str]:
+    """The counters `/proc/lockdep_stats` carries, and what they were on either side of an event.
+
+    Every counter is in the table and none of them is chosen here, because a generator that picks
+    the interesting rows is a generator with an opinion, and an opinion in a generated section is
+    the thing the seal exists to keep out. The rows that moved are the ones a reader will look at,
+    and the change column makes them findable without anything here deciding which they are.
+    """
+    from kxray.lockdep import account_stats, parse_stats
+
+    def read(one: Path):
+        text = one.read_text(encoding="utf-8")
+        return parse_stats(text), account_stats(text)
+
+    stats, lines = read(path)
+    other, other_lines = read(partner) if partner is not None else (None, None)
+
+    left = path.stem
+    right = partner.stem if partner is not None else ""
+    counting = (
+        f"{len(stats.values)} counter(s) read, {lines.skipped} line(s) skipped, "
+        f"{lines.unparsed} line(s) the parser could not read"
+    )
+    if other is not None:
+        counting += (
+            f", and {len(other.values)} counter(s), {other_lines.skipped} skipped, "
+            f"{other_lines.unparsed} unread in the other"
+        )
+    out = [counting + ".", ""]
+
+    on = "on, so every lock taken from here is checked"
+    gone = "off, so nothing taken from here is checked and there will be no second report"
+    out.append(f"`debug_locks` in `{left}` is {stats.debug_locks}, which is the checker {on}.")
+    if stats.off:
+        out[-1] = f"`debug_locks` in `{left}` is {stats.debug_locks}, which is the checker {gone}."
+    if other is not None:
+        state = gone if other.off else on
+        out.append(f"In `{right}` it is {other.debug_locks}, which is the checker {state}.")
+    out.append("")
+
+    later = other.values if other else {}
+    names = list(stats.values) + [n for n in later if n not in stats.values]
+    if other is None:
+        out += ["| Counter | Value | Ceiling |", "|---|---|---|"]
+        for name in names:
+            out.append(f"| `{name}` | {stats.values[name]} | {_ceiling(stats, name)} |")
+        out.append("")
+        return out
+
+    out += [f"| Counter | `{left}` | `{right}` | Change | Ceiling |", "|---|---|---|---|---|"]
+    for name in names:
+        was = stats.values.get(name)
+        now = other.values.get(name)
+        moved = "" if was is None or now is None else f"{now - was:+d}"
+        if moved == "+0":
+            moved = "none"
+        out.append(
+            f"| `{name}` | {'not in this one' if was is None else was} "
+            f"| {'not in this one' if now is None else now} | {moved} | {_ceiling(stats, name)} |"
+        )
+    out.append("")
+    return out
+
+
+def _ceiling(stats, name: str) -> str:
+    """The build time limit on a counter, when the file prints one, as a fraction used.
+
+    Five of the counters come with the maximum the kernel was built for printed beside them, and
+    those five are the ones that can run out. The rest have no ceiling to report and say so, which
+    is different from having a ceiling nobody measured.
+    """
+    if name not in stats.maxima:
+        return "none printed"
+    return f"{stats.maxima[name]}, {stats.headroom(name) * 100:.1f}% used"
+
+
+# Which of the readers above draws which artefact. The tracer captures are dispatched a few lines
+# up on the `tracer` key in their metadata, because that is a fact about how they were taken.
+# Everything else in the corpus was taken by reading a file or by copying what the kernel printed,
+# and what decides how to draw one of those is which parser understands it, which `kxray` already
+# writes down. An artefact whose reader is not in here still gets its heading and its description.
+READERS = {
+    "lockdep-splat": _lockdep_splat_block,
+    "lockdep-stats": _lockdep_stats_block,
+}
 
 
 # -- section 7, the interfaces -------------------------------------------------------------------

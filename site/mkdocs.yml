@@ -86,5 +86,6 @@ nav:
   - Blueprints:
       - All blueprints: blueprints/index.md
       - Notation: blueprints/NOTATION.md
+      - "The lock ordering checker": blueprints/lock-ordering.md
       - "The page fault path": blueprints/page-fault.md
       - "The buffered write path": blueprints/write-path.md

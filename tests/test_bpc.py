@@ -399,6 +399,50 @@ def test_naming_no_artefacts_says_nothing_is_observed_rather_than_going_quiet():
     assert rendered.source.evidence is False
 
 
+def test_an_artefact_nothing_traced_says_how_it_was_taken_instead():
+    # Before this, everything that was not a function_graph capture rendered as one line reading
+    # "Tracer `unknown`", which is the generator shrugging at a file whose provenance is written
+    # down two lines away in its own metadata.
+    request = bpcgen.Request(pin="v7.2.2", arch="i386", artefacts=("oops/tier0/lockdep-ab-ba",))
+    rendered = bpcgen.render(5, request, root=ROOT)
+    assert "Tracer `unknown`" not in rendered.text
+    assert "Not a trace. Taken by `insmod /lib/modules/abba.ko`" in rendered.text
+
+
+def test_section_five_draws_a_lock_report_in_the_shape_the_parser_read_it():
+    request = bpcgen.Request(pin="v7.2.2", arch="i386", artefacts=("oops/tier0/lockdep-ab-ba",))
+    rendered = bpcgen.render(5, request, root=ROOT)
+
+    assert rendered.problems == []
+    assert rendered.source.evidence is True
+    assert "`abba_second` at pid 40" in rendered.text
+    assert "A cycle of 2: `lock_a` -> `lock_b` -> `lock_a`" in rendered.text
+    assert "lock(lock_b);" in rendered.text
+
+
+def test_a_before_and_after_pair_is_drawn_as_one_table_with_the_change_in_it():
+    """Two readings of one file are only worth anything next to each other.
+
+    Fifty counters in one column and fifty in another, pages apart, is not a specification of what
+    changed. Which two go together comes off the `pair` key each capture carries, and which is the
+    before is the order the blueprint lists them in, so nothing here guesses from a filename.
+    """
+    request = bpcgen.Request(
+        pin="v7.2.2",
+        arch="i386",
+        artefacts=("proc/tier0/lockdep-stats-before", "proc/tier0/lockdep-stats-after"),
+    )
+    rendered = bpcgen.render(5, request, root=ROOT)
+
+    assert rendered.problems == []
+    assert rendered.text.count("### ") == 1
+    assert "lockdep-stats-before.txt` and `corpora/proc/tier0/lockdep-stats-after.txt`" in (
+        rendered.text
+    )
+    assert "| `lock_classes` | 391 | 401 | +10 |" in rendered.text
+    assert "which is the checker off" in rendered.text
+
+
 # -- the regeneration pass ----------------------------------------------------------------------
 
 

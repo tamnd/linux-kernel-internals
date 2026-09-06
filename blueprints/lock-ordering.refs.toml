@@ -1,0 +1,618 @@
+schema = 1
+
+# Citations for the lock ordering blueprint.
+#
+# Every sentence in `lock-ordering.md` that states something about Linux points at one of these by
+# writing its id in square brackets, and `refcheck` fails the build on a marker with no entry here
+# and on an entry nothing points at.
+#
+# These are confirmed against the pinned tree. Confirming one means running:
+#
+#     ./kxbox/kernel/tree.sh
+#     python3 -m tools.refcheck --tree kxbox/kernel/build/tree/linux-7.2.2 --confirm
+#
+# which finds the anchor, writes down the line it landed on and flips the flag. The tree that gets
+# unpacked is the pristine tarball from kernel.org, checked against the same sha256 the build
+# checks.
+#
+# The anchor is a piece of text to find, never a line number. The line numbers below are output
+# rather than input, and running the command again after a version bump is what finds the ones
+# that moved.
+#
+# Two things about this set are worth knowing before reading it. Nearly all of it is one file,
+# `kernel/locking/lockdep.c`, which is close to seven thousand lines and is the whole mechanism
+# apart from the type definitions and the `/proc` file. And a large number of the anchors below
+# are comments rather than code, which is unusual for this project and is deliberate here: the
+# comments in this file state the rules the code enforces, several of them are the only written
+# statement of a rule anywhere, and a comment that gets deleted is exactly the change a reader of
+# this blueprint would want to know about.
+
+[[references]]
+id = "lock-ordering-R1"
+path = "Documentation/locking/lockdep-design.rst"
+anchor = "The basic object the validator operates upon"
+kernel = "7.2.2"
+confirmed = true
+line = 11
+context = "ab9ac16b28dc"
+note = "The unit the whole mechanism works in. A class, not a lock. Everything that surprises people about a report comes back to this paragraph."
+
+[[references]]
+id = "lock-ordering-R2"
+path = "kernel/locking/lockdep.c"
+anchor = "NOTE: the class-key must be unique. For dynamic locks, a static"
+kernel = "7.2.2"
+confirmed = true
+line = 915
+context = "3d965d51bbc4"
+note = "What identifies a class. The key is an address, and for a lock initialised by a macro it is the address of a static variable that macro created, which is why the class is a line of source."
+
+[[references]]
+id = "lock-ordering-R3"
+path = "kernel/locking/lockdep.c"
+anchor = "static int static_obj(const void *obj)"
+kernel = "7.2.2"
+confirmed = true
+line = 827
+context = "677c6604d7fd"
+note = "The test for whether an address is in the kernel image or in the per cpu area rather than in something allocated. A key that is neither is refused, which is the check behind the trying to register non-static key complaint."
+
+[[references]]
+id = "lock-ordering-R4"
+path = "kernel/locking/lockdep.c"
+anchor = "Static locks do not have their class-keys yet - for them the key is"
+kernel = "7.2.2"
+confirmed = true
+line = 951
+context = "283a54f91774"
+note = "The fallback when a lock was never given a key. The lock's own address becomes the key, so a statically declared lock is its own class."
+
+[[references]]
+id = "lock-ordering-R5"
+path = "kernel/locking/lockdep.c"
+anchor = "register_lock_class(struct lockdep_map *lock, unsigned int subclass, int force)"
+kernel = "7.2.2"
+confirmed = true
+line = 1285
+context = "d2fad0b141f0"
+note = "Where a class comes into existence. Looks the key up, and only takes the graph lock and allocates when the lookup missed."
+
+[[references]]
+id = "lock-ordering-R6"
+path = "kernel/locking/lockdep.c"
+anchor = "We do an RCU walk of the hash, see lockdep_free_key_range()."
+kernel = "7.2.2"
+confirmed = true
+line = 928
+context = "c46c5e24f995"
+note = "The lookup is lockless. It has to be, because it runs on every acquire on every processor, and a lock around it would be the busiest lock in the kernel."
+
+[[references]]
+id = "lock-ordering-R7"
+path = "kernel/locking/lockdep.c"
+anchor = "nr_lock_classes++;"
+kernel = "7.2.2"
+confirmed = true
+line = 1336
+context = "090ab717c660"
+note = "The allocation. Classes come off a free list that was filled once at boot, so this never calls the allocator and can run with interrupts off."
+
+[[references]]
+id = "lock-ordering-R8"
+path = "include/linux/lockdep_types.h"
+anchor = "#define MAX_LOCKDEP_KEYS_BITS"
+kernel = "7.2.2"
+confirmed = true
+line = 202
+context = "39cdbd78efd1"
+note = "Thirteen bits, so 8192 classes, and the same thirteen bits are the width of class_idx in a held_lock. The ceiling and the field are the same number by construction."
+
+[[references]]
+id = "lock-ordering-R9"
+path = "kernel/locking/lockdep.c"
+anchor = "print_lockdep_off(\"BUG: MAX_LOCKDEP_KEYS too low!\");"
+kernel = "7.2.2"
+confirmed = true
+line = 1331
+context = "45c09b079175"
+note = "What running out of classes prints. It is not a failure of the acquire, it is the end of checking for the rest of the boot."
+
+[[references]]
+id = "lock-ordering-R10"
+path = "include/linux/lockdep_types.h"
+anchor = "#define MAX_LOCKDEP_SUBCLASSES"
+kernel = "7.2.2"
+confirmed = true
+line = 15
+context = "a2c6b396735f"
+note = "Eight subclasses per key. A subclass is how code that legitimately takes two locks of one class in a fixed order tells the checker which is which."
+
+[[references]]
+id = "lock-ordering-R11"
+path = "include/linux/lockdep_types.h"
+anchor = "#define NR_LOCKDEP_CACHING_CLASSES"
+kernel = "7.2.2"
+confirmed = true
+line = 61
+context = "04a327ef7d02"
+note = "Two cached class pointers in every lockdep_map. Subclass 0 and subclass 1 skip the hash lookup, everything above them pays for it every time."
+
+[[references]]
+id = "lock-ordering-R12"
+path = "kernel/locking/lockdep.c"
+anchor = "static int __lock_acquire(struct lockdep_map *lock, unsigned int subclass,"
+kernel = "7.2.2"
+confirmed = true
+line = 5077
+context = "bbef916d8976"
+note = "The body of an acquire, and the function every step in section 3 is inside. Eleven parameters, which is what it costs to describe an acquire completely."
+
+[[references]]
+id = "lock-ordering-R13"
+path = "kernel/locking/lockdep.c"
+anchor = "void lock_acquire(struct lockdep_map *lock, unsigned int subclass,"
+kernel = "7.2.2"
+confirmed = true
+line = 5825
+context = "3b9d176de7e9"
+note = "The entry point every lock in the kernel calls. It fires a tracepoint, checks the master switch, and disables interrupts before doing anything else."
+
+[[references]]
+id = "lock-ordering-R14"
+path = "kernel/locking/lockdep.c"
+anchor = "kasan_check_byte(lock);"
+kernel = "7.2.2"
+confirmed = true
+line = 5842
+context = "6cdada3c7561"
+note = "A deliberate read of the lock's own memory, put here because this is usually the first thing to touch a lock and a freed lock should be caught by the memory checker rather than by a confusing report."
+
+[[references]]
+id = "lock-ordering-R15"
+path = "kernel/locking/lockdep.c"
+anchor = "hlock->prev_chain_key = chain_key;"
+kernel = "7.2.2"
+confirmed = true
+line = 5220
+context = "73f2b7af992b"
+note = "The held_lock is filled in before the checking runs, and the chain key it displaces is saved in it, which is how the key is restored on release without recomputing anything."
+
+[[references]]
+id = "lock-ordering-R16"
+path = "kernel/locking/lockdep.c"
+anchor = "static inline u64 iterate_chain_key(u64 key, u32 idx)"
+kernel = "7.2.2"
+confirmed = true
+line = 447
+context = "dffaad62be8e"
+note = "The mixing step. One class index into a 64 bit running hash, with jhash, once per acquire."
+
+[[references]]
+id = "lock-ordering-R17"
+path = "kernel/locking/lockdep.c"
+anchor = "The hash key of the lock dependency chains is a hash itself too:"
+kernel = "7.2.2"
+confirmed = true
+line = 442
+context = "6c7b762430df"
+note = "What the chain key means. It identifies the whole sequence of locks held right now, not the last one, which is what makes one lookup able to skip all the work."
+
+[[references]]
+id = "lock-ordering-R18"
+path = "kernel/locking/lockdep.c"
+anchor = "curr->curr_chain_key = chain_key;"
+kernel = "7.2.2"
+confirmed = true
+line = 5244
+context = "4c8ed69c53de"
+note = "The chain key lives in the task, so it costs nothing to keep and needs no lock. Every thread has its own."
+
+[[references]]
+id = "lock-ordering-R19"
+path = "kernel/locking/lockdep.c"
+anchor = "if (separate_irq_context(curr, hlock)) {"
+kernel = "7.2.2"
+confirmed = true
+line = 5221
+context = "29af536ccf65"
+note = "An interrupt that lands mid sequence starts a fresh chain rather than extending the interrupted one, because the locks the interrupted code holds are not locks the handler is nesting inside."
+
+[[references]]
+id = "lock-ordering-R20"
+path = "kernel/locking/lockdep.c"
+anchor = "static inline struct lock_chain *lookup_chain_cache(u64 chain_key)"
+kernel = "7.2.2"
+confirmed = true
+line = 3796
+context = "8be6038f4a7f"
+note = "The lookup that decides whether anything expensive happens. A hit means this exact sequence has been validated before and there is nothing to do."
+
+[[references]]
+id = "lock-ordering-R21"
+path = "kernel/locking/lockdep.c"
+anchor = "static inline int add_chain_cache(struct task_struct *curr,"
+kernel = "7.2.2"
+confirmed = true
+line = 3730
+context = "90b57ebc96a5"
+note = "Recording a sequence so it is never checked again. This is why the cost of the checker falls away after boot instead of growing with uptime."
+
+[[references]]
+id = "lock-ordering-R22"
+path = "kernel/locking/lockdep.c"
+anchor = "print_lockdep_off(\"BUG: MAX_LOCKDEP_CHAINS too low!\");"
+kernel = "7.2.2"
+confirmed = true
+line = 3752
+context = "6ccad8de7ce9"
+note = "Running out of room for chains, which switches the checker off in the same way a report does."
+
+[[references]]
+id = "lock-ordering-R23"
+path = "kernel/locking/lockdep.c"
+anchor = "if (!hlock->trylock && hlock->check &&"
+kernel = "7.2.2"
+confirmed = true
+line = 3875
+context = "c8f22905db56"
+note = "The gate on all the checking. A trylock adds no dependency, because failing is an option and code that can fail is allowed to take locks in any order."
+
+[[references]]
+id = "lock-ordering-R24"
+path = "kernel/locking/lockdep.c"
+anchor = "check_deadlock(struct task_struct *curr, struct held_lock *next)"
+kernel = "7.2.2"
+confirmed = true
+line = 3057
+context = "5fee3ab679ea"
+note = "The cheap check first: is this class already on this task's own held stack. That is a deadlock with one thread and needs no graph walk to see."
+
+[[references]]
+id = "lock-ordering-R25"
+path = "kernel/locking/lockdep.c"
+anchor = "Allow read-after-read recursion of the same"
+kernel = "7.2.2"
+confirmed = true
+line = 3074
+context = "647913765f20"
+note = "The exception to the previous check. Two readers of one reader-writer lock are not a deadlock, and the read field in the held_lock is what says which kind of acquire this was."
+
+[[references]]
+id = "lock-ordering-R26"
+path = "kernel/locking/lockdep.c"
+anchor = "Add the dependency to all directly-previous locks that are 'relevant'."
+kernel = "7.2.2"
+confirmed = true
+line = 3252
+context = "444b9ef2c022"
+note = "Which held locks get an edge to the new one. Not all of them. The rule is stated here and it is the reason the graph does not have a quadratic number of edges in it."
+
+[[references]]
+id = "lock-ordering-R27"
+path = "kernel/locking/lockdep.c"
+anchor = "check_prevs_add(struct task_struct *curr, struct held_lock *next)"
+kernel = "7.2.2"
+confirmed = true
+line = 3258
+context = "9d06d591032e"
+note = "The loop over the held stack that applies the rule above, walking outwards from the innermost held lock and stopping at the first one that was not a trylock."
+
+[[references]]
+id = "lock-ordering-R28"
+path = "kernel/locking/lockdep.c"
+anchor = "check_prev_add(struct task_struct *curr, struct held_lock *prev,"
+kernel = "7.2.2"
+confirmed = true
+line = 3122
+context = "c9ce741d76ae"
+note = "One candidate edge, and everything that has to be true before it is added. The comment above it lists the three questions in order."
+
+[[references]]
+id = "lock-ordering-R29"
+path = "kernel/locking/lockdep.c"
+anchor = "ret = check_noncircular(next, prev, trace);"
+kernel = "7.2.2"
+confirmed = true
+line = 3165
+context = "ba8b91ef66e0"
+note = "The call, and the argument order is the thing to notice. The search starts at the lock being taken and looks for the lock already held, which is backwards from how the edge is described."
+
+[[references]]
+id = "lock-ordering-R30"
+path = "kernel/locking/lockdep.c"
+anchor = "check_noncircular(struct held_lock *src, struct held_lock *target,"
+kernel = "7.2.2"
+confirmed = true
+line = 2149
+context = "0a3e6e13796a"
+note = "The search itself. Before a new edge is added the checker walks the graph looking for a path back, and a path back is a cycle."
+
+[[references]]
+id = "lock-ordering-R31"
+path = "kernel/locking/lockdep.c"
+anchor = "static enum bfs_result __bfs(struct lock_list *source_entry,"
+kernel = "7.2.2"
+confirmed = true
+line = 1733
+context = "c0c61b6b4368"
+note = "The graph walk, breadth first, so that the cycle it reports is the shortest one and the report is as small as it can be."
+
+[[references]]
+id = "lock-ordering-R32"
+path = "kernel/locking/lockdep.c"
+anchor = "The search is limited by the size of the circular queue (i.e.,"
+kernel = "7.2.2"
+confirmed = true
+line = 3161
+context = "b67d64d28147"
+note = "The walk has a fixed size queue and can give up. Giving up is a separate outcome from finding nothing, and it is one of the ways checking stops."
+
+[[references]]
+id = "lock-ordering-R33"
+path = "kernel/locking/lockdep.c"
+anchor = "Is the <prev> -> <next> dependency already present?"
+kernel = "7.2.2"
+confirmed = true
+line = 3173
+context = "25718edfb32b"
+note = "The duplicate check, after the cycle search rather than before it. The comment explains why an edge can already exist even on a chain that is new."
+
+[[references]]
+id = "lock-ordering-R34"
+path = "kernel/locking/lockdep.c"
+anchor = "Is the <prev> -> <next> link redundant?"
+kernel = "7.2.2"
+confirmed = true
+line = 3217
+context = "cbc3c3679c9a"
+note = "An edge already implied by a path through other edges is not stored. This is what keeps the graph from growing without bound on a long running machine."
+
+[[references]]
+id = "lock-ordering-R35"
+path = "kernel/locking/lockdep.c"
+anchor = "static int add_lock_to_list(struct lock_class *this,"
+kernel = "7.2.2"
+confirmed = true
+line = 1424
+context = "90f1493b8634"
+note = "Adding an edge. Two calls, one forward and one backward, because the backward search and the forward search both have to be cheap."
+
+[[references]]
+id = "lock-ordering-R36"
+path = "kernel/locking/lockdep.c"
+anchor = "list_add_tail_rcu(&entry->entry, head);"
+kernel = "7.2.2"
+confirmed = true
+line = 1448
+context = "77c0da4112f0"
+note = "The edge goes in under RCU, so the lockless readers walking the graph do not have to be stopped while it is modified."
+
+[[references]]
+id = "lock-ordering-R37"
+path = "kernel/locking/lockdep_internals.h"
+anchor = "(1UL << CONFIG_LOCKDEP_BITS)"
+kernel = "7.2.2"
+confirmed = true
+line = 104
+context = "c7c36bc65292"
+note = "How many edges the graph can hold, chosen at build time. On the profile this blueprint was generated from that is fifteen bits, so 32768."
+
+[[references]]
+id = "lock-ordering-R38"
+path = "kernel/locking/lockdep.c"
+anchor = "print_lockdep_off(\"BUG: MAX_LOCKDEP_ENTRIES too low!\");"
+kernel = "7.2.2"
+confirmed = true
+line = 1411
+context = "bd06d31e499a"
+note = "Running out of edges. Same ending as every other exhaustion in this file."
+
+[[references]]
+id = "lock-ordering-R39"
+path = "kernel/locking/lockdep.c"
+anchor = "static noinline void print_circular_bug(struct lock_list *this,"
+kernel = "7.2.2"
+confirmed = true
+line = 2005
+context = "8e9080ed3131"
+note = "The report. The first thing it does is switch the checker off, and it does that before printing a single line."
+
+[[references]]
+id = "lock-ordering-R40"
+path = "kernel/locking/lockdep.c"
+anchor = "the existing dependency chain (in reverse order) is"
+kernel = "7.2.2"
+confirmed = true
+line = 1973
+context = "0614bdf2cff7"
+note = "Where the numbered chain in the middle of a report is printed, and where the order of the numbers is decided. The printing is what makes #0 the lock being acquired."
+
+[[references]]
+id = "lock-ordering-R41"
+path = "kernel/locking/lockdep.c"
+anchor = "static inline int debug_locks_off_graph_unlock(void)"
+kernel = "7.2.2"
+confirmed = true
+line = 198
+context = "18a86a3dd252"
+note = "Switching off and releasing the graph lock in one step, and returning whether this call was the one that did it. Everything that reports uses this, which is why only the first report of a boot is printed."
+
+[[references]]
+id = "lock-ordering-R42"
+path = "kernel/locking/lockdep.c"
+anchor = "static void print_lockdep_off(const char *bug_msg)"
+kernel = "7.2.2"
+confirmed = true
+line = 522
+context = "8d8157e1a5f7"
+note = "The two lines printed when an internal limit is hit. The second one, turning off the locking correctness validator, is the string to search a log for."
+
+[[references]]
+id = "lock-ordering-R43"
+path = "kernel/locking/lockdep_proc.c"
+anchor = "seq_printf(m, \" debug_locks:"
+kernel = "7.2.2"
+confirmed = true
+line = 378
+context = "40cab8d2cfe1"
+note = "The one line of /proc/lockdep_stats that says whether anything above it is still being maintained."
+
+[[references]]
+id = "lock-ordering-R44"
+path = "kernel/locking/lockdep.c"
+anchor = "static arch_spinlock_t __lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;"
+kernel = "7.2.2"
+confirmed = true
+line = 138
+context = "79c215dfb493"
+note = "The one lock the whole graph is protected by, and it is a raw architecture spinlock rather than any of the kernel's own lock types."
+
+[[references]]
+id = "lock-ordering-R45"
+path = "kernel/locking/lockdep.c"
+anchor = "This is one of the rare exceptions where it's justified"
+kernel = "7.2.2"
+confirmed = true
+line = 134
+context = "4674841bac0d"
+note = "Why it has to be a raw architecture spinlock. Any lock the kernel offers would call back into this file, and this file is the callee."
+
+[[references]]
+id = "lock-ordering-R46"
+path = "kernel/locking/lockdep.c"
+anchor = "static int check_wait_context(struct task_struct *curr, struct held_lock *next)"
+kernel = "7.2.2"
+confirmed = true
+line = 4852
+context = "882d7fdd7bbe"
+note = "The second thing this mechanism checks, which is not about order at all. It asks whether a lock that can sleep is being taken inside one that cannot."
+
+[[references]]
+id = "lock-ordering-R47"
+path = "kernel/locking/lockdep.c"
+anchor = "if (next_outer > curr_inner)"
+kernel = "7.2.2"
+confirmed = true
+line = 4901
+context = "055de92bf5d4"
+note = "The comparison. Wait types are ordered, and taking a lock whose wait type is looser than the tightest one already held is the violation."
+
+[[references]]
+id = "lock-ordering-R48"
+path = "include/linux/lockdep_types.h"
+anchor = "enum lockdep_wait_type {"
+kernel = "7.2.2"
+confirmed = true
+line = 17
+context = "c0e6a22460af"
+note = "The ordered list of wait types, from a lock that cannot even be preempted up to one that can sleep. This is the enum the PREEMPT_RT rules are written in."
+
+[[references]]
+id = "lock-ordering-R49"
+path = "kernel/locking/lockdep.c"
+anchor = "pr_warn(\"[ BUG: Invalid wait context ]\\n\");"
+kernel = "7.2.2"
+confirmed = true
+line = 4815
+context = "7d29704f7ae4"
+note = "What a wait context violation prints, and it looks nothing like a lock ordering report, which is worth knowing before searching for the wrong text."
+
+[[references]]
+id = "lock-ordering-R50"
+path = "kernel/locking/lockdep.c"
+anchor = "pr_warn(\"WARNING: possible circular locking dependency detected\\n\");"
+kernel = "7.2.2"
+confirmed = true
+line = 1962
+context = "9b2358582f6e"
+note = "The banner of the report this blueprint is mostly about."
+
+[[references]]
+id = "lock-ordering-R51"
+path = "kernel/locking/lockdep.c"
+anchor = "pr_warn(\"WARNING: possible recursive locking detected\\n\");"
+kernel = "7.2.2"
+confirmed = true
+line = 3022
+context = "d7ff85731d9a"
+note = "The one thread version, where the class is already on this task's own held stack."
+
+[[references]]
+id = "lock-ordering-R52"
+path = "kernel/locking/lockdep.c"
+anchor = "pr_warn(\"WARNING: %s-safe -> %s-unsafe lock order detected\\n\","
+kernel = "7.2.2"
+confirmed = true
+line = 2565
+context = "1f41bac4878d"
+note = "The interrupt inversion report, which has no cycle in it at all and is the reason the checker records which locks are ever taken with interrupts off."
+
+[[references]]
+id = "lock-ordering-R53"
+path = "kernel/locking/lockdep.c"
+anchor = "pr_warn(\"WARNING: held lock freed!\\n\");"
+kernel = "7.2.2"
+confirmed = true
+line = 6684
+context = "c1e6a38d339b"
+note = "Memory containing a held lock being freed. The allocator calls in to ask, so this fires from kfree rather than from an acquire."
+
+[[references]]
+id = "lock-ordering-R54"
+path = "kernel/locking/lockdep.c"
+anchor = "pr_warn(\"WARNING: bad unlock balance detected!\\n\");"
+kernel = "7.2.2"
+confirmed = true
+line = 5285
+context = "bb593d3d33c5"
+note = "A release with no matching acquire on the held stack, which is usually a lock released on a different thread from the one that took it."
+
+[[references]]
+id = "lock-ordering-R55"
+path = "kernel/locking/lockdep.c"
+anchor = "pr_warn(\"WARNING: lock held when returning to user space!\\n\");"
+kernel = "7.2.2"
+confirmed = true
+line = 6815
+context = "115f3ed92869"
+note = "Checked on the way out of a system call, which catches a leak that no acquire would ever notice."
+
+[[references]]
+id = "lock-ordering-R56"
+path = "kernel/locking/lockdep.c"
+anchor = "pr_warn(\"WARNING: suspicious RCU usage\\n\");"
+kernel = "7.2.2"
+confirmed = true
+line = 6841
+context = "78f9f1b537a5"
+note = "The same held lock bookkeeping used to answer a different question, which is whether the caller is inside an RCU read side section."
+
+[[references]]
+id = "lock-ordering-R57"
+path = "kernel/locking/lockdep.c"
+anchor = "if (unlikely(curr->lockdep_depth >= MAX_LOCK_DEPTH)) {"
+kernel = "7.2.2"
+confirmed = true
+line = 5251
+context = "6f8cfab68f63"
+note = "The held stack is fixed size and per task, and going past the end switches the checker off after dumping every lock currently held."
+
+[[references]]
+id = "lock-ordering-R58"
+path = "include/linux/sched.h"
+anchor = "define MAX_LOCK_DEPTH"
+kernel = "7.2.2"
+confirmed = true
+line = 1287
+context = "b99e10d6fea6"
+note = "Forty eight held locks per task, and the array is inside the task structure, so this is a fixed memory cost on every thread on a kernel built with the checker."
+
+[[references]]
+id = "lock-ordering-R59"
+path = "kernel/locking/lockdep.c"
+anchor = "print_lockdep_off(\"BUG: MAX_STACK_TRACE_ENTRIES too low!\");"
+kernel = "7.2.2"
+confirmed = true
+line = 581
+context = "85d25968c028"
+note = "Running out of room for stack traces. An edge cannot be recorded without one, so this ends checking too."
