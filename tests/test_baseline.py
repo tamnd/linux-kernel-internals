@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 from kxray import kallsyms, lockdep, tracefs
+from kxray.corpus import index
 from kxray.models import Lines
 from kxray.trace import parse_file
 from tools import baseline
@@ -39,7 +40,7 @@ def test_the_corpus_is_not_empty():
 @pytest.mark.parametrize("artefact", ARTEFACTS, ids=lambda p: p.relative_to(CORPORA).as_posix())
 def test_every_artefact_has_a_reader(artefact, here):
     # An artefact nothing opens is how a file ends up committed that has never been read.
-    assert baseline.route(artefact.relative_to(ROOT)) is not None
+    assert index.route(artefact.relative_to(ROOT)) is not None
 
 
 @pytest.mark.parametrize("artefact", ARTEFACTS, ids=lambda p: p.relative_to(CORPORA).as_posix())
@@ -50,7 +51,7 @@ def test_every_line_is_accounted_for(artefact, here):
     some lines and forgets others can report zero unparsed lines forever while understanding less
     and less of the file.
     """
-    reading = baseline.read_one(artefact.relative_to(ROOT))
+    reading = index.read(index.at(artefact.relative_to(ROOT)))
     if reading.accounted is None:
         pytest.skip(f"{reading.reader} does not account for lines")
     assert reading.accounted.total == reading.lines
@@ -78,7 +79,7 @@ def test_nothing_in_the_corpus_is_unparsed_today(here):
 # What the tool does when something moves.
 
 
-def readings(**changes) -> list[baseline.Reading]:
+def readings(**changes) -> list[index.Reading]:
     """One row, with some of it changed."""
     fields = {
         "path": "corpora/traces/tier0/write-1byte.txt",
@@ -88,11 +89,12 @@ def readings(**changes) -> list[baseline.Reading]:
         "accounted": Lines(read=8, skipped=2),
     }
     fields.update(changes)
-    return [baseline.Reading(**fields)]
+    one = index.Artefact("traces/tier0/write-1byte", Path(fields["path"]), fields["reader"], {})
+    return [index.Reading(one, fields["found"], fields["lines"], fields["accounted"])]
 
 
-def recorded(rows: list[baseline.Reading]) -> dict:
-    return {"schema": baseline.SCHEMA, "artefact": [one.row() for one in rows]}
+def recorded(rows: list[index.Reading]) -> dict:
+    return {"schema": baseline.SCHEMA, "artefact": [baseline.row(one) for one in rows]}
 
 
 def test_a_matching_pair_has_nothing_to_say():
@@ -129,7 +131,7 @@ def test_a_baseline_written_by_an_older_tool_is_refused():
 
 
 def test_what_is_written_reads_back_as_what_was_measured(here):
-    rows = baseline.survey()
+    rows = index.survey()
     again = tomllib.loads(baseline.as_toml(rows))
     assert baseline.compare(rows, again) == []
 
@@ -140,7 +142,7 @@ def test_an_artefact_nothing_reads_is_an_error(tmp_path, monkeypatch):
     (tmp_path / "corpora" / "mystery" / "thing.log").write_text("hello\n")
     (tmp_path / "corpora" / "mystery" / "thing.meta.toml").write_text("evidence = false\n")
     with pytest.raises(LookupError, match="no reader"):
-        baseline.survey()
+        index.survey()
 
 
 # The readers themselves, one case each for the distinction that reader exists to make.
