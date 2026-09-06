@@ -39,6 +39,10 @@ class Recipe:
     profile: str
     describes: str
     command: str
+    # The module this recipe loads, if it loads one. `box.insmod("/lib/modules/abba.ko")` finds a
+    # recipe by the file name at the end of that path, because the path a lesson writes and the
+    # path the capture was taken with are the same string on a live guest and need not be here.
+    module: str = ""
     functions: tuple[str, ...] = ()
     trace: str = ""
     stdout: str = ""
@@ -66,6 +70,7 @@ class Recipe:
             profile=str(raw.get("profile", "teaching")),
             describes=str(raw.get("describes", "")),
             command=str(raw.get("command", "")),
+            module=str(raw.get("module", "")),
             functions=tuple(str(one) for one in raw.get("functions", []) or []),
             trace=str(raw.get("trace", "")),
             stdout=str(raw.get("stdout", "")),
@@ -83,6 +88,16 @@ def load_recipes(root: Path) -> list[Recipe]:
         return []
     raw = tomllib.loads(path.read_text(encoding="utf-8"))
     return [Recipe.from_toml(one) for one in raw.get("recipes", [])]
+
+
+def captures(one: Recipe) -> list[str]:
+    """Every committed file this recipe points at, trace and snapshots together.
+
+    A recipe's evidence is not only its tape. Both lockdep recipes have no trace at all and two
+    real `/proc` readings between them, and anything that asked about the trace alone would call
+    them handwritten.
+    """
+    return ([one.trace] if one.trace else []) + sorted(one.files.values())
 
 
 def evidence_of(root: Path, relative: str) -> bool:
@@ -108,10 +123,13 @@ class Corpus:
     def evidence(self) -> bool:
         """True only when every recording this backend could hand out is real.
 
-        Today they are all handwritten, so this is False, and the banner says so on every cell.
+        Every file a recipe points at counts, not only its trace. That used to look at traces
+        alone, so a recipe whose evidence is a `/proc` snapshot rather than a tape came out
+        marked handwritten no matter what its metadata said, and both of the lockdep recipes are
+        that shape.
         """
-        paths = [one.trace for one in self.recipes.values() if one.trace]
-        return bool(paths) and all(evidence_of(self.root, one) for one in paths)
+        paths = [path for one in self.recipes.values() for path in captures(one)]
+        return bool(paths) and all(evidence_of(self.root, path) for path in paths)
 
     def describe(self) -> str:
         if not self.recipes:
@@ -144,22 +162,72 @@ class Corpus:
         one = self.recipe(recipe or line)
         return Command(one.command, one.status, one.stdout, "", backend=self.name)
 
-    def read(self, path: str, *, recipe: str = "") -> str:
+    def insmod(self, path: str):
+        """The recorded reply to loading a module.
+
+        Named by the module rather than by the path it was loaded from. On a live guest the two are
+        the same string, so a lesson writes the path either way, and here the path is a detail of
+        where the rootfs build happened to put the file.
+        """
+        from kxbox.session import Command
+
+        wanted = Path(path).name
         for one in self.recipes.values():
-            if recipe and one.name != recipe:
-                continue
-            if path in one.files:
-                return (self.root / CORPORA / one.files[path]).read_text(encoding="utf-8")
+            if one.module == wanted:
+                return Command(one.command, one.status, one.stdout, "", backend=self.name)
+
+        loads = ", ".join(sorted(one.module for one in self.recipes.values() if one.module))
+        raise NotRecorded(
+            f"no recording of loading `{wanted}` for the {self.profile} profile. Recorded so far: "
+            f"{loads or 'nothing'}. Adding it means loading the module on a Tier 0 session and "
+            "listing the recipe in corpora/tier0/recipes.toml with a `module` field."
+        )
+
+    def read(self, path: str, *, recipe: str = "") -> str:
+        if recipe:
+            one = self.recipe(recipe)
+            if path not in one.files:
+                raise NotRecorded(
+                    f"the `{one.name}` recipe has no snapshot of `{path}`. It has "
+                    f"{', '.join(sorted(one.files)) or 'no files'} recorded against it."
+                )
+            return (self.root / CORPORA / one.files[path]).read_text(encoding="utf-8")
+
+        # No recipe named, so the path has to pick one on its own, and it can only do that if
+        # exactly one recipe recorded it. This used to take the first match in file order. Two
+        # recipes reading `/proc/lockdep_stats` either side of an insmod is the ordinary case
+        # rather than a strange one, and a lesson asking for it without saying which would have
+        # been handed the before or the after depending on nothing it could see.
+        found = [one for one in self.recipes.values() if path in one.files]
+        if len(found) == 1:
+            return (self.root / CORPORA / found[0].files[path]).read_text(encoding="utf-8")
+        if len(found) > 1:
+            names = ", ".join(sorted(one.name for one in found))
+            raise NotRecorded(
+                f"`{path}` is recorded against more than one recipe ({names}), so this has to say "
+                "which: box.read(path, recipe=...). They are different readings of the same file "
+                "and picking one for you would pick the wrong one about half the time."
+            )
         raise NotRecorded(
             f"no recorded snapshot of `{path}`. A file read has to be recorded like anything "
             "else, in the `files` table of a recipe in corpora/tier0/recipes.toml."
         )
 
-    def tape(self, recipe: str, do=None, functions: tuple[str, ...] = (), *, owns_window=False):
-        """Hand back the recording. The callable and the filter belong to the live backend.
+    def tape(
+        self,
+        recipe: str,
+        do=None,
+        functions: tuple[str, ...] = (),
+        *,
+        owns_window: bool = False,
+        max_depth: int = 0,
+    ):
+        """Hand back the recording. The callable, the filter and the depth belong to the live one.
 
         They are still in the signature so that the two backends are called the same way, which
-        is the only reason a lesson cell can be written once and run either side.
+        is the only reason a lesson cell can be written once and run either side. A test compares
+        the two signatures, because an argument one backend has and the other does not is a lesson
+        that works in a browser and raises TypeError everywhere else.
         """
         from kxray import trace
 

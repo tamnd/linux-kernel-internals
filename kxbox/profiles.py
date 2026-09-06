@@ -118,6 +118,22 @@ def get(name: str) -> Profile:
     return found
 
 
+def for_build(name: str) -> Profile | None:
+    """The boot profile that uses a given build, or None when nothing uses it.
+
+    The other direction, and it is needed because the harness and the capture metadata name a
+    build, not a boot profile. `KXBOX_PROFILE=D-lockdep` picks which compiled image the headless
+    runner boots, and whatever is standing on top of it has to say `lockdep`. Three of the six
+    builds have nobody on top of them, which is why this can answer None: `A-gzip`,
+    `B-btf-external` and `C-longterm` exist to be measured against `A-full` rather than to be
+    booted by a lesson.
+    """
+    for one in PROFILES.values():
+        if one.builds == name:
+            return one
+    return None
+
+
 def built(name: str, root: Path | None = None) -> dict:
     """What `pin.toml` says about the build behind this boot profile.
 

@@ -16,6 +16,7 @@ remembering which of the two actually finds this class of mistake.
 
 from __future__ import annotations
 
+import inspect
 import re
 import tomllib
 from dataclasses import dataclass
@@ -74,6 +75,10 @@ def repo(tmp_path: Path, *, recipes: str = RECIPES, evidence: str = "false") -> 
     proc = tmp_path / "corpora" / "proc" / "demo"
     proc.mkdir(parents=True)
     (proc / "status.txt").write_text("Name:\tdd\n")
+    # The snapshot needs metadata beside it for the same reason the trace does. This fixture went
+    # without one for as long as `evidence` looked only at traces, which is exactly the gap that
+    # made a recipe recorded entirely out of /proc readings come out marked handwritten.
+    (proc / "status.meta.toml").write_text(META.format(evidence=evidence))
 
     (tmp_path / "corpora" / "tier0").mkdir()
     (tmp_path / "corpora" / "tier0" / "recipes.toml").write_text(recipes)
@@ -357,6 +362,130 @@ def test_a_bridge_missing_a_call_is_refused_at_the_door():
 def test_there_is_no_bridge_on_a_machine_that_is_not_a_page():
     assert bridge.find_bridge() is None
     assert "not running in a browser" in bridge.explain()
+
+
+# -- the bridge API ------------------------------------------------------------------------------
+#
+# Five calls, and the point of the whole arrangement is that a lesson writes them once. So the
+# thing worth testing mechanically is not what any one of them does, it is that the two backends
+# agree about what they are called and what they take.
+
+CALLS = ("sh", "read", "insmod", "tape")
+
+
+@pytest.mark.parametrize("call", CALLS)
+def test_the_two_backends_take_the_same_arguments(call):
+    """An argument one backend has and the other does not is a lesson that raises TypeError.
+
+    It raises it on whichever machine the reader is on rather than on the machine it was written
+    on, which is the worst place to find out. `max_depth` was exactly this: the live backend had
+    it from the day it was written, the recorded one did not, and `Box.trace` could not pass it,
+    so a knob documented as the fix for a hanging guest was unreachable.
+    """
+    live = inspect.signature(getattr(bridge.V86, call))
+    recorded = inspect.signature(getattr(corpus.Corpus, call))
+    assert list(live.parameters) == list(recorded.parameters), call
+    for name, param in live.parameters.items():
+        assert param.kind == recorded.parameters[name].kind, f"{call}.{name}"
+
+
+def test_writing_into_the_guest_is_not_part_of_the_lesson_api():
+    """`write` is the one call the live backend has that the recorded one does not, on purpose.
+
+    A recording can hand back what a file said. It cannot do anything about a lesson writing to
+    that file, and a lesson whose effect quietly does not happen on most readers' machines is
+    worse than one that cannot be written. So `write` stays inside the tracer plumbing, where the
+    live backend uses it and the recorded one has nothing to do, and `Box` does not offer it.
+    """
+    assert hasattr(bridge.V86, "write")
+    assert not hasattr(corpus.Corpus, "write")
+    assert not hasattr(kxbox.Box, "write")
+
+
+def test_the_page_still_has_to_offer_all_four_protocol_calls():
+    """A bridge object missing one of them is refused at the door rather than halfway through."""
+    assert bridge.CALLS == ("sh", "read", "write", "insmod")
+
+
+def test_box_passes_on_every_argument_the_backends_take():
+    """A backend argument `Box` cannot reach is an argument no lesson can use.
+
+    `Box` is the only way in, so a parameter it does not forward is a parameter that exists in
+    two backends and nowhere a reader can type it.
+    """
+    forwarded = inspect.signature(kxbox.Box.trace).parameters
+    behind = inspect.signature(corpus.Corpus.tape).parameters
+    for name in behind:
+        if name in ("self", "recipe", "do", "functions"):
+            continue
+        assert name in forwarded, name
+
+
+def test_both_backends_answer_insmod(tmp_path):
+    """This used to be a branch inside `Box` rather than a call on a backend.
+
+    The recorded side turned a module load into a shell line and looked it up under a recipe
+    named `insmod abba.ko`, a naming convention invented at that call site and written down
+    nowhere. No recipe has ever been named that way, so the recorded path had never once worked.
+    """
+    assert hasattr(corpus.Corpus, "insmod")
+
+    live = kxbox.Box(bridge.V86(FakeBridge()), "teaching")
+    assert live.insmod("/lib/modules/abba.ko").ok
+
+    box = kxbox.Box(corpus.Corpus(ROOT, "lockdep"), "lockdep", "no emulator")
+    loaded = box.insmod("/lib/modules/abba.ko")
+    assert loaded.ok
+    assert loaded.line == "insmod /lib/modules/abba.ko"
+
+
+def test_loading_a_module_nobody_recorded_says_what_is_recorded():
+    box = kxbox.Box(corpus.Corpus(ROOT, "lockdep"), "lockdep", "no emulator")
+    with pytest.raises(corpus.NotRecorded) as raised:
+        box.insmod("/lib/modules/nosuch.ko")
+    said = str(raised.value)
+    assert "nosuch.ko" in said
+    assert "abba.ko" in said, "it should say what has been recorded"
+    assert "recipes.toml" in said, "it should say where to add it"
+
+
+def test_a_file_two_recipes_recorded_will_not_pick_one_for_you():
+    """`/proc/lockdep_stats` either side of an insmod is the ordinary case, not a strange one.
+
+    This took the first match in file order, so a lesson asking without saying which got the
+    before or the after depending on nothing it could see, and both are plausible readings of the
+    same file. Half the time it would have been right.
+    """
+    backend = corpus.Corpus(ROOT, "lockdep")
+    with pytest.raises(corpus.NotRecorded) as raised:
+        backend.read("/proc/lockdep_stats")
+    said = str(raised.value)
+    assert "more than one recipe" in said
+    assert "lockdep-before" in said
+    assert "load-abba" in said
+
+    before = backend.read("/proc/lockdep_stats", recipe="lockdep-before")
+    after = backend.read("/proc/lockdep_stats", recipe="load-abba")
+    assert "debug_locks:" in before
+    assert before != after
+
+
+def test_asking_a_recipe_for_a_file_it_did_not_record_says_what_it_did():
+    backend = corpus.Corpus(ROOT, "lockdep")
+    with pytest.raises(corpus.NotRecorded) as raised:
+        backend.read("/proc/meminfo", recipe="load-abba")
+    assert "/proc/lockdep_stats" in str(raised.value)
+
+
+def test_a_recipe_whose_evidence_is_a_snapshot_still_counts_as_evidence():
+    """Both lockdep recipes have no trace and two real /proc readings between them.
+
+    `evidence` looked at the trace alone, so a session made of snapshots said it was handwritten
+    and every banner in a lesson using it would have said nothing here is evidence.
+    """
+    backend = corpus.Corpus(ROOT, "lockdep")
+    assert backend.evidence is True
+    assert corpus.captures(backend.recipe("load-abba")) == ["proc/tier0/lockdep-stats-after.txt"]
 
 
 # -- the property the design rests on ------------------------------------------------------------

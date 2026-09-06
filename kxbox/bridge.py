@@ -34,6 +34,8 @@ from __future__ import annotations
 
 import sys
 
+from kxbox import profiles
+
 # Where the tracer's controls live inside the guest. The same names `kxray.tracefs` uses on a real
 # machine, because it is the same interface and there is no reason for two spellings of it.
 TRACING = "/sys/kernel/tracing"
@@ -110,20 +112,27 @@ class V86:
     live = True
     evidence = True
 
-    def __init__(self, bridge, profile: str = "teaching") -> None:
+    def __init__(self, bridge, profile: str = profiles.DEFAULT) -> None:
         missing = [one for one in CALLS if not hasattr(bridge, one)]
         if missing:
             raise Unavailable(f"the bridge object is missing {', '.join(missing)}")
+        # A boot profile name, checked here for the same reason `boot()` checks it. This is the
+        # other way in, `kxbox/web/first-tape.py` comes through it, and a name nothing builds is
+        # a session that describes itself as something it is not.
+        profiles.get(profile)
         self.bridge = bridge
         self.profile = profile
 
     @classmethod
-    def find(cls, profile: str = "teaching") -> V86 | None:
+    def find(cls, profile: str = profiles.DEFAULT) -> V86 | None:
         found = find_bridge()
         return None if found is None else cls(found, profile)
 
     def describe(self) -> str:
-        return f"v86, profile {self.profile}, uniprocessor, 32 bit, emulated timing"
+        one = profiles.get(self.profile)
+        return (
+            f"v86, {one.name} profile built as {one.builds}, uniprocessor, 32 bit, emulated timing"
+        )
 
     def sh(self, line: str, *, recipe: str = ""):
         from kxbox.session import Command

@@ -20,6 +20,22 @@ The obvious way to write a fallback is a branch: use the emulator if it is there
 
 Here there is one path. `box.trace(...)` returns a `kxray.models.Tape` from both backends, so the widget, the diagram and the blueprint that consume it cannot tell which one they got. `KXBOX_DISABLE=1` forces the recording, every lesson has to work that way, and CI runs them all like that. The fallback is the tested path rather than the promised one.
 
+## The five calls
+
+| call | what it does | on a recording |
+| --- | --- | --- |
+| `kxbox.boot(profile)` | a session, live if there is one | picks the recorded backend and says why in the banner |
+| `box.sh(line, recipe=)` | one shell line, waited for | the recorded standard output and exit status |
+| `box.read(path, recipe=)` | a file inside the guest | the recorded snapshot of that file |
+| `box.trace(name, do, ...)` | the function graph tracer around something | the recorded tape, and the callable is not run |
+| `box.insmod(path)` | load a module | the recorded reply to having loaded it |
+
+All five return the same types from both backends. `sh` and `insmod` give a `Command`, `read` gives a string, `trace` gives a `kxray.models.Tape`. A test compares the two backends' signatures argument by argument, because an argument one has and the other does not is a lesson that raises `TypeError` on the reader's machine rather than on the one it was written on. That test is how `max_depth` was found: the live backend had it from the day it was written, nothing else did, and a knob documented as the fix for a hanging guest could not be reached from a lesson.
+
+There is no `box.write`. The live backend has one and uses it to drive the tracer, and it is not offered to a lesson, because a recording can say what a file contained and can do nothing at all about a lesson writing to it. A cell whose effect quietly does not happen on most readers' machines is worse than one that cannot be written.
+
+The `recipe=` argument on `sh` and `read` names which recording answers the call. A live kernel ignores it. That is the one asymmetry in the design and it is in one place rather than in a hundred lesson cells.
+
 ## Every traced action has a name
 
 `write-1byte` is not decoration. It is what the recording is filed under, and it is the thing both backends agree about. The callable beside it is what the live backend runs, and the recorded backend ignores it because there is nothing to run it on. That is the one asymmetry in the design and it lives in one function rather than in a hundred lesson cells.

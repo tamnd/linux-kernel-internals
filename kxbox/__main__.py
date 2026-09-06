@@ -19,7 +19,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from kxbox.corpus import CORPORA, Recipe, evidence_of, load_recipes
+from kxbox.corpus import CORPORA, Recipe, captures, evidence_of, load_recipes
 from kxbox.session import boot, repo_root
 
 
@@ -65,7 +65,10 @@ def report(root: Path) -> str:
 
     lines.append(f"{len(recipes)} recording(s):")
     for one in sorted(recipes, key=lambda r: (r.profile, r.name)):
-        mark = "real" if one.trace and evidence_of(root, one.trace) else "handwritten"
+        # Every file the recipe points at, not only its trace. Two of these have no trace and two
+        # real /proc readings, and looking at the trace alone called them handwritten.
+        files = captures(one)
+        mark = "real" if files and all(evidence_of(root, path) for path in files) else "handwritten"
         lines.append(f"  {one.profile}/{one.name}  {mark}  {one.describes}")
     return "\n".join(lines)
 

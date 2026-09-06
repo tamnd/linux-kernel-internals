@@ -101,8 +101,13 @@ class Box:
         return self.backend.read(path, recipe=recipe)
 
     def insmod(self, path: str) -> Command:
-        if not self.live:
-            return self.sh(f"insmod {path}", recipe=f"insmod {Path(path).name}")
+        """Load a module, or hand back the recording of it having been loaded.
+
+        This used to branch on `self.live` and turn a recorded load into a shell line named
+        `insmod abba.ko`, a recipe naming convention that was invented here and written down
+        nowhere. Both backends have an `insmod` now, so this is a delegation like the other four
+        and the difference between them lives in the backend that has it.
+        """
         return self.backend.insmod(path)
 
     def trace(
@@ -112,6 +117,7 @@ class Box:
         *,
         functions: tuple[str, ...] | list[str] = (),
         owns_window: bool = False,
+        max_depth: int = 0,
     ):
         """Run something with the function graph tracer on, and hand back a `kxray.models.Tape`.
 
@@ -121,8 +127,18 @@ class Box:
         `owns_window` says the thing being run opens and closes the tracer window itself, which
         every compiled program in the rootfs does. It means nothing to a recording and everything
         to a live kernel.
+
+        `max_depth` limits how far under the named functions the tracer follows, and 0 means no
+        limit, which is what every committed capture used. It is worth reaching for when the thing
+        being traced does not own its window, because a busy window fills the ring buffer faster
+        than a serial line drains it and that failure looks like the guest hanging rather than like
+        too much output. The live backend has had this knob since it was written and there was no
+        way to reach it from here, which is the sort of gap a signature test finds and a person
+        does not.
         """
-        return self.backend.tape(recipe, do, tuple(functions), owns_window=owns_window)
+        return self.backend.tape(
+            recipe, do, tuple(functions), owns_window=owns_window, max_depth=max_depth
+        )
 
     def banner(self) -> str:
         """What is behind this session, printed before a reader believes anything it says.
