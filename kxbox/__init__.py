@@ -15,21 +15,27 @@ all like that, because the emulator is the part most likely to be missing where 
 sitting.
 """
 
+from kxbox import profiles
 from kxbox.bridge import V86, Unavailable
 from kxbox.corpus import Corpus, NotRecorded, Recipe, load_recipes
+from kxbox.profiles import PROFILES, Profile, Unknown
 from kxbox.session import DISABLE, Box, Command, boot, disabled, repo_root
 
 __all__ = [
     "DISABLE",
+    "PROFILES",
     "V86",
     "Box",
     "Command",
     "Corpus",
     "NotRecorded",
+    "Profile",
     "Recipe",
     "Unavailable",
+    "Unknown",
     "boot",
     "disabled",
     "load_recipes",
+    "profiles",
     "repo_root",
 ]

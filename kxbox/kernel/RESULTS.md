@@ -15,8 +15,13 @@ Filled in by `build.sh`. The compressed image is the number that matters, becaus
 | `B-btf-external` | 7.2.2 | 2896384 (2.76 MiB) | 104525968 (100 MiB) | 243s | M4 laptop, docker, cross from aarch64 | 2026-09-02 |
 | `C-longterm` | 6.18.48 | not measured | not measured | not measured | | |
 | `D-lockdep` | 7.2.2 | 3600896 (3.43 MiB) | 121288336 (116 MiB) | 249s | M4 laptop, docker, cross from aarch64 | 2026-09-02 |
+| `E-memcheck` | 7.2.2 | not measured | not measured | not measured | | |
 
 Two of those rows are the same kernel with one symbol changed, so the difference is the price of a decision and nothing else.
+
+The `D-lockdep` row above was built from a fragment that asked for `CONFIG_KASAN=y` and `CONFIG_KASAN_GENERIC=y`, and the image it produced has neither. The generated config at `build/D-lockdep/config` has no `CONFIG_KASAN` line in it at all. `arch/x86/Kconfig` selects `HAVE_ARCH_KASAN` only under `X86_64`, this is a 32 bit build, and Kconfig drops a symbol whose dependencies are unmet without printing anything. So the 3.43 MiB and the 249 seconds are honest numbers for a kernel that never had the feature the fragment claimed. Nothing measured here changes, and nothing that used `D-lockdep` was relying on KASAN, but the row is worth a note because the failure was invisible from every direction: the build succeeded, the image booted, and the only trace of it anywhere was a symbol quietly missing from a file nobody reads.
+
+The two lines are gone from the fragment, `tools/kconfig` now fails a 32 bit profile that asks for an architecture gated symbol, and `E-memcheck` is the profile that does the memory checking a 32 bit kernel can actually do.
 
 `A-gzip` costs 1.1 MiB, a third more download, for `CONFIG_KERNEL_XZ` becoming `CONFIG_KERNEL_GZIP`. The vmlinux is byte for byte the same size, because compression happens after the kernel is built. Whether the faster decompression pays for the extra download is a browser measurement and is not answered here.
 

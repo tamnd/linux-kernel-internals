@@ -25,7 +25,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from kxbox import bridge
+from kxbox import bridge, profiles
 from kxbox.corpus import Corpus
 
 DISABLE = "KXBOX_DISABLE"
@@ -72,8 +72,18 @@ class Box:
     """A booted Tier 0 session, or the recording of one."""
 
     backend: object
-    profile: str = "teaching"
+    profile: str = profiles.DEFAULT
     why: str = ""
+    root: Path | None = None
+
+    def built(self) -> dict:
+        """The `pin.toml` row for the kernel behind this profile, empty if there is no checkout.
+
+        The boot profile is a name a lesson asks for and the build profile is a thing somebody
+        compiled, and this is how a lesson gets from one to the other without knowing which is
+        which.
+        """
+        return profiles.built(self.profile, self.root)
 
     @property
     def live(self) -> bool:
@@ -124,6 +134,11 @@ class Box:
             f"kxbox: {self.backend.name} backend, {self.profile} profile",
             f"       {self.backend.describe()}",
         ]
+        # What the profile turns on, and what it takes for it. A reader timing something on the
+        # lockdep kernel and reporting the number is the mistake this line is here to stop.
+        one = profiles.get(self.profile)
+        lines.append(f"       {one.name} gives you {one.gives}")
+        lines.append(f"       and costs {one.costs}")
         if self.live:
             lines.append(f"       {LIMITS}")
             lines.append("       no performance claim can be made from this machine")
@@ -137,17 +152,23 @@ class Box:
         return "\n".join(lines)
 
 
-def boot(profile: str = "teaching", *, root: Path | None = None) -> Box:
+def boot(profile: str = profiles.DEFAULT, *, root: Path | None = None) -> Box:
     """Get a session, live if there is one and a recording if there is not.
 
     The fallback is never silent. It is picked when the reader asked for it, or when there is no
     emulator in the page, and either way the banner says which happened and why.
+
+    A profile name nothing builds raises here rather than being carried. This used to be a free
+    string, so `boot("lockdpe")` came up saying it had booted a lockdep kernel while running the
+    teaching one, and a lesson about lock ordering would then find no lock ordering problems for
+    the least interesting reason there is.
     """
+    profiles.get(profile)
     root = root or repo_root()
     if disabled():
-        return Box(Corpus(root, profile), profile, f"{DISABLE} is set")
+        return Box(Corpus(root, profile), profile, f"{DISABLE} is set", root)
 
     live = bridge.V86.find(profile)
     if live is not None:
-        return Box(live, profile, "")
-    return Box(Corpus(root, profile), profile, bridge.explain())
+        return Box(live, profile, "", root)
+    return Box(Corpus(root, profile), profile, bridge.explain(), root)

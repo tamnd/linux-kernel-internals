@@ -1,0 +1,35 @@
+source = "pinned"
+evidence = true
+
+describes = "the block of HAVE_ARCH_ selects on config X86, which is where the pinned kernel decides that 32 bit x86 does not get KASAN and does get KFENCE"
+path = "arch/x86/Kconfig"
+excerpt = true
+
+kernel = "7.2.2"
+tarball_sha256 = "7d0e7ce14f98c43efe880cffbf354a59be45928fdf7170d7333c374ae91c0d83"
+taken = "2026-09-06"
+
+# arch/x86/Kconfig is 3138 lines on 7.2.2 and almost none of it is about this project. What is here
+# is the opening of `config X86` and the run of HAVE_ARCH_ selects, which is thirty two lines and
+# contains the whole answer to a question the milestone asked.
+#
+# The question was for three boot profiles: teaching, lockdep and kasan. Two lines in here say the
+# third one cannot exist on the kernel this project pins.
+#
+#     select HAVE_ARCH_KASAN                  if X86_64
+#     select HAVE_ARCH_KFENCE
+#
+# The pinned build is i386. `menuconfig KASAN` in lib/Kconfig.kasan depends on HAVE_ARCH_KASAN,
+# nothing selects HAVE_ARCH_KASAN on a 32 bit build, so KASAN cannot be switched on at all. It does
+# not appear in menuconfig, and a fragment setting CONFIG_KASAN=y produces a .config without it and
+# no error anywhere. KFENCE is selected with no condition on it, so 32 bit x86 has it.
+#
+# The comment three lines above `config X86` is the kernel's own note on the same point, which is
+# why it is in the excerpt rather than trimmed off: the `if X86_64` markers are about what has been
+# ported rather than about what is possible.
+
+lines_in_full_file = 3138
+excerpt_lines = "55 to 60, then 188 to 212"
+symbol = "X86"
+kasan_condition = "X86_64"
+kfence_condition = ""

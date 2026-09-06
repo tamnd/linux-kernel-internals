@@ -1,0 +1,31 @@
+source = "pinned"
+evidence = true
+
+describes = "every KFENCE symbol the kernel declares, which is what the memcheck boot profile is built out of because 32 bit x86 cannot have KASAN"
+path = "lib/Kconfig.kfence"
+excerpt = false
+
+kernel = "7.2.2"
+tarball_sha256 = "7d0e7ce14f98c43efe880cffbf354a59be45928fdf7170d7333c374ae91c0d83"
+taken = "2026-09-06"
+
+# The whole file, ninety nine lines, because it is the declaration of everything the memcheck
+# profile turns on and there is nothing in it worth leaving out.
+#
+# Two things in here are worth knowing before setting any of these by hand.
+#
+# Six of the eight symbols sit inside `if KFENCE`, and five of those six have no `depends on` line
+# of their own. Read a symbol without reading the block it is in and the answer to why it is off is
+# missing. This file is why `kxray.source.kconfig` now reads `if` and `endif` rather than counting
+# them as lines it did not understand, and `Symbol.conditions` is where the block condition and the
+# symbol's own dependencies come back together.
+#
+# KFENCE_NUM_OBJECTS carries `range 1 65535`, which is the only place the kernel says out loud what
+# that number is allowed to be. A fragment setting it to 0 would produce a .config that silently
+# does not have the value in it.
+
+symbols = 8
+inside_the_if_block = 6
+sample_interval_default = 100
+num_objects_default = 255
+num_objects_range = "1 65535"

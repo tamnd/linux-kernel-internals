@@ -53,6 +53,34 @@ REQUIRED = {
     "CONFIG_SERIAL_8250_CONSOLE": "the bridge talks to the kernel over the serial port",
 }
 
+# Symbols this project has actually tried to turn on and could not, with the gate that stopped
+# them. A gate is a HAVE_ARCH_ symbol, and the architecture selects it or does not.
+#
+# The condition on each gate is not written down here. It is read out of the committed excerpt of
+# `arch/x86/Kconfig` below, so this table cannot drift away from what the kernel says, and a kernel
+# that starts supporting one of these on 32 bit turns the check off by itself.
+#
+# This list exists because of a real fragment in this repository. `config/lockdep.config` asked for
+# CONFIG_KASAN=y and CONFIG_KASAN_GENERIC=y, profile D was built with it, and neither symbol is in
+# the resulting `.config`. Not off, not on: absent, because on i386 nothing selects HAVE_ARCH_KASAN
+# so the symbol does not exist to be set. Kconfig does not warn about that and the build succeeded.
+# The only line about KASAN in the built config is CONFIG_CC_HAS_KASAN_GENERIC=y, which says the
+# compiler could have done it, which is the most misleading thing it could have said.
+ARCH_GATED = {
+    "CONFIG_KASAN": "HAVE_ARCH_KASAN",
+    "CONFIG_KASAN_GENERIC": "HAVE_ARCH_KASAN",
+    "CONFIG_KASAN_SW_TAGS": "HAVE_ARCH_KASAN_SW_TAGS",
+    "CONFIG_KASAN_VMALLOC": "HAVE_ARCH_KASAN_VMALLOC",
+    "CONFIG_KMSAN": "HAVE_ARCH_KMSAN",
+}
+
+# Where the conditions come from. An excerpt rather than the whole 3138 line file, and it carries
+# its own metadata saying which lines it is and which tarball they came out of. Named from this
+# file rather than from the working directory, because it is a file in the repository and the
+# answer should not change with where somebody happened to run the checker from.
+WHERE = "corpora/source/pinned/arch/x86/Kconfig.excerpt"
+EXCERPT = Path(__file__).resolve().parents[1] / WHERE
+
 # A line in a fragment is one of these three shapes and nothing else.
 SET = re.compile(r"^(CONFIG_[A-Z0-9_]+)=(.*)$")
 UNSET = re.compile(r"^#\s*(CONFIG_[A-Z0-9_]+)\s+is not set\s*$")
@@ -126,6 +154,67 @@ def read_config(path: Path) -> dict[str, Setting]:
     return merge([settings])
 
 
+def gates(excerpt: Path = EXCERPT) -> dict[str, str]:
+    """Which condition each HAVE_ARCH_ gate is selected under, out of the pinned excerpt.
+
+    An empty string means selected with no condition on it, which is KFENCE, and is why the third
+    boot profile is built out of KFENCE rather than out of KASAN.
+    """
+    from kxray.source import kconfig as reader
+
+    if not excerpt.exists():
+        return {}
+    found = reader.parse(excerpt.read_text(encoding="utf-8"), source=str(excerpt))
+    arch = found.get("X86")
+    if arch is None:
+        return {}
+    return {one.symbol: one.condition for one in arch.selects}
+
+
+def is_32bit(merged: dict[str, Setting]) -> bool:
+    """Whether these fragments build a 32 bit kernel, which they say in two ways.
+
+    `# CONFIG_64BIT is not set` is the answer to the question and `CONFIG_X86_32=y` is the shape
+    that follows from it. The v86 fragment writes both, and either one on its own is enough.
+    """
+    sixty_four = merged.get("CONFIG_64BIT")
+    if sixty_four is not None and not sixty_four.is_on:
+        return True
+    thirty_two = merged.get("CONFIG_X86_32")
+    return thirty_two is not None and thirty_two.is_on
+
+
+def check_arch(where: str, merged: dict[str, Setting], excerpt: Path = EXCERPT) -> list[Finding]:
+    """A fragment asking for a symbol this architecture cannot have.
+
+    Setting one is not an error anywhere else in the toolchain. Kconfig drops a symbol whose
+    dependencies are unmet, says nothing, and the build finishes. The fragment then goes on
+    claiming for years that the kernel has a feature it has never had.
+    """
+    if not is_32bit(merged):
+        return []
+    conditions = gates(excerpt)
+    findings = []
+    for symbol, gate in ARCH_GATED.items():
+        setting = merged.get(symbol)
+        if setting is None or not setting.is_on:
+            continue
+        condition = conditions.get(gate)
+        if condition is None or condition == "":
+            # Either the excerpt is not here to read, or the gate has no condition on it and the
+            # symbol is fine. Neither is something to complain about.
+            continue
+        findings.append(
+            Finding(
+                where,
+                f"sets {symbol} on a 32 bit profile, and {WHERE} has the architecture selecting "
+                f"{gate} only if {condition}, so the symbol does not exist here and Kconfig will "
+                f"drop it without a word",
+            )
+        )
+    return findings
+
+
 def check_profile(root: Path, pin: dict, profile: dict) -> list[Finding]:
     where = f"{root}#{profile.get('name', '?')}"
     findings: list[Finding] = []
@@ -156,6 +245,7 @@ def check_profile(root: Path, pin: dict, profile: dict) -> list[Finding]:
         return findings
 
     merged = merge(fragments)
+    findings.extend(check_arch(where, merged))
     drops = set(profile.get("drops", []))
     reason = str(profile.get("drops_reason", "")).strip()
 
@@ -258,6 +348,33 @@ def verify(path: Path, built: Path, name: str) -> list[Finding]:
     actual = read_config(built)
 
     findings = []
+
+    # Everything the fragments asked to have on, that the built config does not have on. This is
+    # the general form of the KASAN case: Kconfig resolves dependencies and silently drops what it
+    # cannot satisfy, so the only way to find out what actually happened is to compare the two
+    # files. It needs a build, which is why it lives under --verify rather than in the CI check.
+    asked = []
+    for relative in profile.get("fragments", []):
+        fragment = path.parent / relative
+        if fragment.exists():
+            asked.append(parse_fragment(fragment)[0])
+    for symbol, setting in merge(asked).items():
+        if not setting.is_on or symbol in drops:
+            continue
+        got = actual.get(symbol)
+        if got is None:
+            findings.append(
+                Finding(
+                    f"{setting.path}:{setting.line}",
+                    f"asks for {symbol} and the built config has no such symbol, so its "
+                    f"dependencies are unmet on this architecture and Kconfig dropped it",
+                )
+            )
+        elif not got.is_on:
+            findings.append(
+                Finding(f"{setting.path}:{setting.line}", f"asks for {symbol} and it came out off")
+            )
+
     for symbol, why in REQUIRED.items():
         if symbol in drops:
             continue

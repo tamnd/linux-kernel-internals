@@ -244,3 +244,59 @@ def test_every_requirement_says_what_it_gives_you():
     """A requirement with no reason is a requirement nobody can argue with or remove."""
     for symbol, why in kconfig.REQUIRED.items():
         assert len(why.split()) >= 4, symbol
+
+
+# -- the architecture gate -----------------------------------------------------------------------
+#
+# These are about the one bug this repository has actually shipped. `config/lockdep.config` asked
+# for CONFIG_KASAN=y for as long as it existed, the built kernel never had it, and nothing said a
+# word, because Kconfig drops a symbol whose dependencies are unmet in silence.
+
+
+def settings(text: str, tmp_path) -> dict:
+    path = tmp_path / "one.config"
+    path.write_text(text, encoding="utf-8")
+    return kconfig.merge([kconfig.parse_fragment(path)[0]])
+
+
+def test_the_conditions_are_read_off_the_corpus_rather_than_written_here():
+    """A kernel that starts supporting KASAN on i386 turns this check off by replacing a file."""
+    conditions = kconfig.gates()
+    assert conditions["HAVE_ARCH_KASAN"] == "X86_64"
+    assert conditions["HAVE_ARCH_KFENCE"] == ""
+
+
+def test_a_missing_excerpt_means_no_opinion(tmp_path):
+    assert kconfig.gates(tmp_path / "nope") == {}
+
+
+def test_a_32_bit_build_says_so_in_either_of_two_ways(tmp_path):
+    assert kconfig.is_32bit(settings("# CONFIG_64BIT is not set\n", tmp_path))
+    assert kconfig.is_32bit(settings("CONFIG_X86_32=y\n", tmp_path))
+    assert not kconfig.is_32bit(settings("CONFIG_64BIT=y\n", tmp_path))
+    assert not kconfig.is_32bit(settings("CONFIG_FTRACE=y\n", tmp_path))
+
+
+def test_asking_for_kasan_on_a_32_bit_profile_is_caught(tmp_path):
+    merged = settings("# CONFIG_64BIT is not set\nCONFIG_KASAN=y\n", tmp_path)
+    findings = kconfig.check_arch("somewhere", merged)
+    assert "does not exist here" in messages(findings)
+    assert "X86_64" in messages(findings)
+
+
+def test_kfence_on_the_same_profile_is_fine(tmp_path):
+    """The whole point of the memcheck profile. It is selected with no condition on it."""
+    merged = settings("# CONFIG_64BIT is not set\nCONFIG_KFENCE=y\nCONFIG_KMSAN=y\n", tmp_path)
+    found = messages(kconfig.check_arch("somewhere", merged))
+    assert "CONFIG_KFENCE" not in found
+    assert "CONFIG_KMSAN" in found
+
+
+def test_the_gate_says_nothing_about_a_64_bit_build(tmp_path):
+    merged = settings("CONFIG_64BIT=y\nCONFIG_KASAN=y\n", tmp_path)
+    assert kconfig.check_arch("somewhere", merged) == []
+
+
+def test_a_symbol_turned_off_is_not_asking_for_anything(tmp_path):
+    merged = settings("# CONFIG_64BIT is not set\n# CONFIG_KASAN is not set\n", tmp_path)
+    assert kconfig.check_arch("somewhere", merged) == []

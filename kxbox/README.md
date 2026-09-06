@@ -32,9 +32,27 @@ The first cell of every lesson prints it, because somebody reading a trace needs
 
 A live session says what Tier 0 is: uniprocessor, 32 bit x86, emulated timing, and no performance claim can be made from it. A recorded session says that it is not a running kernel, why the emulator was not used, and whether what it is handing back is evidence at all. Today it is not, because the two recordings that exist were written by hand so the parser had something to parse.
 
+Either way the banner also says what the profile turns on and what it costs, which is the line that stops somebody timing a function on the lockdep kernel and reporting the number.
+
+## The three profiles
+
+A lesson asks for one of three kernels by name, and `kxbox/profiles.py` is the list.
+
+| profile | gives you | costs |
+| --- | --- | --- |
+| `teaching` | ftrace, kprobes, BTF, every `/proc` file the book reads, and modules | nothing beyond its size, which is what makes it the default |
+| `lockdep` | lockdep, lock statistics, and the sleeping in atomic context checks | every lock the kernel takes is recorded and checked, so timings mean nothing |
+| `memcheck` | KFENCE, page poisoning, unmapped freed pages, and the slab debugger | freed pages are unmapped and rewritten, so allocation timings mean nothing |
+
+A name nothing builds raises rather than being carried. This used to be a free string, so `boot("lockdpe")` came up saying it had booted a lockdep kernel while actually running the teaching one, and a lesson about lock ordering would then find no lock ordering problems for the least interesting reason there is. A clean answer that means nothing is worse than a crash.
+
+The third one is called `memcheck` and not `kasan` because KASAN cannot exist on this kernel. `arch/x86/Kconfig` selects `HAVE_ARCH_KASAN` only under `X86_64`, Tier 0 is 32 bit, and Kconfig drops a symbol whose dependencies are unmet without saying a word. `kernel/README.md` has the whole story, including the two config lines that had been asking for it since the day they were written.
+
+These three names are separate from the six build profiles in `kernel/pin.toml`. Those are named `A-full` through `E-memcheck` and exist to settle the kill criterion. `profiles.py` is where a name a lesson wrote turns into a kernel somebody built, so a lesson never has to know which is which.
+
 ## What is here and what is not
 
-`session.py` is the session and the banner. `corpus.py` replays a recording. `bridge.py` is the Python half of the conversation with the emulator, and `PROTOCOL.md` is the contract, which is four calls wide and says why the calls are synchronous and what that costs in hosting.
+`session.py` is the session and the banner. `profiles.py` is the three kernels a lesson may ask for. `corpus.py` replays a recording. `bridge.py` is the Python half of the conversation with the emulator, and `PROTOCOL.md` is the contract, which is four calls wide and says why the calls are synchronous and what that costs in hosting.
 
 `web/` is the other half: the shared buffer the answer comes back through, the shell protocol every call turns into, the page that boots the emulator, and a server that sets the two headers a blocking worker needs.
 

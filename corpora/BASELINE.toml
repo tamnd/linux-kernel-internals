@@ -12,10 +12,10 @@
 schema = 1
 
 [totals]
-artefacts = 39
-lines = 7837
-read = 5392
-skipped = 454
+artefacts = 41
+lines = 7968
+read = 5454
+skipped = 523
 unparsed = 0
 
 [[artefact]]
@@ -232,6 +232,15 @@ skipped = 80
 unparsed = 0
 
 [[artefact]]
+path = "corpora/source/pinned/arch/x86/Kconfig.excerpt"
+reader = "kconfig-source"
+lines = 32
+found = 1
+read = 27
+skipped = 5
+unparsed = 0
+
+[[artefact]]
 path = "corpora/source/pinned/arch/x86/entry/syscalls/syscall_32.tbl"
 reader = "syscall-table"
 lines = 479
@@ -262,6 +271,15 @@ lines = 194
 found = 15
 read = 69
 skipped = 125
+unparsed = 0
+
+[[artefact]]
+path = "corpora/source/pinned/lib/Kconfig.kfence"
+reader = "kconfig-source"
+lines = 99
+found = 8
+read = 35
+skipped = 64
 unparsed = 0
 
 [[artefact]]

@@ -94,4 +94,13 @@ kernel = "kernel"
 fragments = ["config/v86.config", "config/teaching.config", "config/lockdep.config"]
 compression = "xz"
 kill_criterion = false
-summary = "Profile A plus lockdep and the memory debuggers, for lesson C09. Deliberately slow and deliberately not the image a reader boots by default."
+summary = "Profile A plus lockdep and the lock debuggers, for lesson C09. Deliberately slow and deliberately not the image a reader boots by default."
+
+[[profiles]]
+name = "E-memcheck"
+order = 6
+kernel = "kernel"
+fragments = ["config/v86.config", "config/teaching.config", "config/memcheck.config"]
+compression = "xz"
+kill_criterion = false
+summary = "Profile A plus the memory checking a 32 bit kernel can actually do, which is KFENCE and the page and slab debuggers rather than KASAN, because arch/x86/Kconfig selects HAVE_ARCH_KASAN only if X86_64."
