@@ -85,10 +85,23 @@ paths = [
     "Documentation/locking/",
     "include/linux/mutex.h",
     "include/linux/spinlock.h",
+    "include/linux/lockdep.h",
+    "include/linux/lockdep_types.h",
 ]
 lessons = ["C09"]
-blueprints = []
+blueprints = ["lock-ordering"]
 note = "Lockdep is the way in, because it is the part of locking a reader can watch working."
+
+[[subsystem]]
+name = "scheduler"
+status = "partial"
+paths = [
+    "kernel/sched/",
+    "include/linux/sched.h",
+]
+lessons = []
+blueprints = ["lock-ordering"]
+note = "Nothing here is taught yet. The one thing reaching in is the held lock array the lock checker keeps in every task, which lives in this header rather than in its own."
 
 [[subsystem]]
 name = "tracing"

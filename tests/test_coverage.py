@@ -301,7 +301,12 @@ def test_every_entry_says_something_about_itself():
 def test_show_groups_by_status_and_counts():
     printed = coverage.show(ENTRIES)
     assert "taught (0)" in printed
-    assert "partial (7)" in printed
+    # Counted off the ledger rather than typed in, because the number moves every time a blueprint
+    # reaches into a subsystem nobody had written about yet, and a test that has to be edited for
+    # that is a test that gets edited without being read.
+    partial = len([one for one in ENTRIES if one.status == "partial"])
+    assert f"partial ({partial})" in printed
+    assert partial > 0
 
 
 def test_show_says_when_there_is_nothing_behind_an_entry():
