@@ -40,13 +40,13 @@ A request goes to the page as a message, which is queued before the worker goes 
 
 ## The state of it
 
-It boots. `node kxbox/web/headless.js smoke` starts the pinned kernel, waits for the ready marker, and runs nine checks, each one named after something a lesson stops working without.
+It boots. `node kxbox/web/headless.js smoke` starts the pinned kernel, waits for the ready marker, and runs eleven checks, each one named after something a lesson stops working without.
 
 Running it found two bugs that the tests had been passing over. A write to any tracefs file did nothing and reported success, and every read came back with one extra newline. Both bugs were in code with tests, and in both cases the test double was the thing that was wrong: it had been written to match the protocol as designed rather than what a busybox shell on a serial line actually does. The doubles now match the real guest, and there are tests that fail if they drift apart again.
 
 Everything that can be checked without an emulator still is, because that is what runs in CI. `just web` runs it. Forty one tests, and the useful ones are the parsing of a serial stream that contains the prompt and the echo of the command, a write arriving in pieces and ending up as one file, two commands not interleaving on the one shell, and a blocking call across two real threads with the answer deliberately late.
 
-It also runs in a browser now, which is what M0 was actually asking. `just web-measure` boots the pinned kernel in Chrome on a throwaway profile, runs the same ten checks, brings Pyodide up in the worker, runs every recipe against its recording, and takes one filtered trace all the way through the bridge and back. A shell in about two and a half seconds on an idle laptop, ten checks passing, three of three recipes agreeing in about seventeen seconds, and forty one frames of a real tape drawn by the same widget a notebook would use. The numbers and the surprises are in `../kernel/RESULTS.md`.
+It also runs in a browser now, which is what M0 was actually asking. `just web-measure` boots the pinned kernel in Chrome on a throwaway profile, runs the same checks, brings Pyodide up in the worker, runs every recipe against its recording, and takes one filtered trace all the way through the bridge and back. A shell in about two and a half seconds on an idle laptop, every check passing, three of three recipes agreeing in about seventeen seconds, and forty one frames of a real tape drawn by the same widget a notebook would use. The numbers and the surprises are in `../kernel/RESULTS.md`.
 
 Two surprises are worth repeating here. A visible window is about three times slower than a headless one, and almost all of that is sensitivity to what else the machine is doing rather than a fixed cost. Headless boots in 2.2 seconds whether the laptop is idle or has several compiler jobs on it. Visible goes from 2.6 seconds to between 6.4 and 9.1. Every node number this project quoted before is therefore optimistic about what a reader waits for, and none of them was wrong about whether it works.
 

@@ -703,3 +703,61 @@ def test_the_browser_demo_asks_for_what_the_recipe_asks_for():
     assert f"owns_window={one.owns_window}" in program, "the demo should use the recipe's window"
     for name in one.functions:
         assert f'"{name}"' in program, f"the demo should ask for `{name}` like the recipe does"
+
+
+# The rootfs recipe.
+#
+# Everything the image is made of is a row in `kxbox/rootfs/pin.toml`, and `build.sh` reads that
+# file through one helper. A key spelled wrong is a `KeyError` from a heredoc partway through a
+# build, which for strace is thirty seven minutes in on the machine most likely to be running this.
+
+ROOTFS_PIN = ROOT / "kxbox" / "rootfs" / "pin.toml"
+BUILD_SH = ROOT / "kxbox" / "rootfs" / "build.sh"
+
+
+def asked_for(script: str) -> set[tuple[str, str]]:
+    """Every (section, key) `build.sh` reads out of the pin, including through a named helper.
+
+    Two spellings reach the pin. `read_pin busybox version` names its section, and a one line
+    helper like `read_strace() { read_pin strace "$1"; }` carries the section so that every later
+    call is one word shorter. Both end up here.
+    """
+    sections = {
+        name: section
+        for name, section in re.findall(
+            r'^read_(\w+)\(\)\s*\{\s*read_pin (\w+) "\$1"; \}', script, re.M
+        )
+    }
+    wanted = set(re.findall(r"read_pin (\w+) (\w+)", script))
+    for name, section in sections.items():
+        wanted |= {(section, key) for key in re.findall(rf"read_{name} (\w+)", script)}
+    return wanted
+
+
+def test_the_rootfs_build_only_asks_for_keys_the_pin_has():
+    pin = tomllib.loads(ROOTFS_PIN.read_text(encoding="utf-8"))
+    for section, key in sorted(asked_for(BUILD_SH.read_text(encoding="utf-8"))):
+        assert section in pin, f"build.sh reads a [{section}] section the pin has not got"
+        assert key in pin[section], f"build.sh reads {section}.{key} and the pin has not got it"
+
+
+def test_the_helper_finds_both_spellings():
+    """The test above is worth nothing if the reader misses half the calls, so here is a fixture."""
+    script = 'read_strace() { read_pin strace "$1"; }\nA=$(read_pin busybox url)\nB=$(read_strace version)\n'
+    assert asked_for(script) == {("busybox", "url"), ("strace", "version")}
+
+
+def test_everything_the_image_carries_is_pinned_by_checksum():
+    """Two things come off the network into this image and both are checked before they are used.
+
+    The busybox is a binary somebody else built and the strace is a source tarball, which is a real
+    difference in what the checksum is protecting. It is not a difference in whether there is one.
+    """
+    pin = tomllib.loads(ROOTFS_PIN.read_text(encoding="utf-8"))
+    fetched = [name for name, row in pin.items() if isinstance(row, dict) and "url" in row]
+    assert fetched, "nothing in the rootfs pin is downloaded, which cannot be right"
+    for name in fetched:
+        row = pin[name]
+        assert len(row["sha256"]) == 64, f"{name} has no usable sha256"
+        assert row["url"].startswith("https://"), f"{name} is fetched over {row['url'][:5]}"
+        assert row["recorded"], f"{name} does not say when its checksum was taken"

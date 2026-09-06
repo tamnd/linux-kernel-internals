@@ -74,7 +74,7 @@ These three names are separate from the six build profiles in `kernel/pin.toml`.
 
 `kernel/` is the pin, the config fragments and the build script. `pin.toml` says which kernel, from where, with which checksum.
 
-`rootfs/` is the initramfs: a pinned busybox, an init script that mounts the filesystems the lessons need and prints the ready marker, and a build script that makes the cpio. `web/vendor.toml` pins v86 and `tools/vendor.py` fetches it against those checksums.
+`rootfs/` is the initramfs: a pinned busybox, a pinned strace built from source, three small programs that each do one thing so a trace of one has one thing in it, an init script that mounts the filesystems the lessons need and prints the ready marker, and a build script that makes the cpio. `web/vendor.toml` pins v86 and `tools/vendor.py` fetches it against those checksums.
 
 ## Booting one
 

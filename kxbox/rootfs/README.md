@@ -2,7 +2,7 @@
 
 The kernel is the subject of this book. The rootfs is the smallest thing that lets you talk to it.
 
-One statically linked busybox, three nine kilobyte programs, and one init script. That is the whole image, and it comes to 649 KiB compressed, next to a 3.25 MiB kernel.
+One statically linked busybox, one strace, three nine kilobyte programs, and one init script. That is the whole image, and it comes to 1.66 MiB compressed, next to a 3.25 MiB kernel.
 
 ## Building it
 
@@ -10,11 +10,43 @@ One statically linked busybox, three nine kilobyte programs, and one init script
 sh kxbox/rootfs/build.sh
 ```
 
-No root. It downloads busybox, checks it against the sha256 in `pin.toml`, asks the binary which applets it has and stops if one the bridge needs is missing, compiles the three programs, then makes a cpio archive with `cpio -R 0:0` so every file is owned by root without anybody having to be root to say so.
+No root. It downloads busybox, checks it against the sha256 in `pin.toml`, asks the binary which applets it has and stops if one the bridge needs is missing, compiles the three programs, builds strace, then makes a cpio archive with `cpio -R 0:0` so every file is owned by root without anybody having to be root to say so.
 
-The compiled programs need the container, because they are 32-bit x86 and the machine building them usually is not. That is the same container the kernel is built in, so it adds no toolchain that was not already needed. A machine with no docker gets an image without it and a warning saying what that costs.
+Everything compiled needs the container, because it is all 32-bit x86 and the machine building it usually is not. That is the same container the kernel is built in, so it adds no toolchain that was not already needed. A machine with no docker gets an image without any of it and a warning saying what that costs.
 
 The output is `build/initrd.gz` and it is not committed.
+
+## strace
+
+The function graph tracer says what the kernel did once it was inside a call, and how long each frame took. It does not say what the program asked for. The arguments, the file descriptors, the flags and the errno on the way back are not in a tape and no amount of reading one recovers them, because the tracer records entry and exit and those values live in registers it never samples.
+
+Those are the first questions anybody has, and until now the box could not answer them. Here is `writebyte`, which the section below describes in words:
+
+```
+execve("/bin/writebyte", ["/bin/writebyte", "/tmp/probe"], 0xbffaf98c /* 6 vars */) = 0
+open("/tmp/.writebyte-warmup", O_WRONLY|O_CREAT|O_TRUNC, 0600) = 3
+write(3, "x", 1)                        = 1
+close(3)                                = 0
+unlink("/tmp/.writebyte-warmup")        = 0
+open("/tmp/one-byte", O_WRONLY|O_CREAT|O_TRUNC, 0600) = 3
+open("/sys/kernel/tracing/tracing_on", O_WRONLY) = 4
+write(4, "1\n", 2)                      = 2
+write(3, "x", 1)                        = 1
+write(4, "0\n", 2)                      = 2
+close(4)                                = 0
+close(3)                                = 0
+write(1, "wrote 1 byte to /tmp/one-byte\n", 30) = 30
+exit(0)                                 = ?
++++ exited with 0 +++
+```
+
+Everything the section below claims is on that page. The warmup runs the whole sequence once and throws it away. The file is opened before the window rather than inside it. Between the two writes to `tracing_on` there is one `write`, which is the claim all three programs are built on and which nothing was checking until this binary went in.
+
+It is built from the release tarball rather than downloaded, because nobody publishes a static i686 strace. The build is the expensive thing here: about thirty seven minutes on an arm laptop, where almost all of it is qemu translating x86 one instruction at a time, and a couple of minutes on an x86 machine. The result is cached beside busybox and reused, so it happens once.
+
+It costs about a megabyte compressed, which more than doubles the image. Most of that is a static glibc plus the tables that turn a syscall number and six longs into a line somebody can read, and those tables are the entire feature.
+
+Three things it will not do here. `-k` needs libunwind and there is none, so `strace -V` reports `Optional features enabled: (none)`. The `seconds` column of `strace -c` is emulated time on Tier 0 and means nothing, the same as every other duration in the box. And attaching to a process stops it twice per system call, so a tape taken while strace is attached is a tape of ptrace doing its job, which is a real trace of something nobody asked about.
 
 ## Modules
 
@@ -52,11 +84,13 @@ Both writes are in one tracer window rather than in two. Two captures taken a se
 
 `corpora/traces/tier0/two-writes.txt` is what it produces.
 
-## Why an upstream binary
+## Why busybox is downloaded and strace is built
 
 The busybox here is somebody else's build, downloaded from busybox.net. Building it from source would need a second cross toolchain and a second container, and would make the fast half of Tier 0 as slow as the kernel half.
 
-The checksum is what makes that safe rather than a shrug. `pin.toml` records the version, the URL, the size and the sha256, and the build refuses a binary that does not match. If this ever needs to become a real build, it happens in this directory and nothing above it changes.
+strace goes the other way for a duller reason than any argument: there is no static i686 binary to download. So it is built, and the thirty seven minutes that costs is the price of the only option there was.
+
+The checksum is what makes both safe rather than a shrug. `pin.toml` records the version, the URL, the size and the sha256 of each, and the build refuses anything that does not match. For strace the checksum is on the source tarball, which is the thing that came off the network, and `built_bytes` beside it records what the compiler then made of it, so a build that starts producing something a long way from that is a build somebody should look at.
 
 ## What init does, and what it deliberately does not
 

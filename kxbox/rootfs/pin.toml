@@ -2,14 +2,16 @@ schema = 1
 
 # The userland that comes up inside Tier 0, pinned the same way the kernel is.
 #
-# One statically linked busybox and nothing else. Static because a dynamic binary drags a C library
-# into the image and the image is the thing a browser pays for twice, and because a rootfs with one
-# file in it has one thing that can be wrong with it.
+# Everything in the image is statically linked. A dynamic binary drags a C library in beside it,
+# and the image is the thing a browser pays for twice.
 #
-# This is an upstream prebuilt binary rather than one this project compiled. That is a deliberate
-# trade and it is worth saying out loud: it saves a second cross toolchain and a second build, and
-# it means the shell in the box is somebody else's build. The checksum below is what pins it. If
-# this ever needs to become a real build, it lives here and nothing above it changes.
+# The busybox below is an upstream prebuilt binary rather than one this project compiled. That is a
+# deliberate trade and it is worth saying out loud: it saves a second cross toolchain and a second
+# build, and it means the shell in the box is somebody else's build. The checksum is what pins it.
+# If this ever needs to become a real build, it lives here and nothing above it changes.
+#
+# strace further down goes the other way and is built from source, for the plain reason that nobody
+# publishes a static i686 one. The three programs after it are ours.
 
 [busybox]
 version = "1.35.0"
@@ -60,6 +62,57 @@ packages = ["gcc-i686-linux-gnu"]
 # downloads. `-fno-pic` because the syscall wrappers want ebx, which position independent code
 # reserves for itself.
 flags = ["-static", "-nostdlib", "-fno-pic", "-fno-stack-protector", "-Os", "-Wall", "-Wextra", "-Werror"]
+
+# strace, which answers the one question the function graph tracer cannot answer at all.
+#
+# A tape says what the kernel did inside a call and how long each frame took. It does not say what
+# the program asked for. The arguments, the file descriptors, the flags and the errno on the way
+# back are not in a function graph trace and no amount of reading one recovers them, because the
+# tracer records entry and exit and the values live in registers it does not sample. Those are the
+# first questions a beginner has, they are the whole of the Tourist tier, and until now the box had
+# no way to answer them.
+#
+# The two together are the point rather than either alone. `strace` on `writebyte` shows one
+# `write` in the tracer window, which is the claim the three programs beside this file are built on
+# and which nothing was checking. The tape shows what that one write turned into.
+#
+# Built from the release tarball, not downloaded as a binary, because nobody publishes a static
+# i686 strace. That is the opposite trade from busybox above and it is made for a plain reason:
+# there was nothing to download.
+#
+# It costs about a megabyte compressed, which more than doubles the image. Most of that is a static
+# glibc plus the tables that turn a syscall number and six longs into a line somebody can read, and
+# those tables are the entire feature. Building against musl would cut it and would mean a second
+# cross toolchain, which is the trade `kernel/README.md` already refused once.
+#
+# `--enable-mpers=no` because mpers is for a 64 bit strace decoding a 32 bit process. This strace
+# is 32 bit and there is one personality here, so the machinery has nothing to do. It is also the
+# part of the build that needs the most from the toolchain, so turning it off removes the thing
+# most likely to break on somebody else's machine.
+#
+# `configure` needs a native compiler as well as the cross one. It builds and runs a few small
+# programs on the build host on its way to deciding things about the target, which is why `gcc` and
+# `libc6-dev` are in the list next to their cross versions.
+[strace]
+version = "7.2"
+url = "https://github.com/strace/strace/releases/download/v7.2/strace-7.2.tar.xz"
+sha256 = "4bde6246926890dcee824f6e6ac42a06752f47d77e5097d86e3c0d6d4b709fe5"
+size_bytes = 2810844
+recorded = "2026-09-06"
+image = "debian:trixie-slim"
+packages = [
+    "gcc",
+    "gcc-i686-linux-gnu",
+    "libc6-dev",
+    "libc6-dev-i386-cross",
+    "make",
+    "xz-utils",
+]
+configure = ["--host=i686-linux-gnu", "--enable-mpers=no"]
+strip = "i686-linux-gnu-strip"
+# What the built binary comes to, stripped, so a build that suddenly produces something a long way
+# from this has changed in a way somebody should look at.
+built_bytes = 2446716
 
 # Kernel modules the image carries, if somebody has built them.
 #

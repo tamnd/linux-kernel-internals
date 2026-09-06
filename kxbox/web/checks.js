@@ -18,6 +18,9 @@ export const CHECKS = [
   { name: "readback", what: "the write above actually landing", run: (box) => box.read("/tmp/probe") },
   { name: "modules", what: "every part that ends in a change", run: (box) => box.sh("test -d /sys/module") },
   { name: "touchpage", what: "a page fault trace with one fault in it instead of thirty", run: (box) => box.sh("/bin/touchpage") },
+  // ptrace rather than the tracer, so this fails on its own if the kernel loses PTRACE_ATTACH or
+  // the binary was built against the wrong libc, and it fails while everything above still passes.
+  { name: "strace", what: "which system calls a program made, and what they returned", run: (box) => box.sh("strace -o /tmp/s.txt /bin/busybox true && grep -c execve /tmp/s.txt") },
 ];
 
 // A reply is a string from `read` and an object from `sh`, and nothing above cares which.
