@@ -93,7 +93,7 @@ Every line of every artefact goes in one of three buckets. `read` turned into so
 
 The bucket to watch is not the last one. A rise in `unparsed` is loud and the tests already catch it. The quiet failure is a line sliding from `read` to `skipped`, which is what a regular expression that stopped matching looks like from outside: nothing raises, nothing is logged, and the lesson shows the reader less than it did last week. Run `just baseline-show` to see the table.
 
-If you change a parser or add an artefact, run `just baseline-write` and say in the commit message why a number moved. A number moving on its own is the failure the file exists to catch. Adding an artefact that no reader claims is an error rather than an omission, so add it to the routing table in `tools/baseline.py` at the same time.
+If you change a parser or add an artefact, run `just baseline-write` and say in the commit message why a number moved. A number moving on its own is the failure the file exists to catch. Adding an artefact that no reader claims is an error rather than an omission, so add it to the routing table in `kxray/corpus/index.py` at the same time.
 
 ## What this project covers
 

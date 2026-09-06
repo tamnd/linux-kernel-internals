@@ -31,6 +31,12 @@ it, so the rule is that the number is recorded rather than that the number is sm
 
 An artefact that no reader claims is an error, not an omission. Adding a capture to `corpora/`
 without saying what reads it is how a file ends up in the repository that nothing has ever opened.
+
+The reading itself is not done here. `kxray.corpus.index` knows which reader opens which artefact
+and runs it, because a lesson wants to open one file the same way this tool opens all of them, and
+two copies of that knowledge is how the lesson and the baseline end up disagreeing. What is left in
+this file is the comparison against `corpora/BASELINE.toml`, which is the only part that is about
+the baseline rather than about the corpus.
 """
 
 from __future__ import annotations
@@ -38,276 +44,22 @@ from __future__ import annotations
 import argparse
 import sys
 import tomllib
-from dataclasses import dataclass
-from fnmatch import fnmatch
-from pathlib import Path
 
-from kxray import kallsyms, lockdep, tracefs
-from kxray.btf import reader as btf
-from kxray.models import Lines
-from kxray.proc import keyed as proc_keyed
-from kxray.proc import maps as proc_maps
-from kxray.proc import percpu as proc_percpu
-from kxray.proc import pidstat as proc_pidstat
-from kxray.proc import version as proc_version
-from kxray.replay import cast as replay_cast
-from kxray.replay import session as replay_session
-from kxray.source import kconfig as source_kconfig
-from kxray.source import maintainers as source_maintainers
-from kxray.source import syscalls as source_syscalls
-from kxray.trace import events, formats, parse_file
-from kxray.trace import function as trace_function
+from kxray.corpus import index
+from kxray.corpus.index import CORPORA, Reading
 
-CORPORA = Path("corpora")
 BASELINE = CORPORA / "BASELINE.toml"
 SCHEMA = 1
 
-# Which reader opens which artefact, first match winning. This table is the answer to "what reads
-# this file", and it is here rather than in each artefact's metadata so that the whole mapping can
-# be read at once.
-ROUTES = (
-    # Both tracers write `.txt` into the same directory and the file name is the only thing that
-    # tells them apart, so the narrower pattern has to come first. `flat-` on the front of a
-    # capture means the flat function tracer took it.
-    ("corpora/traces/*/flat-*.txt", "function"),
-    ("corpora/traces/*/events-*.txt", "events"),
-    ("corpora/traces/*/*.txt", "function_graph"),
-    ("corpora/events/*/*.format", "event-format"),
-    ("corpora/proc/*/kallsyms.txt", "kallsyms"),
-    ("corpora/proc/*/kallsyms-*.txt", "kallsyms"),
-    ("corpora/proc/*/lockdep.txt", "lockdep-classes"),
-    ("corpora/proc/*/lockdep_stats.txt", "lockdep-stats"),
-    ("corpora/proc/*/lockdep-stats-*.txt", "lockdep-stats"),
-    ("corpora/proc/*/ring-overrun.txt", "tracefs-stats"),
-    # The rest of /proc, routed by what the file is rather than by what it is called, which is why
-    # `self-status.txt` and `meminfo.txt` land on the same reader and `self-stat.txt` does not. The
-    # lockdep patterns above have to stay in front of the `*-stat.txt` one.
-    ("corpora/proc/*/version.txt", "proc-version"),
-    ("corpora/proc/*/meminfo.txt", "proc-keyed"),
-    ("corpora/proc/*/self-status.txt", "proc-keyed"),
-    ("corpora/proc/*/interrupts.txt", "proc-percpu"),
-    ("corpora/proc/*/softirqs.txt", "proc-percpu"),
-    ("corpora/proc/*/self-maps.txt", "proc-maps"),
-    ("corpora/proc/*/*-stat.txt", "proc-pidstat"),
-    # Files out of the pinned tarball rather than off a running kernel. `read_write.c` has no
-    # reader here on purpose: kxray.source.symbols opens it with a name to look for, so there is no
-    # whole file count to take, and saying so is better than inventing one.
-    ("corpora/source/*/MAINTAINERS*", "maintainers"),
-    ("corpora/source/*/*.tbl", "syscall-table"),
-    ("corpora/source/*/Kconfig*", "kconfig-source"),
-    ("corpora/source/*/*.c", "none"),
-    ("corpora/oops/*/*.txt", "lockdep-splat"),
-    ("corpora/btf/*/*.btf", "btf"),
-    ("corpora/experiments/*/*.txt", "none"),
-    ("corpora/replays/*/*.cast", "cast"),
-)
 
-
-@dataclass(frozen=True)
-class Reading:
-    """What one reader got out of one artefact."""
-
-    path: str
-    reader: str
-    lines: int
-    found: int
-    accounted: Lines | None
-
-    def row(self) -> dict:
-        row = {
-            "path": self.path,
-            "reader": self.reader,
-            "lines": self.lines,
-            "found": self.found,
-        }
-        if self.accounted is not None:
-            row["read"] = self.accounted.read
-            row["skipped"] = self.accounted.skipped
-            row["unparsed"] = self.accounted.unparsed
-        return row
-
-    def adds_up(self) -> bool:
-        return self.accounted is None or self.accounted.total == self.lines
-
-
-def _function_graph(path: Path) -> tuple[int, Lines | None]:
-    tape = parse_file(path)
-    return tape.frame_count, tape.lines
-
-
-def _function_flat(path: Path) -> tuple[int, Lines | None]:
-    log = trace_function.parse_file(path)
-    return len(log.calls), log.lines
-
-
-def _events(path: Path) -> tuple[int, Lines | None]:
-    # Read through every format in the corpus rather than through none, because an event that
-    # stops binding to its format is exactly the drift this file exists to catch, and a reader
-    # given no formats would not notice.
-    log = events.parse_file(path, formats.load(CORPORA / "events" / "tier0"))
-    return len(log.events), log.lines
-
-
-def _event_format(path: Path) -> tuple[int, Lines | None]:
-    return len(formats.parse_file(path).fields), formats.account(path.read_text(encoding="utf-8"))
-
-
-def _kernel_path(path: Path) -> str:
-    """Which file in /proc this artefact is a copy of, from its own metadata.
-
-    The readers need it, because what a file is called on disk does not decide how it is read or
-    what it is worth. `self-maps.txt` is `/proc/self/maps`, and only the second of those two names
-    reaches the stability ledger.
-    """
-    meta = path.with_suffix(".meta.toml")
-    if not meta.exists():
-        return ""
-    return str(tomllib.loads(meta.read_text(encoding="utf-8")).get("path", ""))
-
-
-def _proc_keyed(path: Path) -> tuple[int, Lines | None]:
-    found = proc_keyed.parse_file(path, _kernel_path(path))
-    return len(found.entries), found.lines
-
-
-def _proc_percpu(path: Path) -> tuple[int, Lines | None]:
-    found = proc_percpu.parse_file(path, _kernel_path(path))
-    return len(found.counters), found.lines
-
-
-def _proc_maps(path: Path) -> tuple[int, Lines | None]:
-    found = proc_maps.parse_file(path, _kernel_path(path))
-    return len(found.regions), found.lines
-
-
-def _proc_pidstat(path: Path) -> tuple[int, Lines | None]:
-    found = proc_pidstat.parse_file(path, _kernel_path(path))
-    # The named fields rather than one, because one line that read is not the number that would
-    # move. A kernel that appends a field puts it in `extra`, and counting the named ones plus the
-    # extras is how that shows up here at all.
-    return len(found.values) + len(found.extra), found.lines
-
-
-def _proc_version(path: Path) -> tuple[int, Lines | None]:
-    found = proc_version.parse_file(path, _kernel_path(path))
-    return len(found.parts), found.lines
-
-
-def _maintainers(path: Path) -> tuple[int, Lines | None]:
-    found = source_maintainers.parse(path.read_text(encoding="utf-8"), source=path.as_posix())
-    return len(found.sections), found.lines
-
-
-def _syscall_table(path: Path) -> tuple[int, Lines | None]:
-    found = source_syscalls.parse(path.read_text(encoding="utf-8"), source=path.as_posix())
-    return len(found.calls), found.lines
-
-
-def _kconfig_source(path: Path) -> tuple[int, Lines | None]:
-    found = source_kconfig.parse(path.read_text(encoding="utf-8"), source=path.as_posix())
-    return len(found.symbols), found.lines
-
-
-def _kallsyms(path: Path) -> tuple[int, Lines | None]:
-    text = path.read_text(encoding="utf-8")
-    return len(kallsyms.parse(text)), kallsyms.account(text)
-
-
-def _lockdep_classes(path: Path) -> tuple[int, Lines | None]:
-    text = path.read_text(encoding="utf-8")
-    return len(lockdep.parse_classes(text)), lockdep.account_classes(text)
-
-
-def _lockdep_stats(path: Path) -> tuple[int, Lines | None]:
-    text = path.read_text(encoding="utf-8")
-    return len(lockdep.parse_stats(text).values), lockdep.account_stats(text)
-
-
-def _tracefs_stats(path: Path) -> tuple[int, Lines | None]:
-    text = path.read_text(encoding="utf-8")
-    return len(tracefs.parse_stats(text)), tracefs.account_stats(text)
-
-
-def _lockdep_splat(path: Path) -> tuple[int, Lines | None]:
-    # A splat is a report spread over many lines rather than a file of rows, so there is no line
-    # accounting to do. What is worth pinning is how many complete ones come out, because the
-    # incomplete ones are dropped on purpose and a change there would be silent too.
-    return len(lockdep.splats(path.read_text(encoding="utf-8"))), None
-
-
-def _btf(path: Path) -> tuple[int, Lines | None]:
-    # BTF is bytes, so it has no lines. The type count is the thing that would move. Index zero is
-    # the void every BTF blob starts with rather than a type anybody declared, so it is not counted,
-    # which is also how the artefact's own metadata counts them.
-    return len(btf.parse_file(path).types) - 1, None
-
-
-def _cast(path: Path) -> tuple[int, Lines | None]:
-    # A recorded session. The number worth pinning is how many steps come out of it, because the
-    # steps are found from marks in the middle of the byte stream rather than from the shape of a
-    # line, and a change to that walk would leave the line counts alone and quietly halve the
-    # walkthrough.
-    one = replay_cast.parse_file(path)
-    return len(replay_session.steps_of(one)), one.lines
-
-
-def _unread(path: Path) -> tuple[int, Lines | None]:
-    # An artefact a person reads and no parser does. Its line count is still pinned, so a truncated
-    # file is caught even here.
-    return 0, None
-
-
-READERS = {
-    "function_graph": _function_graph,
-    "function": _function_flat,
-    "events": _events,
-    "event-format": _event_format,
-    "proc-keyed": _proc_keyed,
-    "proc-percpu": _proc_percpu,
-    "proc-maps": _proc_maps,
-    "proc-pidstat": _proc_pidstat,
-    "proc-version": _proc_version,
-    "maintainers": _maintainers,
-    "syscall-table": _syscall_table,
-    "kconfig-source": _kconfig_source,
-    "kallsyms": _kallsyms,
-    "lockdep-classes": _lockdep_classes,
-    "lockdep-stats": _lockdep_stats,
-    "tracefs-stats": _tracefs_stats,
-    "lockdep-splat": _lockdep_splat,
-    "btf": _btf,
-    "cast": _cast,
-    "none": _unread,
-}
-
-
-def route(path: Path) -> str | None:
-    """Which reader opens this artefact, or None when nothing claims it."""
-    name = path.as_posix()
-    return next((reader for pattern, reader in ROUTES if fnmatch(name, pattern)), None)
-
-
-def artefacts(root: Path = CORPORA) -> list[Path]:
-    """Every committed artefact, which means every file with a `.meta.toml` beside it."""
-    found = [
-        one
-        for one in sorted(root.rglob("*"))
-        if one.is_file() and one.suffix != ".toml" and one.with_suffix(".meta.toml").exists()
-    ]
-    return found
-
-
-def read_one(path: Path) -> Reading:
-    reader = route(path)
-    if reader is None:
-        raise LookupError(f"{path} has no reader in tools/baseline.py")
-    found, accounted = READERS[reader](path)
-    lines = 0 if reader == "btf" else len(path.read_text(encoding="utf-8").splitlines())
-    return Reading(path.as_posix(), reader, lines, found, accounted)
-
-
-def survey(root: Path = CORPORA) -> list[Reading]:
-    return [read_one(one) for one in artefacts(root)]
+def row(one: Reading) -> dict:
+    """The line this reading gets in the baseline file."""
+    out = {"path": one.path, "reader": one.reader, "lines": one.lines, "found": one.found}
+    if one.accounted is not None:
+        out["read"] = one.accounted.read
+        out["skipped"] = one.accounted.skipped
+        out["unparsed"] = one.accounted.unparsed
+    return out
 
 
 def totals(readings: list[Reading]) -> dict[str, int]:
@@ -327,7 +79,7 @@ def as_toml(readings: list[Reading]) -> str:
     out += [f"{name} = {value}" for name, value in totals(readings).items()]
     for one in readings:
         out += ["", "[[artefact]]"]
-        for name, value in one.row().items():
+        for name, value in row(one).items():
             out.append(f'{name} = "{value}"' if isinstance(value, str) else f"{name} = {value}")
     return "\n".join(out) + "\n"
 
@@ -361,7 +113,7 @@ def compare(readings: list[Reading], recorded: dict) -> list[str]:
         problems.append(f"{path} is in the corpus and not in the baseline")
 
     for path in sorted(set(now) & set(was)):
-        for name, value in now[path].row().items():
+        for name, value in row(now[path]).items():
             if was[path].get(name) != value:
                 problems.append(f"{path}: {name} was {was[path].get(name)!r}, is now {value!r}")
     return problems
@@ -394,7 +146,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     try:
-        readings = survey()
+        readings = index.survey()
     except LookupError as unclaimed:
         print(f"baseline: {unclaimed}", file=sys.stderr)
         return 1
