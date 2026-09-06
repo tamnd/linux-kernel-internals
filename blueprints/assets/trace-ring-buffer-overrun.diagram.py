@@ -14,14 +14,14 @@ from kxdraw import Scene
 
 ALT = (
     "A picture in four parts, about how a full trace buffer loses events without saying so. "
-    "Across the top, a ring of four boxes labelled sub buffer 0 to sub buffer 3, joined "
-    "left to right by arrows with a dashed arrow wrapping from the last one back to the first. "
-    "The first box is also labelled head, the oldest, the third is labelled tail, writing here "
-    "now, and a separate box sits outside the ring labelled reader page, off the ring, with a "
-    "note that the writer will never touch it. Underneath on the left, a column headed what one "
-    "writer does, with three boxes reading down: read the tail page, read the two timestamps, and "
-    "add my length to the write index with one atomic add. That last box forks. The left branch "
-    "is labelled it fits and holds one box reading write the data and commit. The right branch is "
+    "Across the top, a ring of four boxes labelled sub buffer 0 to sub buffer 3, joined left to "
+    "right by arrows with a dashed arrow wrapping from the last one back to the first. The first "
+    "box is also labelled head, the oldest, the third is labelled tail, writing here now, and a "
+    "separate box sits outside the ring labelled reader page, off the ring, with a note that the "
+    "writer will never touch it. Underneath on the left, a column headed what one writer does, "
+    "with three boxes reading down: read the tail page, read the two timestamps, and add my "
+    "length to the write index with one atomic add. That last box forks. The left branch is "
+    "labelled it fits and holds one box reading write the data and commit. The right branch is "
     "labelled it does not fit and holds three boxes in a red style reading the next page is the "
     "head, throw that whole page away and add its events to overrun, and move the tail onto it. A "
     "note beside the red branch says nothing waits, nothing fails, and no caller is told. On the "
@@ -32,14 +32,16 @@ ALT = (
     "consuming read, take overrun minus last overrun, and print CPU:0 LOST 44002 EVENTS. The "
     "right column, the trace file, has boxes reading iterator read, ask for the iterator's missed "
     "events flag, and a red box reading the writer never sets that bit on an ordinary buffer, so "
-    "the flag is zero and nothing prints. Across the bottom is a red band reading a quiet trace "
-    "file is not evidence that nothing was lost, and under it a line saying the stats file under "
-    "per_cpu is the only place that tells you."
+    "nothing marks the body. An arrow leads from that red box to a wide box holding the header "
+    "line of the trace file, entries-in-buffer slash entries-written 273 slash 44275. Across the "
+    "bottom is a red band reading each way of reading a trace tells you half of what was lost, "
+    "and under it a line saying trace_pipe says where and prints no header, while the trace file "
+    "says how many, once, in a header a reader skips, and marks nothing in the body."
 )
 
 
 def scene() -> Scene:
-    s = Scene("How a full ring buffer loses events", width=1240, height=1112)
+    s = Scene("How a full ring buffer loses events", width=1240, height=1180)
 
     s.note(40, 44, "How a full ring buffer loses events", font_size=20)
     s.note(
@@ -172,7 +174,7 @@ def scene() -> Scene:
         882,
         210,
         60,
-        "the writer never sets that bit,\nso the flag is zero",
+        "the writer never sets that bit,\nso nothing marks the body",
         style="warn",
         font_size=12,
     )
@@ -182,23 +184,35 @@ def scene() -> Scene:
     s.arrow(t1, t2)
     s.arrow(t2, t3)
 
+    header = s.box(
+        760,
+        954,
+        440,
+        56,
+        "the header of the trace file: entries-in-buffer/entries-written 273/44275",
+        style="accent",
+        font_size=12,
+        mono=True,
+    )
+    s.arrow(t3, header, sides=("bottom", "top"))
+
     # -- the part that costs a debugging session --------------------------------------------------
     band = s.box(
         40,
-        988,
+        1056,
         1160,
         56,
-        "a quiet trace file is not evidence that nothing was lost",
+        "each way of reading a trace tells you half of what was lost",
         style="warn",
         font_size=17,
     )
-    s.arrow(t3, band)
+    s.arrow(header, band)
 
     s.note(
         40,
-        1068,
-        "The stats file under per_cpu is the only place that tells you, and the counter to read is "
-        "named after the setting.",
+        1136,
+        "trace_pipe says where and prints no header. The trace file says how many, once, in a "
+        "header a reader skips, and marks nothing in the body.",
         font_size=13,
         muted=True,
     )
